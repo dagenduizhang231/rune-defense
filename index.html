@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>符文塔防 · 玩法原型</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+html,body{margin:0;background:#0d1020;color:#e5e7eb;font-family:-apple-system,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;height:100%;overflow:hidden;touch-action:manipulation}
+#app{display:flex;flex-direction:column;align-items:center;height:100vh;height:100dvh}
+#hud{width:100%;max-width:480px;display:flex;gap:6px;justify-content:space-between;align-items:center;padding:8px 10px;font-size:14px;font-weight:600}
+.pill{background:#1b2040;padding:5px 10px;border-radius:999px;white-space:nowrap}
+#spd{background:#334155;padding:5px 12px;border-radius:999px;font-weight:700}
+#cv{display:block;width:min(100vw,480px,calc((100vh - 190px) * 0.6429));width:min(100vw,480px,calc((100dvh - 190px) * 0.6429));aspect-ratio:360/560;border-radius:10px;background:#141a33;touch-action:none}
+#panel{width:100%;max-width:480px;padding:8px 10px;flex:1;min-height:140px}
+button{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}
+.big{width:100%;padding:12px;font-size:16px;font-weight:700;background:linear-gradient(#3b82f6,#2563eb)}
+.wv{text-align:center;padding:12px;font-weight:700;color:#fca5a5;background:#1b2040;border-radius:10px}
+.row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.tb{background:#1b2040;padding:8px 2px;font-size:13px;line-height:1.35;border:2px solid #2a3158}
+.tb b{display:block;font-size:20px}
+.tb:disabled{opacity:.38}
+.hint{color:#9aa3c7;font-size:12.5px;margin-top:8px;line-height:1.55}
+.tinfo{margin-top:8px;font-size:13.5px;color:#cbd5e1}
+#ov{position:fixed;inset:0;background:rgba(5,7,15,.86);display:none;flex-direction:column;align-items:center;justify-content:center;padding:16px;z-index:9;text-align:center}
+#ov h2{margin:0 0 4px;font-size:20px}
+#ov .sub{color:#9aa3c7;font-size:13px}
+.cards{display:flex;flex-direction:column;gap:10px;width:100%;max-width:420px;margin-top:14px}
+.card{background:#1b2040;border:2px solid #475080;border-radius:14px;padding:12px 14px;text-align:left}
+.card .n{font-size:17px;font-weight:700}
+.card .d{font-size:14px;color:#c7cbe0;margin-top:4px}
+.card .r{float:right;font-size:12px;opacity:.85;margin-top:3px}
+.card.r1{border-color:#8b5cf6}.card.r1 .r{color:#c4b5fd}
+.card.r2{border-color:#f59e0b;box-shadow:0 0 16px rgba(245,158,11,.35)}.card.r2 .r{color:#fcd34d}
+.reroll{margin-top:12px;background:#334155;padding:9px 18px;font-size:14px}
+.reroll:disabled{opacity:.4}
+.build{margin-top:10px;font-size:13px;color:#c7cbe0;max-width:420px;line-height:1.6}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hud">
+    <span class="pill" id="hW">波次 0/15</span>
+    <span class="pill" id="hG">💰 0</span>
+    <span class="pill" id="hL">❤️ 20</span>
+    <button id="spd">1×</button>
+  </div>
+  <canvas id="cv"></canvas>
+  <div id="panel"></div>
+</div>
+<div id="ov"></div>
+<script>
+"use strict";
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXW=15;
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const DPR=Math.min(3,window.devicePixelRatio||1);
+cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
+const panel=document.getElementById('panel'),ov=document.getElementById('ov');
+
+// ---------- 地图 ----------
+const WP=[[-1,1],[7,1],[7,4],[1,4],[1,7],[7,7],[7,10],[1,10],[1,12],[9,12]];
+const pathSet=new Set();
+for(let i=0;i<WP.length-1;i++){
+  const [c1,r1]=WP[i],[c2,r2]=WP[i+1];const dc=Math.sign(c2-c1),dr=Math.sign(r2-r1);
+  let c=c1,r=r1;
+  while(true){if(c>=0&&c<COLS&&r>=0&&r<ROWS)pathSet.add(c+','+r);if(c===c2&&r===r2)break;c+=dc;r+=dr;}
+}
+const PP=WP.map(([c,r])=>({x:(c+.5)*CS,y:(r+.5)*CS}));
+const segLen=[];let TOTAL=0;
+for(let i=0;i<PP.length-1;i++){const l=Math.hypot(PP[i+1].x-PP[i].x,PP[i+1].y-PP[i].y);segLen.push(l);TOTAL+=l;}
+function posAt(d){
+  for(let i=0;i<segLen.length;i++){
+    if(d<=segLen[i]){const t=d/segLen[i];return{x:PP[i].x+(PP[i+1].x-PP[i].x)*t,y:PP[i].y+(PP[i+1].y-PP[i].y)*t};}
+    d-=segLen[i];
+  }
+  return{x:PP[PP.length-1].x,y:PP[PP.length-1].y};
+}
+
+// ---------- 数据 ----------
+const TT={
+  arrow :{name:'箭塔',ch:'弓',cost:50 ,dmg:9 ,rate:.55,range:2.6,color:'#4ade80',tip:'快速单体'},
+  cannon:{name:'炮塔',ch:'炮',cost:80 ,dmg:24,rate:1.5,range:2.4,color:'#fb923c',tip:'范围爆炸'},
+  frost :{name:'冰塔',ch:'冰',cost:60 ,dmg:3 ,rate:1.0,range:2.0,color:'#60a5fa',tip:'范围减速'},
+  tesla :{name:'电塔',ch:'电',cost:100,dmg:17,rate:1.2,range:2.3,color:'#c084fc',tip:'连锁闪电'},
+};
+const ET={
+  norm :{hp:32 ,spd:1.15,r:9 ,col:'#f87171',gold:5  ,armor:0,dmg:1},
+  fast :{hp:20 ,spd:2.0 ,r:7 ,col:'#fbbf24',gold:4  ,armor:0,dmg:1},
+  tank :{hp:110,spd:.72 ,r:12,col:'#94a3b8',gold:10 ,armor:4,dmg:2},
+  split:{hp:55 ,spd:1.0 ,r:11,col:'#34d399',gold:6  ,armor:0,dmg:1},
+  mini :{hp:16 ,spd:1.5 ,r:6 ,col:'#6ee7b7',gold:2  ,armor:0,dmg:1},
+  boss :{hp:900,spd:.5  ,r:17,col:'#e879f9',gold:100,armor:3,dmg:6},
+};
+const RAR=['普通','稀有','史诗'];
+const CARDS=[
+ {id:'a1',tag:'arrow',r:0,name:'锋利箭头',desc:'箭塔伤害 +35%',ap:()=>M.arrowDmg*=1.35},
+ {id:'a2',tag:'arrow',r:0,name:'急速上弦',desc:'箭塔攻速 +30%',ap:()=>M.arrowRate*=1.3},
+ {id:'a3',tag:'arrow',r:1,max:2,name:'多重射击',desc:'箭塔每次多射 1 个目标',ap:()=>M.arrowMulti++},
+ {id:'c1',tag:'cannon',r:0,name:'高爆火药',desc:'炮塔伤害 +40%',ap:()=>M.cannonDmg*=1.4},
+ {id:'c2',tag:'cannon',r:0,max:3,name:'冲击波',desc:'炮塔爆炸范围 +40%',ap:()=>M.cannonSplash*=1.4},
+ {id:'c3',tag:'cannon',r:1,max:3,name:'燃烧弹',desc:'炮击点燃敌人，每秒 6×塔等级 真实伤害，持续 2 秒',ap:()=>M.burn+=6},
+ {id:'f1',tag:'frost',r:0,max:2,name:'极寒',desc:'冰塔减速效果 +15%',ap:()=>M.frostSlow+=.15},
+ {id:'f2',tag:'frost',r:1,max:2,name:'冰封',desc:'冰塔有 20% 几率冻结敌人 1 秒',ap:()=>M.freeze+=.2},
+ {id:'f3',tag:'frost',r:1,max:2,name:'碎冰',desc:'被减速/冻结的敌人受到所有伤害 +30%',ap:()=>M.shatter+=.3},
+ {id:'t1',tag:'tesla',r:0,max:3,name:'超导',desc:'电塔连锁目标 +2',ap:()=>M.chain+=2},
+ {id:'t2',tag:'tesla',r:0,name:'高压',desc:'电塔伤害 +35%',ap:()=>M.teslaDmg*=1.35},
+ {id:'t3',tag:'tesla',r:1,max:2,name:'过载',desc:'电塔每次跳跃 25% 几率造成 3 倍伤害',ap:()=>M.overload+=.25},
+ {id:'g1',r:0,name:'意外之财',desc:'立即获得 120 金币',ap:()=>{gold+=120}},
+ {id:'g2',r:1,max:1,name:'复利',desc:'每波结束获得持有金币 10% 的利息（上限 60）',ap:()=>M.interest+=.1},
+ {id:'g3',r:0,max:3,name:'赏金猎人',desc:'每次击杀额外 +1 金币',ap:()=>M.killGold++},
+ {id:'g4',r:1,max:2,name:'工程学',desc:'建造和升级费用 -15%',ap:()=>M.costMul*=.85},
+ {id:'x1',r:1,max:2,name:'鹰眼',desc:'所有塔射程 +15%',ap:()=>M.rangeMul*=1.15},
+ {id:'x2',r:1,max:3,name:'致命一击',desc:'所有伤害 12% 几率暴击（×2.5）',ap:()=>M.crit+=.12},
+ {id:'x3',r:0,name:'城墙加固',desc:'生命 +6',ap:()=>{lives+=6}},
+ {id:'x4',r:2,max:2,name:'狂热',desc:'所有塔攻速 +18%',ap:()=>M.allRate*=1.18},
+ {id:'s1',r:2,max:1,name:'处决',desc:'非 Boss 敌人生命低于 15% 时直接击杀',ap:()=>{M.execute=.15}},
+ {id:'s2',r:2,max:1,name:'元素共鸣',desc:'场上每有一种不同的塔，所有伤害 +8%',ap:()=>{M.resonance=.08}},
+];
+
+// ---------- 状态 ----------
+let M,gold,lives,wave,phase,towers,enemies,projs,fx,texts,queue,spawnT,speed=1,sel=null,taken,grid,stats,rerollCost,pendingTitle;
+function reset(){
+  M={arrowDmg:1,arrowRate:1,arrowMulti:1,cannonDmg:1,cannonSplash:1,burn:0,frostSlow:.4,freeze:0,shatter:0,chain:3,teslaDmg:1,overload:0,interest:0,killGold:0,costMul:1,rangeMul:1,crit:0,allRate:1,execute:0,resonance:0};
+  gold=160;lives=20;wave=0;phase='build';towers=[];enemies=[];projs=[];fx=[];texts=[];queue=[];spawnT=0;sel=null;taken={};grid={};
+  stats={kills:0,leaked:0};
+  renderPanel();
+  offerCards('选择开局强化','每波结束都能三选一，围绕你的塔叠出流派');
+}
+
+// ---------- 敌人 ----------
+function spawn(type,d){
+  d=d||0;const b=ET[type],g=Math.pow(1.30,wave-1);
+  let hp=b.hp*g;if(type==='boss')hp*=wave/5*1.4;
+  const armor=b.armor?b.armor+wave*.5:0;
+  const p=posAt(d);
+  enemies.push({type,hp,max:hp,spd:b.spd,r:b.r,col:b.col,gold:b.gold,armor,dmg:b.dmg,d,x:p.x,y:p.y,slowT:0,slowA:0,frzT:0,burnT:0,burnD:0,dead:false});
+}
+function buildWave(w){
+  const q=[];const n=8+Math.floor(w*2.2);
+  for(let i=0;i<n;i++){
+    let t='norm';const r=Math.random();
+    if(w>=2&&r<.25)t='fast';else if(w>=4&&r<.42)t='tank';else if(w>=6&&r<.58)t='split';
+    q.push({t,gap:t==='fast'?.35:.65});
+  }
+  if(w===3||w===8||w===13)for(let i=0;i<10;i++)q.push({t:'fast',gap:.18});
+  if(w%5===0)q.push({t:'boss',gap:1.5});
+  return q;
+}
+function waveTag(w){if(w%5===0)return' · Boss';if(w===3||w===8||w===13)return' · 疾行群';return'';}
+
+// ---------- 塔 ----------
+function costOf(type){return Math.round(TT[type].cost*M.costMul);}
+function upCost(t){return Math.round(TT[t.type].cost*.8*t.lvl*M.costMul);}
+function resonanceMul(){if(!M.resonance)return 1;return 1+M.resonance*new Set(towers.map(t=>t.type)).size;}
+function stat(t){
+  const b=TT[t.type],L=t.lvl-1;
+  let dmg=b.dmg*Math.pow(1.65,L)*resonanceMul(),rate=b.rate*Math.pow(.9,L)/M.allRate,range=(b.range+.25*L)*M.rangeMul*CS;
+  if(t.type==='arrow'){dmg*=M.arrowDmg;rate/=M.arrowRate;}
+  if(t.type==='cannon')dmg*=M.cannonDmg;
+  if(t.type==='tesla')dmg*=M.teslaDmg;
+  return{dmg,rate,range};
+}
+function hit(e,dmg,noCrit,pure){
+  if(e.dead)return;let crit=false;
+  if(!noCrit&&M.crit&&Math.random()<M.crit){dmg*=2.5;crit=true;}
+  if(M.shatter&&(e.slowT>0||e.frzT>0))dmg*=1+M.shatter;
+  if(!pure)dmg=Math.max(dmg*.25,dmg-e.armor);
+  e.hp-=dmg;
+  if(crit)txt(e.x,e.y-14,Math.round(dmg)+'!','#fde047');
+  if(M.execute&&e.type!=='boss'&&e.hp>0&&e.hp<e.max*M.execute){e.hp=0;txt(e.x,e.y-14,'处决','#f87171');}
+  if(e.hp<=0)kill(e);
+}
+function kill(e){
+  e.dead=true;gold+=e.gold+M.killGold;stats.kills++;
+  if(e.type==='split'){spawn('mini',Math.max(0,e.d-4));spawn('mini',Math.max(0,e.d-16));}
+  fx.push({k:'boom',x:e.x,y:e.y,r:e.r*1.7,t:.25,T:.25,c:e.col});
+}
+function inRange(t,R){const R2=R*R;return enemies.filter(e=>!e.dead&&(e.x-t.x)**2+(e.y-t.y)**2<=R2);}
+function updTower(t,dt){
+  t.flash=Math.max(0,(t.flash||0)-dt);t.cd-=dt;if(t.cd>0)return;
+  const s=stat(t);const list=inRange(t,s.range);
+  if(!list.length){t.cd=0;return;}
+  list.sort((a,b)=>b.d-a.d);t.cd=s.rate;t.flash=.1;
+  if(t.type==='arrow'){
+    for(let i=0;i<Math.min(M.arrowMulti,list.length);i++)projs.push({k:'arrow',x:t.x,y:t.y,tg:list[i],tx:list[i].x,ty:list[i].y,v:520,dmg:s.dmg});
+  }else if(t.type==='cannon'){
+    const e=list[0];projs.push({k:'shell',x:t.x,y:t.y,tg:e,tx:e.x,ty:e.y,v:300,dmg:s.dmg,lvl:t.lvl});
+  }else if(t.type==='frost'){
+    fx.push({k:'ring',x:t.x,y:t.y,r:s.range,t:.35,T:.35,c:'#93c5fd'});
+    for(const e of list){
+      e.slowT=1.6;e.slowA=Math.min(.8,M.frostSlow);
+      if(M.freeze&&Math.random()<M.freeze)e.frzT=e.type==='boss'?.35:1;
+      hit(e,s.dmg);
+    }
+  }else if(t.type==='tesla'){
+    let cur=list[0],d=s.dmg;const hs=new Set(),pts=[[t.x,t.y]];
+    for(let i=0;i<M.chain&&cur;i++){
+      hs.add(cur);pts.push([cur.x,cur.y]);
+      let dd=d;if(M.overload&&Math.random()<M.overload){dd*=3;txt(cur.x,cur.y-14,'过载','#e9d5ff');}
+      hit(cur,dd);d*=.85;
+      let best=null,bd=(1.8*CS)**2;
+      for(const e of enemies){if(e.dead||hs.has(e))continue;const q=(e.x-cur.x)**2+(e.y-cur.y)**2;if(q<bd){bd=q;best=e;}}
+      cur=best;
+    }
+    fx.push({k:'zap',pts,t:.15,T:.15});
+  }
+}
+function updProj(p,dt){
+  if(p.tg&&!p.tg.dead){p.tx=p.tg.x;p.ty=p.tg.y;}
+  const dx=p.tx-p.x,dy=p.ty-p.y,dist=Math.hypot(dx,dy),st=p.v*dt;
+  if(dist<=st){
+    p.done=true;
+    if(p.k==='arrow'){if(p.tg&&!p.tg.dead)hit(p.tg,p.dmg);}
+    else{
+      const R=.9*CS*M.cannonSplash,R2=R*R;
+      fx.push({k:'boom',x:p.tx,y:p.ty,r:R,t:.3,T:.3,c:'#fb923c'});
+      for(const e of enemies){
+        if(!e.dead&&(e.x-p.tx)**2+(e.y-p.ty)**2<=R2){
+          if(M.burn){e.burnT=2;e.burnD=Math.max(e.burnD,M.burn*p.lvl);}
+          hit(e,p.dmg);
+        }
+      }
+    }
+  }else{p.x+=dx/dist*st;p.y+=dy/dist*st;}
+}
+function updEnemy(e,dt){
+  if(e.dead)return;
+  if(e.burnT>0){e.burnT-=dt;hit(e,e.burnD*dt,true,true);if(e.dead)return;}
+  let f=1;
+  if(e.frzT>0){e.frzT-=dt;f=0;}
+  else if(e.slowT>0){e.slowT-=dt;f=1-e.slowA;}
+  e.d+=e.spd*CS*f*dt;
+  if(e.d>=TOTAL){
+    e.dead=true;lives-=e.dmg;stats.leaked++;
+    fx.push({k:'flash',t:.3,T:.3});
+    if(lives<=0){lives=0;endGame(false);}
+    return;
+  }
+  const p=posAt(e.d);e.x=p.x;e.y=p.y;
+}
+
+// ---------- 流程 ----------
+function startWave(){
+  if(phase!=='build')return;
+  wave++;queue=buildWave(wave);spawnT=.3;phase='wave';renderPanel();
+}
+function step(dt){
+  if(queue.length){spawnT-=dt;if(spawnT<=0){const q=queue.shift();spawn(q.t);spawnT=q.gap;}}
+  for(const e of enemies)updEnemy(e,dt);
+  if(phase!=='wave')return;
+  for(const t of towers)updTower(t,dt);
+  for(const p of projs)updProj(p,dt);
+  projs=projs.filter(p=>!p.done);
+  enemies=enemies.filter(e=>!e.dead);
+  updFx(dt);
+  if(!queue.length&&!enemies.length)waveDone();
+}
+function waveDone(){
+  projs=[];
+  const bonus=20+wave*4,interest=M.interest?Math.min(60,Math.floor(gold*M.interest)):0;
+  gold+=bonus+interest;
+  if(wave>=MAXW){phase='win';endGame(true);return;}
+  phase='build';renderPanel();
+  offerCards(`第 ${wave} 波完成！`,`奖励 +${bonus} 金${interest?`，利息 +${interest}`:''} · 选择一项强化`);
+}
+function updFx(dt){
+  for(const f of fx)f.t-=dt;fx=fx.filter(f=>f.t>0);
+  for(const t of texts){t.t-=dt;t.y-=22*dt;}texts=texts.filter(t=>t.t>0);
+}
+function txt(x,y,s,c,T){texts.push({x,y,s,c,t:T||.8,T:T||.8});}
+
+// ---------- 卡牌 ----------
+function rollCards(){
+  const owned=new Set(towers.map(t=>t.type));
+  const pool=CARDS.filter(c=>!(c.max&&(taken[c.id]||0)>=c.max));
+  const out=[];
+  while(out.length<3&&pool.length){
+    let tot=0;
+    const ws=pool.map(c=>{let w=[60,28,12][c.r];if(c.tag)w*=owned.has(c.tag)?2.2:(towers.length?.45:1);tot+=w;return w;});
+    let x=Math.random()*tot,i=0;
+    while(i<ws.length-1&&x>ws[i]){x-=ws[i];i++;}
+    out.push(pool.splice(i,1)[0]);
+  }
+  return out;
+}
+function offerCards(title,sub){
+  pendingTitle=[title,sub];rerollCost=25;showCards(rollCards());
+}
+function showCards(cs){
+  const owned=towers.map(t=>t.type);
+  let h=`<h2>${pendingTitle[0]}</h2><div class="sub">${pendingTitle[1]}</div><div class="cards">`;
+  cs.forEach((c,i)=>{
+    const lv=taken[c.id]?` (已有 ${taken[c.id]})`:'';
+    const tagNote=c.tag&&!owned.includes(c.tag)?`<div class="d" style="color:#94a3b8;font-size:12px">需要建造${TT[c.tag].name}才生效</div>`:'';
+    h+=`<button class="card r${c.r}" data-i="${i}"><span class="r">${RAR[c.r]}</span><div class="n">${c.name}${lv}</div><div class="d">${c.desc}</div>${tagNote}</button>`;
+  });
+  h+=`</div><button class="reroll" id="rr" ${gold<rerollCost?'disabled':''}>🔄 刷新（${rerollCost} 金）</button>`;
+  const build=buildSummary();if(build)h+=`<div class="build">当前流派：${build}</div>`;
+  ov.innerHTML=h;ov.style.display='flex';
+  ov.querySelectorAll('.card').forEach(b=>b.onclick=()=>{
+    const c=cs[+b.dataset.i];c.ap();taken[c.id]=(taken[c.id]||0)+1;ov.style.display='none';renderPanel();
+  });
+  document.getElementById('rr').onclick=()=>{if(gold<rerollCost)return;gold-=rerollCost;rerollCost+=15;showCards(rollCards());};
+}
+function buildSummary(){
+  return Object.keys(taken).map(id=>{const c=CARDS.find(x=>x.id===id);return c.name+(taken[id]>1?'×'+taken[id]:'');}).join('、');
+}
+function endGame(win){
+  phase=win?'win':'over';sel=null;
+  let best=0;try{best=+localStorage.getItem('td_best')||0;if(wave>best){localStorage.setItem('td_best',wave);}}catch(e){}
+  const rec=Math.max(best,wave);
+  ov.innerHTML=`<h2>${win?'🏆 守住了！':'💥 城门失守'}</h2>
+  <div class="sub">${win?'15 波全部通过':'坚持到第 '+wave+' 波'} · 击杀 ${stats.kills} · 最佳 ${rec} 波</div>
+  <div class="build" style="margin-top:14px">本局流派：${buildSummary()||'无'}</div>
+  <button class="big" style="max-width:300px;margin-top:18px" id="again">再来一局</button>`;
+  ov.style.display='flex';
+  document.getElementById('again').onclick=()=>{ov.style.display='none';reset();};
+  renderPanel();
+}
+
+// ---------- 交互 ----------
+cv.addEventListener('pointerdown',ev=>{
+  if(phase==='over'||phase==='win')return;
+  const r=cv.getBoundingClientRect();
+  const x=(ev.clientX-r.left)*W/r.width,y=(ev.clientY-r.top)*H/r.height;
+  const c=Math.floor(x/CS),rr=Math.floor(y/CS);
+  if(c<0||c>=COLS||rr<0||rr>=ROWS)return;
+  if(pathSet.has(c+','+rr)||(sel&&sel.c===c&&sel.r===rr))sel=null;else sel={c,r:rr};
+  renderPanel();
+});
+document.getElementById('spd').onclick=()=>{speed=speed===1?2:speed===2?3:1;document.getElementById('spd').textContent=speed+'×';};
+panel.addEventListener('click',ev=>{
+  const b=ev.target.closest('button');if(!b||b.disabled)return;
+  if(b.id==='go'){startWave();return;}
+  if(!sel)return;const key=sel.c+','+sel.r;
+  if(b.dataset.b){
+    const type=b.dataset.b,cst=costOf(type);if(gold<cst||grid[key])return;
+    gold-=cst;const t={type,lvl:1,c:sel.c,r:sel.r,x:(sel.c+.5)*CS,y:(sel.r+.5)*CS,cd:0,spent:cst};
+    towers.push(t);grid[key]=t;renderPanel();
+  }else if('up' in b.dataset){
+    const t=grid[key];if(!t||t.lvl>=4)return;const uc=upCost(t);if(gold<uc)return;
+    gold-=uc;t.spent+=uc;t.lvl++;renderPanel();
+  }else if('sell' in b.dataset){
+    const t=grid[key];if(!t)return;gold+=Math.floor(t.spent*.7);
+    towers=towers.filter(x=>x!==t);delete grid[key];sel=null;renderPanel();
+  }
+});
+function renderPanel(){
+  let h='';
+  if(phase==='build')h+=`<button class="big" id="go">▶ 开始第 ${wave+1} 波${wave+1===MAXW?'（最终波）':''}${waveTag(wave+1)}</button>`;
+  else if(phase==='wave')h+=`<div class="wv">第 ${wave} 波进行中${waveTag(wave)}</div>`;
+  if(sel&&(phase==='build'||phase==='wave')){
+    const t=grid[sel.c+','+sel.r];
+    if(!t){
+      h+='<div class="row">'+Object.keys(TT).map(k=>{const d=TT[k];return `<button class="tb" data-b="${k}" data-cost="${costOf(k)}" style="border-color:${d.color}66"><b style="color:${d.color}">${d.ch}</b>${d.name}<br>${costOf(k)}金</button>`;}).join('')+'</div>';
+      h+=`<div class="hint">${Object.values(TT).map(d=>`<span style="color:${d.color}">${d.ch}</span> ${d.tip}`).join(' · ')}</div>`;
+    }else{
+      const s=stat(t),uc=upCost(t),d=TT[t.type];
+      h+=`<div class="tinfo"><b style="color:${d.color}">${d.name} Lv.${t.lvl}</b> · 伤害 ${s.dmg.toFixed(0)} · 每 ${s.rate.toFixed(2)} 秒 · 射程 ${(s.range/CS).toFixed(1)}</div>`;
+      h+=`<div class="row2"><button class="tb" data-up data-cost="${t.lvl>=4?99999:uc}">${t.lvl>=4?'已满级':'⬆ 升级 '+uc+' 金'}</button><button class="tb" data-sell>出售 +${Math.floor(t.spent*.7)} 金</button></div>`;
+    }
+  }else if(phase==='build'||phase==='wave'){
+    h+=`<div class="hint">点空地建塔，点塔升级/出售，战斗中也能建。每波结束三选一强化 —— 卡牌会偏向你已建的塔，围绕一两种塔叠流派最强。</div>`;
+  }
+  panel.innerHTML=h;syncButtons();
+}
+function syncButtons(){
+  panel.querySelectorAll('[data-cost]').forEach(b=>{b.disabled=gold<+b.dataset.cost;});
+}
+
+// ---------- 绘制 ----------
+function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    ctx.fillStyle=pathSet.has(c+','+r)?'#3b302b':((c+r)%2?'#171f3c':'#1b2446');
+    ctx.fillRect(c*CS,r*CS,CS,CS);
+  }
+  ctx.strokeStyle='rgba(255,214,170,.10)';ctx.lineWidth=6;ctx.lineJoin='round';ctx.beginPath();
+  PP.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
+  // 起点/终点
+  ctx.fillStyle='#22c55e';ctx.font='bold 12px sans-serif';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText('▶ 入口',4,CS*.5);
+  ctx.fillStyle='#ef4444';ctx.fillRect(W-6,12*CS+4,6,CS-8);ctx.textAlign='right';ctx.fillText('城门',W-10,13*CS+12);
+  // 选中
+  if(sel){
+    const t=grid[sel.c+','+sel.r];
+    ctx.strokeStyle='#fde047';ctx.lineWidth=2;ctx.strokeRect(sel.c*CS+1,sel.r*CS+1,CS-2,CS-2);
+    if(t){const s=stat(t);ctx.fillStyle='rgba(253,224,71,.08)';ctx.strokeStyle='rgba(253,224,71,.5)';ctx.beginPath();ctx.arc(t.x,t.y,s.range,0,7);ctx.fill();ctx.stroke();}
+  }
+  // 塔
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  for(const t of towers){
+    const d=TT[t.type];
+    ctx.fillStyle=t.flash>0?'#fff':'#0f1428';rr(t.c*CS+4,t.r*CS+4,CS-8,CS-8,7);ctx.fill();
+    ctx.strokeStyle=d.color;ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle=d.color;ctx.font='bold 17px sans-serif';ctx.fillText(d.ch,t.x,t.y-1);
+    for(let i=0;i<t.lvl;i++){ctx.fillStyle='#fde047';ctx.fillRect(t.c*CS+8+i*7,t.r*CS+CS-9,5,3);}
+  }
+  // 敌人
+  for(const e of enemies){
+    ctx.fillStyle=e.col;ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,7);ctx.fill();
+    if(e.armor){ctx.strokeStyle='#e2e8f0';ctx.lineWidth=2;ctx.stroke();}
+    if(e.frzT>0){ctx.strokeStyle='#e0f2fe';ctx.lineWidth=3;ctx.stroke();}
+    else if(e.slowT>0){ctx.strokeStyle='#60a5fa';ctx.lineWidth=2;ctx.stroke();}
+    if(e.burnT>0){ctx.fillStyle='rgba(251,146,60,.7)';ctx.beginPath();ctx.arc(e.x,e.y-e.r,3,0,7);ctx.fill();}
+    if(e.type==='boss'){ctx.fillStyle='#fff';ctx.font='bold 12px sans-serif';ctx.fillText('王',e.x,e.y);}
+    const w=e.r*2+4,p=Math.max(0,e.hp/e.max);
+    ctx.fillStyle='#000a';ctx.fillRect(e.x-w/2,e.y-e.r-7,w,3);
+    ctx.fillStyle=p>.5?'#4ade80':p>.25?'#facc15':'#ef4444';ctx.fillRect(e.x-w/2,e.y-e.r-7,w*p,3);
+  }
+  // 子弹
+  for(const p of projs){
+    ctx.fillStyle=p.k==='arrow'?'#bbf7d0':'#fdba74';
+    ctx.beginPath();ctx.arc(p.x,p.y,p.k==='arrow'?2.5:4.5,0,7);ctx.fill();
+  }
+  // 特效
+  for(const f of fx){
+    const a=f.t/f.T;
+    if(f.k==='boom'){ctx.globalAlpha=a*.6;ctx.fillStyle=f.c;ctx.beginPath();ctx.arc(f.x,f.y,f.r*(1.2-a*.4),0,7);ctx.fill();}
+    else if(f.k==='ring'){ctx.globalAlpha=a*.5;ctx.strokeStyle=f.c;ctx.lineWidth=3;ctx.beginPath();ctx.arc(f.x,f.y,f.r*(1-a*.6),0,7);ctx.stroke();}
+    else if(f.k==='zap'){ctx.globalAlpha=a;ctx.strokeStyle='#e9d5ff';ctx.lineWidth=2.5;ctx.beginPath();
+      f.pts.forEach(([x,y],i)=>{if(!i){ctx.moveTo(x,y);return;}const [px,py]=f.pts[i-1];ctx.lineTo((px+x)/2+(Math.random()-.5)*10,(py+y)/2+(Math.random()-.5)*10);ctx.lineTo(x,y);});ctx.stroke();}
+    else if(f.k==='flash'){ctx.globalAlpha=a*.25;ctx.fillStyle='#ef4444';ctx.fillRect(0,0,W,H);}
+    ctx.globalAlpha=1;
+  }
+  ctx.font='bold 13px sans-serif';
+  for(const t of texts){ctx.globalAlpha=Math.min(1,t.t/t.T*1.5);ctx.fillStyle=t.c;ctx.fillText(t.s,t.x,t.y);}
+  ctx.globalAlpha=1;
+}
+const hW=document.getElementById('hW'),hG=document.getElementById('hG'),hL=document.getElementById('hL');
+let last=performance.now(),uiT=0;
+function loop(now){
+  const dt=Math.min(.05,(now-last)/1000);last=now;
+  if(phase==='wave'){for(let s=0;s<speed&&phase==='wave';s++)step(dt);}
+  else updFx(dt);
+  draw();
+  uiT-=dt;
+  if(uiT<=0){uiT=.15;hW.textContent=`波次 ${wave}/${MAXW}`;hG.textContent=`💰 ${Math.floor(gold)}`;hL.textContent=`❤️ ${lives}`;syncButtons();}
+  requestAnimationFrame(loop);
+}
+reset();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
