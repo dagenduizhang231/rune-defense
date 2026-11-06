@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>符文塔防 · v0.2a</title>
+<title>符文塔防 · v0.2a.1</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 html,body{margin:0;background:#0d1020;color:#e5e7eb;font-family:-apple-system,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;height:100%;overflow:hidden;touch-action:manipulation}
@@ -78,9 +78,10 @@ button{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}
 <div id="ov"></div>
 <div id="bp"></div>
 <script src="art.js"></script>
+<script src="maps.js"></script>
 <script>
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.2a';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.2a.1';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -94,18 +95,20 @@ const TILEINFO={
   runewell:{name:'符文井',desc:'周围 8 格里的塔伤害 +20%（多口井可以叠加）。这一格本身不能建塔。',build:false},
   swamp:{name:'沼泽',desc:'铺在路上，经过的敌人移动速度 -30%。',build:false},
 };
-const MAPS=[
-  {name:'长廊',diff:1,desc:'一条很长的弯路，敌人从一个入口进来。适合新手。',
-   paths:[[[-1,1],[7,1],[7,4],[1,4],[1,7],[7,7],[7,10],[1,10],[1,12],[9,12]]],
-   tiles:{'4,2':'highland','4,8':'highland','4,5':'runewell','4,7':'swamp','5,12':'swamp'}},
-  {name:'双入口',diff:2,desc:'敌人从左右两个入口轮流进来，在中间汇合。路更短，考验兵力分配。',
-   paths:[[[-1,1],[2,1],[2,6],[4,6],[4,8],[1,8],[1,10],[7,10],[7,12],[1,12],[1,13],[-1,13]],
-          [[9,1],[6,1],[6,6],[4,6],[4,8],[1,8],[1,10],[7,10],[7,12],[1,12],[1,13],[-1,13]]],
-   tiles:{'4,3':'highland','4,4':'runewell','4,11':'highland','4,8':'swamp','4,12':'swamp'}},
-  {name:'环城',diff:2,desc:'敌人绕着城一圈圈走向中心。摆在中间的塔能打到好几段路。',
-   paths:[[[-1,1],[7,1],[7,12],[1,12],[1,3],[5,3],[5,8]]],
-   tiles:{'3,6':'highland','6,6':'runewell','7,6':'swamp','1,8':'swamp'}},
-];
+const MAPTYPES={
+  tutorial:{name:'新手长廊',desc:'一条很长的弯路，敌人从一个入口进来。最适合第一次玩。'},
+  snake  :{name:'蜿蜒小径',desc:'一条长路弯弯绕绕，敌人只有一个入口。'},
+  twin   :{name:'双路汇流',desc:'两个入口同时来敌，在半路汇合成一条路。'},
+  triple :{name:'三路汇流',desc:'三个入口同时来敌，考验兵力怎么分配。'},
+  fork   :{name:'岔路',desc:'路在中途分成两支，每个敌人随机走一边，再在后面汇合。'},
+  citadel:{name:'围城',desc:'城门在地图中间，敌人一路绕进来攻城。'},
+};
+const TUTORIAL={id:'tutorial',type:'tutorial',place:'',stars:1,
+  paths:[[[-1,1],[7,1],[7,4],[1,4],[1,7],[7,7],[7,10],[1,10],[1,12],[9,12]]],
+  tiles:{'4,2':'highland','4,8':'highland','4,5':'runewell','4,7':'swamp','5,12':'swamp'}};
+const POOL=(typeof window!=='undefined'&&window.RUNE_MAPS)||[];
+const MAPS=[TUTORIAL,...POOL];
+const mapTitle=m=>m.type==='tutorial'?'新手长廊':`${MAPTYPES[m.type].name} · ${m.place}`;
 let MAP,MAPI=0,PATHS=[],pathSet=new Set(),tiles={};
 function setupMap(i){
   MAPI=i;MAP=MAPS[i];pathSet=new Set();tiles={...MAP.tiles};
@@ -268,9 +271,9 @@ function resetRun(mapIdx){
 // ======================= 敌人 =======================
 function spawn(type,d,pi,elite){
   const b=ET[type],isBoss=type.startsWith('boss');
-  let hp=b.hp*hpScale(step);if(elite)hp*=2.6;
+  let hp=b.hp*hpScale(step)*(MAP.hpMul||1);if(elite)hp*=2.6;
   let armor=b.armor?b.armor+step*.5:0;
-  if(pi===undefined)pi=PATHS.length>1?(spawnCount++%PATHS.length):0;
+  if(pi===undefined)pi=PATHS.length>1?(MAP.type==='fork'?(Math.random()<.5?0:1):(spawnCount++%PATHS.length)):0;
   const p=posAt(pi,d||0);
   const e={type,spr:type,boss:isBoss,elite:!!elite,afx:{},dir:1,hp,max:hp,spd:b.spd,r:b.r*(elite?1.25:1),col:b.col,gold:b.gold*(elite?3:1),armor,dmg:b.dmg,d:d||0,pi,x:p.x,y:p.y,
     slowT:0,slowA:0,frzT:0,burnT:0,burnD:0,hitT:9,shield:0,dead:false,lead:false,revealed:true};
@@ -654,14 +657,27 @@ function pickCard(i){const c=pendingCards[i];if(!c)return;takeCard(c);ov.style.d
 function buildSummary(){return Object.keys(taken).map(id=>{const c=CARDS.find(x=>x.id===id);return c.name+(taken[id]>1?'×'+taken[id]:'');}).join('、');}
 
 // ======================= 开局 / 结局 =======================
-function showMapSelect(){
+let mapOffersCur=[];
+function shuffleA(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function rollMapOffers(){
+  const first=!seen.has('run1');let last='';try{last=localStorage.getItem('td_lastmap')||'';}catch(e){}
+  const types=shuffleA(Object.keys(MAPTYPES).filter(t=>t!=='tutorial'&&POOL.some(m=>m.type===t))).slice(0,first?2:3);
+  const offers=types.map(t=>{let ids=MAPS.map((m,i)=>i).filter(i=>MAPS[i].type===t&&MAPS[i].id!==last);return pick(ids);});
+  if(first||!offers.length)offers.unshift(0);
+  return offers;
+}
+function showMapSelect(reroll){
   phase='map';sel=null;renderPanel();
+  if(!reroll||!mapOffersCur.length)mapOffersCur=rollMapOffers();
   let best=0;try{best=+localStorage.getItem('td_best2')||0;}catch(e){}
-  let h=`<h2>符文塔防 ${VERSION}</h2><div class="sub">选择地图${best?` · 最佳纪录：第 ${best} 站`:''}</div><div class="cards">`;
-  MAPS.forEach((m,i)=>{h+=`<button class="card map" data-i="${i}">${mapSVG(m)}<div><div class="n">${m.name} <span style="font-size:13px;color:#fbbf24">${'★'.repeat(m.diff)}${'☆'.repeat(3-m.diff)}</span></div><div class="d">${m.desc}</div></div></button>`;});
-  h+=`</div><div class="tip"><b>地形</b>　<span class="tag" style="background:#86c46a">高地</span>塔射程 +1 格　<span class="tag" style="background:#818cf8">符文井</span>周围的塔伤害 +20%　<span class="tag" style="background:#a3b18a">沼泽</span>敌人减速 30%</div>`;
+  let h=`<h2>符文塔防 ${VERSION}</h2><div class="sub">选择这一局的地图${best?` · 最佳纪录：第 ${best} 站`:''}</div><div class="cards">`;
+  mapOffersCur.forEach(i=>{const m=MAPS[i],T=MAPTYPES[m.type];h+=`<button class="card map" data-i="${i}">${mapSVG(m)}<div><div class="n">${mapTitle(m)} <span style="font-size:13px;color:#fbbf24">${'★'.repeat(m.stars||1)}${'☆'.repeat(3-(m.stars||1))}</span></div><div class="d">${T.desc}${m.type==='tutorial'&&!seen.has('run1')?'<br><b style="color:#86efac">第一次玩推荐</b>':''}</div></div></button>`;});
+  h+=`</div><button class="reroll" id="mapReroll">🎲 换一批地图</button><div class="tip"><b>地形</b>　<span class="tag" style="background:#86c46a">高地</span>塔射程 +1 格　<span class="tag" style="background:#818cf8">符文井</span>周围的塔伤害 +20%　<span class="tag" style="background:#a3b18a">沼泽</span>敌人减速 30%<br><span style="color:#9aa3c7">图库共 ${POOL.length} 张地图，每局随机抽取；星级越多越难。</span></div>`;
   ov.innerHTML=h;ov.style.display='flex';
-  ov.querySelectorAll('.card').forEach(b=>b.onclick=()=>{ov.style.display='none';const i=+b.dataset.i;if(!seen.has('tut'))showTutorial(()=>resetRun(i));else resetRun(i);});
+  ov.querySelectorAll('.card').forEach(b=>b.onclick=()=>{ov.style.display='none';const i=+b.dataset.i;
+    seen.add('run1');try{localStorage.setItem('td_seen',JSON.stringify([...seen]));localStorage.setItem('td_lastmap',MAPS[i].id);}catch(e){}
+    if(!seen.has('tut'))showTutorial(()=>resetRun(i));else resetRun(i);});
+  $('mapReroll').onclick=()=>{mapOffersCur=rollMapOffers();showMapSelect(true);};
 }
 function showTutorial(then){
   seen.add('tut');try{localStorage.setItem('td_seen',JSON.stringify([...seen]));}catch(e){}
@@ -678,7 +694,7 @@ function endGame(win){
   phase=win?'win':'over';sel=null;bpOpen=false;bp.style.display='none';paused=false;
   let best=0;try{best=+localStorage.getItem('td_best2')||0;if(step>best)localStorage.setItem('td_best2',step);}catch(e){}
   ov.innerHTML=`<h2>${win?'🏆 守住了！':'💥 城门失守'}</h2>
-  <div class="sub">地图：${MAP.name} · ${win?'15 站全部通过':'倒在第 '+step+' 站'} · 击杀 ${stats.kills} · 最佳 第 ${Math.max(best,step)} 站</div>
+  <div class="sub">地图：${mapTitle(MAP)} · ${win?'15 站全部通过':'倒在第 '+step+' 站'} · 击杀 ${stats.kills} · 最佳 第 ${Math.max(best,step)} 站</div>
   <div class="build" style="margin-top:14px">本局流派：${buildSummary()||'无'}</div>
   <button class="big" style="max-width:300px;margin-top:18px" id="again">再来一局</button>`;
   ov.style.display='flex';
@@ -776,7 +792,7 @@ function draw(){
   else for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ctx.fillStyle=pathSet.has(c+','+r)?'#a08866':'#3f6b34';ctx.fillRect(c*CS,r*CS,CS,CS);}
   // 入口
   ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 13px sans-serif';
-  for(const P of PATHS){const s=clampPt(P.PP[0]);ctx.fillStyle='rgba(13,16,32,.55)';ctx.beginPath();ctx.arc(s.x,s.y,10,0,7);ctx.fill();ctx.fillStyle='#bbf7d0';ctx.fillText('▶',s.x+(P.PP[0].x<0?2:P.PP[0].x>W?-2:0),s.y+1);}
+  const ents=new Set();for(const P of PATHS){const s=clampPt(P.PP[0]),ek=Math.round(s.x)+','+Math.round(s.y);if(ents.has(ek))continue;ents.add(ek);ctx.fillStyle='rgba(13,16,32,.55)';ctx.beginPath();ctx.arc(s.x,s.y,10,0,7);ctx.fill();ctx.fillStyle='#bbf7d0';ctx.fillText('▶',s.x+(P.PP[0].x<0?2:P.PP[0].x>W?-2:0),s.y+1);}
   drawGate(PATHS[0].PP[PATHS[0].PP.length-1]);
   // 选中
   if(sel&&sel.enemy&&!sel.enemy.dead){const e=sel.enemy;ctx.strokeStyle='#fde047';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(e.x,e.y+e.r*.8,e.r*1.4,e.r*.55,0,0,7);ctx.stroke();}
