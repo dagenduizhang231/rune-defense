@@ -8,9 +8,27 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 html,body{margin:0;background:#0d1020;color:#e5e7eb;font-family:-apple-system,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;height:100%;overflow:hidden;touch-action:manipulation}
 #app{display:flex;flex-direction:column;align-items:center;height:100vh;height:100dvh}
-#hud{width:100%;max-width:480px;display:flex;gap:6px;justify-content:space-between;align-items:center;padding:8px 10px;font-size:14px;font-weight:600}
-.pill{background:#1b2040;padding:5px 10px;border-radius:999px;white-space:nowrap}
-#spd{background:#334155;padding:5px 12px;border-radius:999px;font-weight:700}
+#hud{width:100%;max-width:480px;display:flex;gap:5px;justify-content:space-between;align-items:center;padding:8px 8px;font-size:13.5px;font-weight:600}
+.pill{background:#1b2040;padding:5px 8px;border-radius:999px;white-space:nowrap}
+#spd,#runes{background:#334155;padding:5px 12px;border-radius:999px;font-weight:700;font-size:14px}
+#runes{background:#4c1d95}
+#bp{position:fixed;inset:0;background:rgba(5,7,15,.88);display:none;flex-direction:column;align-items:center;padding:18px 14px;z-index:8;overflow-y:auto}
+#bp .wrap{width:100%;max-width:420px}
+#bp h2{margin:0 0 6px;font-size:19px;text-align:center}
+.sum{background:#1b2040;border-radius:12px;padding:10px 12px;font-size:13.5px;line-height:1.7;margin:8px 0 12px}
+.sum b{color:#86efac}
+.rl{background:#1b2040;border:2px solid #475080;border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.rl.r1{border-color:#8b5cf6}.rl.r2{border-color:#f59e0b}
+.rl .n{font-weight:700;font-size:15px}
+.rl .d{font-size:13px;color:#c7cbe0;margin-top:2px}
+.rl .lv{font-size:13px;color:#fde68a;margin-top:4px}
+.rl .off{font-size:12px;color:#94a3b8;margin-top:2px}
+.close{margin:10px auto 0;display:block;background:#2563eb;padding:11px 40px;font-size:15px;font-weight:700}
+.intro img{width:96px;height:96px}
+.intro .tip{background:#1b2040;border-radius:12px;padding:10px 12px;margin-top:12px;font-size:13.5px;line-height:1.6;text-align:left;max-width:380px}
+.einfo{display:flex;gap:10px;align-items:center;margin-top:8px}
+.einfo img{width:52px;height:52px}
+.einfo .t{font-size:13px;line-height:1.55;color:#cbd5e1}
 #cv{display:block;width:min(100vw,480px,calc((100vh - 190px) * 0.6429));width:min(100vw,480px,calc((100dvh - 190px) * 0.6429));aspect-ratio:360/560;border-radius:10px;background:#141a33;touch-action:none}
 #panel{width:100%;max-width:480px;padding:8px 10px;flex:1;min-height:140px}
 button{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}
@@ -44,19 +62,38 @@ button{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}
     <span class="pill" id="hW">波次 0/15</span>
     <span class="pill" id="hG">💰 0</span>
     <span class="pill" id="hL">❤️ 20</span>
+    <button id="runes">🔮 符文</button>
     <button id="spd">1×</button>
   </div>
   <canvas id="cv"></canvas>
   <div id="panel"></div>
 </div>
 <div id="ov"></div>
+<div id="bp"></div>
+<script src="art.js"></script>
 <script>
 "use strict";
 const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXW=15;
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
-const panel=document.getElementById('panel'),ov=document.getElementById('ov');
+const panel=document.getElementById('panel'),ov=document.getElementById('ov'),bp=document.getElementById('bp');
+
+// ---------- 美术 ----------
+const SPR={};let BG=null;
+const ARTKEYS=['arrow','cannon','frost','tesla','norm','fast','tank','split','mini','boss1','boss2','boss3'];
+function raster(svgStr,px){return new Promise(res=>{if(typeof Image==='undefined'){res(null);return;}const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=c.height=px;c.getContext('2d').drawImage(im,0,0,px,px);res(c);};im.onerror=()=>res(null);im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgStr.replace('<svg ','<svg width="'+px+'" height="'+px+'" '));});}
+async function loadArt(){
+  if(!window.RuneArt)return;
+  const A=window.RuneArt,px=Math.max(96,Math.ceil(72*DPR));
+  await Promise.all(ARTKEYS.map(async k=>{SPR[k]=await raster(A[k](),px);}));
+  const g0=await raster(A.grass(0),128),g1=await raster(A.grass(1),128),pt=await raster(A.path(),128);
+  const b=document.createElement('canvas');b.width=W*DPR;b.height=H*DPR;const bx=b.getContext('2d');bx.scale(DPR,DPR);
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const im=pathSet.has(c+','+r)?pt:((c+r)%2?g1:g0);if(im)bx.drawImage(im,c*CS,r*CS,CS,CS);}
+  BG=b;
+}
+const ARTURL={};
+function artURL(k){if(!window.RuneArt)return'';return ARTURL[k]||(ARTURL[k]='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(window.RuneArt[k]()));}
 
 // ---------- 地图 ----------
 const WP=[[-1,1],[7,1],[7,4],[1,4],[1,7],[7,7],[7,10],[1,10],[1,12],[9,12]];
@@ -92,6 +129,16 @@ const ET={
   mini :{hp:16 ,spd:1.5 ,r:6 ,col:'#6ee7b7',gold:2  ,armor:0,dmg:1},
   boss :{hp:900,spd:.5  ,r:17,col:'#e879f9',gold:100,armor:3,dmg:6},
 };
+const EINFO={
+  norm :{name:'史莱姆',desc:'最普通的敌人，血量和速度都一般。',tip:'点击场上任何敌人，都能随时查看它的信息。'},
+  fast :{name:'风灵',desc:'速度很快、血量少，容易冲过防线。',tip:'用冰塔减速，或者用攻速快的箭塔拦截。'},
+  tank :{name:'石甲兽',desc:'血厚、带护甲：每次受到的伤害先减去护甲值（最少保留 25%）。',tip:'单发伤害越高越好，比如炮塔、升级后的塔。很多次小伤害会被护甲吃掉。'},
+  split:{name:'双生史莱姆',desc:'被击败后分裂成两只小史莱姆。',tip:'炮塔的爆炸、电塔的连锁能一次打中分裂出来的小怪。'},
+  mini :{name:'小史莱姆',desc:'双生史莱姆分裂出来的，血少、跑得快。',tip:'范围伤害最有效。'},
+  boss1:{name:'巢母',desc:'第一幕 Boss。血量很高、带护甲，漏过城门扣 6 条命。',tip:'集中升级高伤害的塔，冰塔减速能多争取输出时间。'},
+  boss2:{name:'棱镜守卫',desc:'第二幕 Boss。血量和护甲都更高，漏过城门扣 6 条命。',tip:'护甲很高，要靠高单发伤害和暴击。'},
+  boss3:{name:'暴君',desc:'最终 Boss，全场最强，漏过城门扣 6 条命。',tip:'把资源都投到输出上，冰封加碎冰能大幅提高伤害。'},
+};
 const RAR=['普通','稀有','史诗'];
 const CARDS=[
  {id:'a1',tag:'arrow',r:0,name:'锋利箭头',desc:'箭塔伤害 +35%',ap:()=>M.arrowDmg*=1.35},
@@ -117,15 +164,41 @@ const CARDS=[
  {id:'s1',r:2,max:1,name:'处决',desc:'非 Boss 敌人生命低于 15% 时直接击杀',ap:()=>{M.execute=.15}},
  {id:'s2',r:2,max:1,name:'元素共鸣',desc:'场上每有一种不同的塔，所有伤害 +8%',ap:()=>{M.resonance=.08}},
 ];
+const LIVE={
+  a1:()=>`当前箭塔伤害 ×${M.arrowDmg.toFixed(2)}`,
+  a2:()=>`当前箭塔攻速 ×${M.arrowRate.toFixed(2)}`,
+  a3:()=>`箭塔每次射 ${M.arrowMulti} 个目标`,
+  c1:()=>`当前炮塔伤害 ×${M.cannonDmg.toFixed(2)}`,
+  c2:()=>`爆炸半径 ${(0.9*M.cannonSplash).toFixed(1)} 格`,
+  c3:()=>`燃烧每秒 ${M.burn}×塔等级 伤害`,
+  f1:()=>`当前减速 ${Math.round(Math.min(.8,M.frostSlow)*100)}%`,
+  f2:()=>`冻结几率 ${Math.round(M.freeze*100)}%`,
+  f3:()=>`被控敌人受到伤害 +${Math.round(M.shatter*100)}%`,
+  t1:()=>`电塔连锁 ${M.chain} 个目标`,
+  t2:()=>`当前电塔伤害 ×${M.teslaDmg.toFixed(2)}`,
+  t3:()=>`${Math.round(M.overload*100)}% 几率造成 3 倍伤害`,
+  g1:n=>`已到账 ${120*n} 金`,
+  g2:()=>`按现在的金币，本波结束利息 +${interestNow()} 金`,
+  g3:()=>`本局已多赚 ${stats.bounty} 金`,
+  g4:()=>`当前费用 ×${M.costMul.toFixed(2)}`,
+  x1:()=>`当前射程 ×${M.rangeMul.toFixed(2)}`,
+  x2:()=>`当前暴击率 ${Math.round(M.crit*100)}%`,
+  x3:n=>`已增加 ${6*n} 条命`,
+  x4:()=>`当前攻速 ×${M.allRate.toFixed(2)}`,
+  s1:()=>`本局已处决 ${stats.exec} 个敌人`,
+  s2:()=>{const k=new Set(towers.map(t=>t.type)).size;return `场上 ${k} 种塔，伤害 +${Math.round(M.resonance*k*100)}%`;},
+};
 
 // ---------- 状态 ----------
 let M,gold,lives,wave,phase,towers,enemies,projs,fx,texts,queue,spawnT,speed=1,sel=null,taken,grid,stats,rerollCost,pendingTitle;
+let paused=false,introQ=[],bpOpen=false,seen=new Set();
+try{seen=new Set(JSON.parse(localStorage.getItem('td_seen')||'[]'));}catch(e){}
 function reset(){
   M={arrowDmg:1,arrowRate:1,arrowMulti:1,cannonDmg:1,cannonSplash:1,burn:0,frostSlow:.4,freeze:0,shatter:0,chain:3,teslaDmg:1,overload:0,interest:0,killGold:0,costMul:1,rangeMul:1,crit:0,allRate:1,execute:0,resonance:0};
   gold=160;lives=20;wave=0;phase='build';towers=[];enemies=[];projs=[];fx=[];texts=[];queue=[];spawnT=0;sel=null;taken={};grid={};
-  stats={kills:0,leaked:0};
+  stats={kills:0,leaked:0,bounty:0,exec:0};paused=false;introQ=[];
   renderPanel();
-  offerCards('选择开局强化','每波结束都能三选一，围绕你的塔叠出流派');
+  offerCards('选择开局符文','每波结束都能三选一，围绕你的塔叠出流派');
 }
 
 // ---------- 敌人 ----------
@@ -133,8 +206,9 @@ function spawn(type,d){
   d=d||0;const b=ET[type],g=Math.pow(1.30,wave-1);
   let hp=b.hp*g;if(type==='boss')hp*=wave/5*1.4;
   const armor=b.armor?b.armor+wave*.5:0;
-  const p=posAt(d);
-  enemies.push({type,hp,max:hp,spd:b.spd,r:b.r,col:b.col,gold:b.gold,armor,dmg:b.dmg,d,x:p.x,y:p.y,slowT:0,slowA:0,frzT:0,burnT:0,burnD:0,dead:false});
+  const p=posAt(d);const spr=type==='boss'?(wave>=15?'boss3':wave>=10?'boss2':'boss1'):type;
+  if(!seen.has(spr)&&!introQ.includes(spr))introQ.push(spr);
+  enemies.push({type,spr,dir:1,hp,max:hp,spd:b.spd,r:b.r,col:b.col,gold:b.gold,armor,dmg:b.dmg,d,x:p.x,y:p.y,slowT:0,slowA:0,frzT:0,burnT:0,burnD:0,dead:false});
 }
 function buildWave(w){
   const q=[];const n=8+Math.floor(w*2.2);
@@ -147,7 +221,7 @@ function buildWave(w){
   if(w%5===0)q.push({t:'boss',gap:1.5});
   return q;
 }
-function waveTag(w){if(w%5===0)return' · Boss';if(w===3||w===8||w===13)return' · 疾行群';return'';}
+function waveTag(w){if(w%5===0)return' · Boss '+EINFO[w>=15?'boss3':w>=10?'boss2':'boss1'].name;if(w===3||w===8||w===13)return' · 疾行群';return'';}
 
 // ---------- 塔 ----------
 function costOf(type){return Math.round(TT[type].cost*M.costMul);}
@@ -168,11 +242,11 @@ function hit(e,dmg,noCrit,pure){
   if(!pure)dmg=Math.max(dmg*.25,dmg-e.armor);
   e.hp-=dmg;
   if(crit)txt(e.x,e.y-14,Math.round(dmg)+'!','#fde047');
-  if(M.execute&&e.type!=='boss'&&e.hp>0&&e.hp<e.max*M.execute){e.hp=0;txt(e.x,e.y-14,'处决','#f87171');}
+  if(M.execute&&e.type!=='boss'&&e.hp>0&&e.hp<e.max*M.execute){e.hp=0;stats.exec++;txt(e.x,e.y-14,'处决','#f87171');}
   if(e.hp<=0)kill(e);
 }
 function kill(e){
-  e.dead=true;gold+=e.gold+M.killGold;stats.kills++;
+  e.dead=true;gold+=e.gold+M.killGold;stats.bounty+=M.killGold;stats.kills++;
   if(e.type==='split'){spawn('mini',Math.max(0,e.d-4));spawn('mini',Math.max(0,e.d-16));}
   fx.push({k:'boom',x:e.x,y:e.y,r:e.r*1.7,t:.25,T:.25,c:e.col});
 }
@@ -237,13 +311,13 @@ function updEnemy(e,dt){
     if(lives<=0){lives=0;endGame(false);}
     return;
   }
-  const p=posAt(e.d);e.x=p.x;e.y=p.y;
+  const p=posAt(e.d);if(Math.abs(p.x-e.x)>.01)e.dir=p.x<e.x?-1:1;e.x=p.x;e.y=p.y;
 }
 
 // ---------- 流程 ----------
 function startWave(){
   if(phase!=='build')return;
-  wave++;queue=buildWave(wave);spawnT=.3;phase='wave';renderPanel();
+  wave++;queue=buildWave(wave);spawnT=.3;phase='wave';if(sel&&sel.enemy)sel=null;renderPanel();
 }
 function step(dt){
   if(queue.length){spawnT-=dt;if(spawnT<=0){const q=queue.shift();spawn(q.t);spawnT=q.gap;}}
@@ -254,6 +328,7 @@ function step(dt){
   projs=projs.filter(p=>!p.done);
   enemies=enemies.filter(e=>!e.dead);
   updFx(dt);
+  if(introQ.length){showIntro();return;}
   if(!queue.length&&!enemies.length)waveDone();
 }
 function waveDone(){
@@ -262,13 +337,41 @@ function waveDone(){
   gold+=bonus+interest;
   if(wave>=MAXW){phase='win';endGame(true);return;}
   phase='build';renderPanel();
-  offerCards(`第 ${wave} 波完成！`,`奖励 +${bonus} 金${interest?`，利息 +${interest}`:''} · 选择一项强化`);
+  offerCards(`第 ${wave} 波完成！`,`奖励 +${bonus} 金${interest?`，利息 +${interest}`:''} · 选择一个符文`);
 }
 function updFx(dt){
   for(const f of fx)f.t-=dt;fx=fx.filter(f=>f.t>0);
   for(const t of texts){t.t-=dt;t.y-=22*dt;}texts=texts.filter(t=>t.t>0);
 }
 function txt(x,y,s,c,T){texts.push({x,y,s,c,t:T||.8,T:T||.8});}
+
+// ---------- 新敌人介绍 / 符文面板 ----------
+function showIntro(){
+  const k=introQ.shift();if(!k)return;
+  seen.add(k);try{localStorage.setItem('td_seen',JSON.stringify([...seen]));}catch(e){}
+  paused=true;const i=EINFO[k];
+  ov.innerHTML=`<div class="intro"><div class="sub">${k.startsWith('boss')?'Boss 登场':'新敌人出现'}</div><img src="${artURL(k)}" alt=""><h2>${i.name}</h2><div class="tip">${i.desc}<br><b style="color:#86efac">应对：</b>${i.tip}</div><button class="big" style="max-width:260px;margin-top:16px" id="okIntro">知道了</button></div>`;
+  ov.style.display='flex';
+  document.getElementById('okIntro').onclick=()=>{ov.style.display='none';if(introQ.length)showIntro();else paused=false;};
+}
+function interestNow(){return M.interest?Math.min(60,Math.floor(gold*M.interest)):0;}
+function openRunes(){if(phase==='over'||phase==='win')return;bpOpen=true;paused=true;renderRunes();bp.style.display='flex';}
+function closeRunes(){bpOpen=false;bp.style.display='none';if(ov.style.display!=='flex')paused=false;}
+function renderRunes(){
+  const ids=Object.keys(taken),nw=phase==='wave'?wave:wave+1;
+  let h=`<div class="wrap"><h2>🔮 我的符文（${ids.length}）</h2>`;
+  h+=`<div class="sum">${phase==='wave'?'本波':'下一波'}结束预计收入：过关奖励 <b>+${20+nw*4}</b> 金${M.interest?`，利息 <b>+${interestNow()}</b> 金`:''}<br>暴击率 ${Math.round(M.crit*100)}% · 射程 ×${M.rangeMul.toFixed(2)} · 攻速 ×${M.allRate.toFixed(2)} · 费用 ×${M.costMul.toFixed(2)}</div>`;
+  if(!ids.length)h+=`<div class="sum" style="text-align:center;color:#9aa3c7">还没有符文。开局和每波结束都能三选一获得。</div>`;
+  for(const id of ids){
+    const c=CARDS.find(x=>x.id===id),n=taken[id];
+    const off=c.tag&&!towers.some(t=>t.type===c.tag)?`<div class="off">还没有建造${TT[c.tag].name}，暂未生效</div>`:'';
+    h+=`<div class="rl r${c.r}"><div class="n">${c.name}${n>1?' ×'+n:''}</div><div class="d">${c.desc}</div><div class="lv">${LIVE[id]?LIVE[id](n):''}</div>${off}</div>`;
+  }
+  h+=`<button class="close" id="closeRunes">返回</button></div>`;
+  bp.innerHTML=h;document.getElementById('closeRunes').onclick=closeRunes;
+}
+document.getElementById('runes').onclick=openRunes;
+function ehpText(e){return e.dead?'已被击败':`生命 ${Math.ceil(Math.max(0,e.hp))}/${Math.ceil(e.max)}${e.armor?` · 护甲 ${e.armor.toFixed(1)}`:''}`;}
 
 // ---------- 卡牌 ----------
 function rollCards(){
@@ -295,19 +398,20 @@ function showCards(cs){
     const tagNote=c.tag&&!owned.includes(c.tag)?`<div class="d" style="color:#94a3b8;font-size:12px">需要建造${TT[c.tag].name}才生效</div>`:'';
     h+=`<button class="card r${c.r}" data-i="${i}"><span class="r">${RAR[c.r]}</span><div class="n">${c.name}${lv}</div><div class="d">${c.desc}</div>${tagNote}</button>`;
   });
-  h+=`</div><button class="reroll" id="rr" ${gold<rerollCost?'disabled':''}>🔄 刷新（${rerollCost} 金）</button>`;
+  h+=`</div><div><button class="reroll" id="rr" ${gold<rerollCost?'disabled':''}>🔄 刷新（${rerollCost} 金）</button> <button class="reroll" id="seeRunes">🔮 我的符文</button></div>`;
   const build=buildSummary();if(build)h+=`<div class="build">当前流派：${build}</div>`;
   ov.innerHTML=h;ov.style.display='flex';
   ov.querySelectorAll('.card').forEach(b=>b.onclick=()=>{
     const c=cs[+b.dataset.i];c.ap();taken[c.id]=(taken[c.id]||0)+1;ov.style.display='none';renderPanel();
   });
+  document.getElementById('seeRunes').onclick=openRunes;
   document.getElementById('rr').onclick=()=>{if(gold<rerollCost)return;gold-=rerollCost;rerollCost+=15;showCards(rollCards());};
 }
 function buildSummary(){
   return Object.keys(taken).map(id=>{const c=CARDS.find(x=>x.id===id);return c.name+(taken[id]>1?'×'+taken[id]:'');}).join('、');
 }
 function endGame(win){
-  phase=win?'win':'over';sel=null;
+  phase=win?'win':'over';sel=null;bpOpen=false;bp.style.display='none';paused=false;
   let best=0;try{best=+localStorage.getItem('td_best')||0;if(wave>best){localStorage.setItem('td_best',wave);}}catch(e){}
   const rec=Math.max(best,wave);
   ov.innerHTML=`<h2>${win?'🏆 守住了！':'💥 城门失守'}</h2>
@@ -324,6 +428,9 @@ cv.addEventListener('pointerdown',ev=>{
   if(phase==='over'||phase==='win')return;
   const r=cv.getBoundingClientRect();
   const x=(ev.clientX-r.left)*W/r.width,y=(ev.clientY-r.top)*H/r.height;
+  let hitE=null,bd=1e9;
+  for(const e of enemies){if(e.dead)continue;const d=(e.x-x)**2+(e.y-y)**2;if(d<(e.r+10)**2&&d<bd){bd=d;hitE=e;}}
+  if(hitE){sel={enemy:hitE};renderPanel();return;}
   const c=Math.floor(x/CS),rr=Math.floor(y/CS);
   if(c<0||c>=COLS||rr<0||rr>=ROWS)return;
   if(pathSet.has(c+','+rr)||(sel&&sel.c===c&&sel.r===rr))sel=null;else sel={c,r:rr};
@@ -333,7 +440,7 @@ document.getElementById('spd').onclick=()=>{speed=speed===1?2:speed===2?3:1;docu
 panel.addEventListener('click',ev=>{
   const b=ev.target.closest('button');if(!b||b.disabled)return;
   if(b.id==='go'){startWave();return;}
-  if(!sel)return;const key=sel.c+','+sel.r;
+  if(!sel||sel.enemy)return;const key=sel.c+','+sel.r;
   if(b.dataset.b){
     const type=b.dataset.b,cst=costOf(type);if(gold<cst||grid[key])return;
     gold-=cst;const t={type,lvl:1,c:sel.c,r:sel.r,x:(sel.c+.5)*CS,y:(sel.r+.5)*CS,cd:0,spent:cst};
@@ -350,7 +457,10 @@ function renderPanel(){
   let h='';
   if(phase==='build')h+=`<button class="big" id="go">▶ 开始第 ${wave+1} 波${wave+1===MAXW?'（最终波）':''}${waveTag(wave+1)}</button>`;
   else if(phase==='wave')h+=`<div class="wv">第 ${wave} 波进行中${waveTag(wave)}</div>`;
-  if(sel&&(phase==='build'||phase==='wave')){
+  if(sel&&sel.enemy&&(phase==='build'||phase==='wave')){
+    const e=sel.enemy,i=EINFO[e.spr];
+    h+=`<div class="einfo"><img src="${artURL(e.spr)}" alt=""><div class="t"><b>${i.name}</b> · <span id="ehp">${ehpText(e)}</span><br>${i.desc}<br><span style="color:#86efac">应对：${i.tip}</span></div></div>`;
+  }else if(sel&&(phase==='build'||phase==='wave')){
     const t=grid[sel.c+','+sel.r];
     if(!t){
       h+='<div class="row">'+Object.keys(TT).map(k=>{const d=TT[k];return `<button class="tb" data-b="${k}" data-cost="${costOf(k)}" style="border-color:${d.color}66"><b style="color:${d.color}">${d.ch}</b>${d.name}<br>${costOf(k)}金</button>`;}).join('')+'</div>';
@@ -361,7 +471,7 @@ function renderPanel(){
       h+=`<div class="row2"><button class="tb" data-up data-cost="${t.lvl>=4?99999:uc}">${t.lvl>=4?'已满级':'⬆ 升级 '+uc+' 金'}</button><button class="tb" data-sell>出售 +${Math.floor(t.spent*.7)} 金</button></div>`;
     }
   }else if(phase==='build'||phase==='wave'){
-    h+=`<div class="hint">点空地建塔，点塔升级/出售，战斗中也能建。每波结束三选一强化 —— 卡牌会偏向你已建的塔，围绕一两种塔叠流派最强。</div>`;
+    h+=`<div class="hint">点空地建塔，点塔升级/出售，战斗中也能建；点敌人查看信息。每波结束三选一符文，右上角 🔮 随时查看已有符文。符文会偏向你已建的塔，围绕一两种塔叠流派最强。</div>`;
   }
   panel.innerHTML=h;syncButtons();
 }
@@ -373,41 +483,60 @@ function syncButtons(){
 function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
 function draw(){
   ctx.clearRect(0,0,W,H);
-  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
-    ctx.fillStyle=pathSet.has(c+','+r)?'#3b302b':((c+r)%2?'#171f3c':'#1b2446');
-    ctx.fillRect(c*CS,r*CS,CS,CS);
+  if(BG)ctx.drawImage(BG,0,0,W,H);
+  else{
+    for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+      ctx.fillStyle=pathSet.has(c+','+r)?'#3b302b':((c+r)%2?'#171f3c':'#1b2446');
+      ctx.fillRect(c*CS,r*CS,CS,CS);
+    }
+    ctx.strokeStyle='rgba(255,214,170,.10)';ctx.lineWidth=6;ctx.lineJoin='round';ctx.beginPath();
+    PP.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
   }
-  ctx.strokeStyle='rgba(255,214,170,.10)';ctx.lineWidth=6;ctx.lineJoin='round';ctx.beginPath();
-  PP.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
   // 起点/终点
-  ctx.fillStyle='#22c55e';ctx.font='bold 12px sans-serif';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText('▶ 入口',4,CS*.5);
-  ctx.fillStyle='#ef4444';ctx.fillRect(W-6,12*CS+4,6,CS-8);ctx.textAlign='right';ctx.fillText('城门',W-10,13*CS+12);
+  ctx.fillStyle='#bbf7d0';ctx.font='bold 12px sans-serif';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText('▶ 入口',4,CS*.5);
+  ctx.fillStyle='#ef4444';ctx.fillRect(W-6,12*CS+4,6,CS-8);ctx.textAlign='right';ctx.fillStyle='#fecaca';ctx.fillText('城门',W-10,13*CS+12);
   // 选中
-  if(sel){
+  if(sel&&sel.enemy&&!sel.enemy.dead){const e=sel.enemy;ctx.strokeStyle='#fde047';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(e.x,e.y+e.r*.8,e.r*1.4,e.r*.55,0,0,7);ctx.stroke();}
+  if(sel&&!sel.enemy){
     const t=grid[sel.c+','+sel.r];
     ctx.strokeStyle='#fde047';ctx.lineWidth=2;ctx.strokeRect(sel.c*CS+1,sel.r*CS+1,CS-2,CS-2);
     if(t){const s=stat(t);ctx.fillStyle='rgba(253,224,71,.08)';ctx.strokeStyle='rgba(253,224,71,.5)';ctx.beginPath();ctx.arc(t.x,t.y,s.range,0,7);ctx.fill();ctx.stroke();}
   }
   // 塔
   ctx.textAlign='center';ctx.textBaseline='middle';
-  for(const t of towers){
-    const d=TT[t.type];
-    ctx.fillStyle=t.flash>0?'#fff':'#0f1428';rr(t.c*CS+4,t.r*CS+4,CS-8,CS-8,7);ctx.fill();
-    ctx.strokeStyle=d.color;ctx.lineWidth=2;ctx.stroke();
-    ctx.fillStyle=d.color;ctx.font='bold 17px sans-serif';ctx.fillText(d.ch,t.x,t.y-1);
-    for(let i=0;i<t.lvl;i++){ctx.fillStyle='#fde047';ctx.fillRect(t.c*CS+8+i*7,t.r*CS+CS-9,5,3);}
+  for(const t of [...towers].sort((a,b)=>a.r-b.r)){
+    const d=TT[t.type],sp=SPR[t.type];
+    if(sp){
+      const s=CS*(1.22+.05*(t.lvl-1));ctx.drawImage(sp,t.x-s/2,t.y+CS*.5-s*.95,s,s);
+      if(t.flash>0){ctx.globalAlpha=.7;ctx.fillStyle=d.color;ctx.beginPath();ctx.arc(t.x,t.y+CS*.5-s*.9,4,0,7);ctx.fill();ctx.globalAlpha=1;}
+      for(let i=0;i<t.lvl;i++){ctx.fillStyle='#0f1428';ctx.fillRect(t.c*CS+7+i*7,t.r*CS+CS-6,6,4);ctx.fillStyle='#fde047';ctx.fillRect(t.c*CS+7.5+i*7,t.r*CS+CS-5.5,5,3);}
+    }else{
+      ctx.fillStyle=t.flash>0?'#fff':'#0f1428';rr(t.c*CS+4,t.r*CS+4,CS-8,CS-8,7);ctx.fill();
+      ctx.strokeStyle=d.color;ctx.lineWidth=2;ctx.stroke();
+      ctx.fillStyle=d.color;ctx.font='bold 17px sans-serif';ctx.fillText(d.ch,t.x,t.y-1);
+      for(let i=0;i<t.lvl;i++){ctx.fillStyle='#fde047';ctx.fillRect(t.c*CS+8+i*7,t.r*CS+CS-9,5,3);}
+    }
   }
   // 敌人
-  for(const e of enemies){
-    ctx.fillStyle=e.col;ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,7);ctx.fill();
-    if(e.armor){ctx.strokeStyle='#e2e8f0';ctx.lineWidth=2;ctx.stroke();}
-    if(e.frzT>0){ctx.strokeStyle='#e0f2fe';ctx.lineWidth=3;ctx.stroke();}
-    else if(e.slowT>0){ctx.strokeStyle='#60a5fa';ctx.lineWidth=2;ctx.stroke();}
-    if(e.burnT>0){ctx.fillStyle='rgba(251,146,60,.7)';ctx.beginPath();ctx.arc(e.x,e.y-e.r,3,0,7);ctx.fill();}
-    if(e.type==='boss'){ctx.fillStyle='#fff';ctx.font='bold 12px sans-serif';ctx.fillText('王',e.x,e.y);}
+  for(const e of [...enemies].sort((a,b)=>a.y-b.y)){
+    const sp=SPR[e.spr];
+    if(e.frzT>0||e.slowT>0){ctx.fillStyle=e.frzT>0?'rgba(186,230,253,.6)':'rgba(96,165,250,.4)';ctx.beginPath();ctx.ellipse(e.x,e.y+e.r*.8,e.r*1.3,e.r*.5,0,0,7);ctx.fill();}
+    let top=e.y-e.r-4;
+    if(sp){
+      const s=e.r*2.9;top=e.y-s*.62;
+      ctx.save();ctx.translate(e.x,e.y);if(e.dir<0)ctx.scale(-1,1);ctx.drawImage(sp,-s/2,-s*.62,s,s);ctx.restore();
+      if(e.frzT>0){ctx.fillStyle='rgba(224,242,254,.45)';ctx.beginPath();ctx.arc(e.x,e.y,e.r*1.15,0,7);ctx.fill();}
+    }else{
+      ctx.fillStyle=e.col;ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,7);ctx.fill();
+      if(e.armor){ctx.strokeStyle='#e2e8f0';ctx.lineWidth=2;ctx.stroke();}
+      if(e.frzT>0){ctx.strokeStyle='#e0f2fe';ctx.lineWidth=3;ctx.stroke();}
+      else if(e.slowT>0){ctx.strokeStyle='#60a5fa';ctx.lineWidth=2;ctx.stroke();}
+      if(e.type==='boss'){ctx.fillStyle='#fff';ctx.font='bold 12px sans-serif';ctx.fillText('王',e.x,e.y);}
+    }
+    if(e.burnT>0){ctx.fillStyle='rgba(251,146,60,.85)';ctx.beginPath();ctx.arc(e.x+e.r*.6,top+4,3,0,7);ctx.fill();}
     const w=e.r*2+4,p=Math.max(0,e.hp/e.max);
-    ctx.fillStyle='#000a';ctx.fillRect(e.x-w/2,e.y-e.r-7,w,3);
-    ctx.fillStyle=p>.5?'#4ade80':p>.25?'#facc15':'#ef4444';ctx.fillRect(e.x-w/2,e.y-e.r-7,w*p,3);
+    ctx.fillStyle='#000a';ctx.fillRect(e.x-w/2,top-5,w,3);
+    ctx.fillStyle=p>.5?'#4ade80':p>.25?'#facc15':'#ef4444';ctx.fillRect(e.x-w/2,top-5,w*p,3);
   }
   // 子弹
   for(const p of projs){
@@ -432,13 +561,14 @@ const hW=document.getElementById('hW'),hG=document.getElementById('hG'),hL=docum
 let last=performance.now(),uiT=0;
 function loop(now){
   const dt=Math.min(.05,(now-last)/1000);last=now;
-  if(phase==='wave'){for(let s=0;s<speed&&phase==='wave';s++)step(dt);}
+  if(phase==='wave'&&!paused){for(let s=0;s<speed&&phase==='wave'&&!paused;s++)step(dt);}
   else updFx(dt);
   draw();
   uiT-=dt;
-  if(uiT<=0){uiT=.15;hW.textContent=`波次 ${wave}/${MAXW}`;hG.textContent=`💰 ${Math.floor(gold)}`;hL.textContent=`❤️ ${lives}`;syncButtons();}
+  if(uiT<=0){uiT=.15;hW.textContent=`波次 ${wave}/${MAXW}`;hG.textContent=`💰 ${Math.floor(gold)}`;hL.textContent=`❤️ ${lives}`;syncButtons();if(sel&&sel.enemy){const el=document.getElementById('ehp');if(el)el.textContent=ehpText(sel.enemy);}}
   requestAnimationFrame(loop);
 }
+loadArt();
 reset();
 requestAnimationFrame(loop);
 </script>
