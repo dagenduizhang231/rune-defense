@@ -41,13 +41,15 @@ window.__qa={
   if(!fin(gold))bad.push('金币异常 '+gold);if(!fin(lives)||lives>60)bad.push('生命异常 '+lives);
   for(const e of enemies)if(!e.dead&&(!fin(e.hp)||!fin(e.x)||!fin(e.y)))bad.push('敌人数值异常 '+e.type);
   for(const t of towers){try{const s=stat(t);if(!fin(s.dmg)||!fin(s.range))bad.push('塔数值异常 '+t.type+' lv'+t.lvl);}catch(err){bad.push('stat() 报错 '+err);}}
+  if(HERO&&(!fin(HERO.cd[0])||!fin(HERO.cd[1])))bad.push('英雄冷却异常');
   for(const cb of COMBOS){const ok=schoolCount(cb.a)>=2&&schoolCount(cb.b)>=2;if(ok!==(comboReady(cb)||has(cb.id)))bad.push('合体条件不一致 '+cb.id);}
   return bad;},
  state(){const vis=el=>el&&el.style.display==='flex';
   const btns=vis(ov)?[...ov.querySelectorAll('button')].filter(b=>b.offsetParent!==null&&!b.disabled).length:0;
   return {phase,step,lives,gold:Math.floor(gold),paused,ov:vis(ov),bp:vis(bp),btns,intro:!!document.getElementById('okIntro')&&vis(ov),
    q:queue.length,en:enemies.length,kills:stats.kills,node:curNode,towers:towers.length,legs:Object.keys(taken).filter(k=>k.startsWith('L_')).length,
-   combos:Object.keys(taken).filter(k=>k.startsWith('C_')).length,runes:Object.keys(taken).length};}
+   combos:Object.keys(taken).filter(k=>k.startsWith('C_')).length,runes:Object.keys(taken).length,
+   ehp:Math.round(enemies.reduce((a,e)=>a+(e.dead?0:e.hp),0)),ed:Math.round(enemies.reduce((a,e)=>a+(e.dead?0:e.d),0))};}
 };
 """
 
@@ -55,6 +57,8 @@ def run_worker(args):
     wid, runs, spd, seed = args
     rnd = random.Random(seed)
     problems, results = [], []
+    cov = {}
+    def C(k): cov[k] = cov.get(k, 0) + 1
     with sync_playwright() as p:
         b = p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox'])
         ctx = b.new_context(viewport={'width': 390, 'height': 844})
@@ -62,7 +66,10 @@ def run_worker(args):
         errs = []
         pg.on('pageerror', lambda e: errs.append('页面报错: ' + str(e)))
         pg.on('console', lambda m: m.type == 'error' and errs.append('console.error: ' + m.text))
-        pg.goto(ROOT); pg.wait_for_timeout(1200)
+        pg.goto(ROOT); pg.wait_for_timeout(800)
+        if wid % 2 == 0:
+            pg.evaluate("localStorage.setItem('td_meta',JSON.stringify({shards:900,owned:{altar:true,fate:true,h_fire:true,h_ice:true,pk_odd:true},hero:'fire',diff:0,unlockedDiff:3,runs:0,wins:0,auto:true}))")
+            pg.reload(); pg.wait_for_timeout(800)
         pg.evaluate(BOT_JS)
         ev = pg.evaluate
 
@@ -90,7 +97,7 @@ def run_worker(args):
                     if s['bp']: prob(run, f'{where}：符文面板关不掉')
                     if s['paused'] and not s['intro'] and not before:
                         prob(run, f'{where}：关掉符文面板后仍处于暂停')
-                    return
+                    C('开关符文面板'); return
 
         cv = None
         def tap_cell(c, r):
@@ -103,7 +110,7 @@ def run_worker(args):
         for run in range(1, runs + 1):
             if run > 1 and rnd.random() < .5:
                 ev("localStorage.removeItem('td_seen')")   # 一半的局重新看到敌人介绍
-            t0 = time.time(); errs.clear()
+            t0 = time.time(); errs.clear(); run_sh0 = ev('META.shards')
             last_sig, last_change = None, time.time()
             done = False; route = rnd.choice(['safe', 'mixed', 'greedy'])
             ev('__qa.types=null')
@@ -112,7 +119,7 @@ def run_worker(args):
                 errs.clear()
                 for m in ev('__qa.check()'): prob(run, m)
                 s = ev('__qa.state()')
-                sig = (s['phase'], s['step'], s['q'], s['en'], s['kills'], s['ov'], s['bp'], s['btns'], s['towers'], s['gold'])
+                sig = (s['phase'], s['step'], s['q'], s['en'], s['kills'], s['ov'], s['bp'], s['btns'], s['towers'], s['gold'], s['ehp'], s['ed'])
                 if sig != last_sig: last_sig, last_change = sig, time.time()
                 elif time.time() - last_change > 12:
                     prob(run, f'卡住 12 秒没有任何变化：{json.dumps(s, ensure_ascii=False)}'); break
@@ -127,12 +134,34 @@ def run_worker(args):
                     if s['phase'] in ('win', 'over'):
                         results.append({'run': run, 'result': '胜利' if s['phase'] == 'win' else '失败', 'step': s['step'], 'lives': s['lives'],
                                         'legs': s['legs'], 'combos': s['combos'], 'runes': s['runes'], 'route': route, 'sec': round(time.time() - t0)})
-                        if not click('#again'): prob(run, '结束界面点不了「再来一局」')
+                        if not click('#again'): prob(run, '结束界面点不了「回到大厅」')
                         pg.wait_for_timeout(200)
-                        if ev('phase') != 'map': prob(run, '「再来一局」之后没有回到选地图')
+                        if ev('phase') != 'map' or not pg.is_visible('#lgo'): prob(run, '结束后没有回到大厅')
+                        if run_sh0 is not None and ev('META.shards') <= run_sh0 and s['step'] > 1: prob(run, '打完一局没有获得符文碎片')
                         done = True; break
                     if rnd.random() < .4 and s['phase'] != 'map': runes_roundtrip(run, f'弹窗({s["phase"]})')
-                    if s['intro']: click('#okIntro')
+                    if pg.is_visible('#lgo'):
+                        if rnd.random() < .5: click('#lart'); pg.wait_for_timeout(80)
+                        else:
+                            hs = [x for x in pg.query_selector_all('.card.hero') if x.is_enabled()]
+                            if hs and rnd.random() < .7: rnd.choice(hs).click(); pg.wait_for_timeout(60)
+                            ds = pg.query_selector_all('.dchip')
+                            if ds and rnd.random() < .5: rnd.choice(ds).click(); pg.wait_for_timeout(60)
+                            run_sh0 = ev('META.shards'); click('#lgo')
+                        continue
+                    if pg.is_visible('#artBack'):
+                        buys = [x for x in pg.query_selector_all('.buy') if x.is_enabled()]
+                        if buys and rnd.random() < .7:
+                            before = ev('META.shards'); rnd.choice(buys).click(); C('工匠铺购买'); pg.wait_for_timeout(60)
+                            if ev('META.shards') >= before: prob(run, '工匠铺：买了东西碎片没扣')
+                        else: click('#artBack')
+                        continue
+                    if pg.is_visible('#altarNo'):
+                        C('诅咒祭坛')
+                        if rnd.random() < .3: click('#altarNo')
+                        else: C('接受诅咒'); rnd.choice([c for c in pg.query_selector_all('#ov .card.curse') if c.is_visible()]).click()
+                        pg.wait_for_timeout(60); continue
+                    if s['intro']: C('敌人介绍'); click('#okIntro')
                     elif pg.is_visible('#tutok'): click('#tutok')
                     elif pg.is_visible('#ov .card.node'):
                         nodes = ev('pendingNodes')
@@ -140,7 +169,7 @@ def run_worker(args):
                         i = nodes.index(want) if want in nodes else 0
                         click(f'#ov .card.node[data-i="{i}"]')
                     elif pg.is_visible('#erRune'):
-                        click('#erTile' if rnd.random() < .35 else '#erRune')
+                        C('精英奖励'); click('#erTile' if rnd.random() < .35 else '#erRune')
                     else:
                         cards = pg.query_selector_all('#ov .card')
                         vis = [c for c in cards if c.is_visible()]
@@ -174,6 +203,11 @@ def run_worker(args):
                     continue
                 if s['phase'] == 'wave':
                     if rnd.random() < .04: runes_roundtrip(run, '战斗中')
+                    if rnd.random() < .08:
+                        for sel_ in ['#hs0', '#hs1', '#hauto']:
+                            try:
+                                if pg.is_visible(sel_) and pg.is_enabled(sel_, timeout=500) and rnd.random() < .5: click(sel_); C('点英雄按钮')
+                            except Exception: pass
                     # 战斗卡住检测：有怪在排队但 3 秒内一个都没刷出
                     if s['q'] > 0 and s['en'] == 0 and not s['paused']:
                         pg.wait_for_timeout(3000)
@@ -192,7 +226,8 @@ def run_worker(args):
                 # 恢复：重新加载
                 pg.goto(ROOT); pg.wait_for_timeout(1000); pg.evaluate(BOT_JS)
         b.close()
-    return problems, results
+    cov['英雄技能释放(含自动)'] = 0
+    return problems, results, cov
 
 if __name__ == '__main__':
     runs = int(sys.argv[1]) if len(sys.argv) > 1 else 8
@@ -203,8 +238,12 @@ if __name__ == '__main__':
     with mp.Pool(par) as pool:
         outs = pool.map(run_worker, [(i, n, spd, 1000 + i * 7 + int(t0)) for i, n in enumerate(per) if n])
     probs = [x for o in outs for x in o[0]]; res = [x for o in outs for x in o[1]]
+    cov = {}
+    for o in outs:
+        for k, v in o[2].items(): cov[k] = cov.get(k, 0) + v
     print(f'完成 {len(res)}/{runs} 局，用时 {round(time.time()-t0)} 秒')
     for r in res: print('  ', json.dumps(r, ensure_ascii=False))
+    print('覆盖：' + '，'.join(f'{k} {v}' for k, v in cov.items() if v))
     print(f'发现问题 {len(probs)} 个')
     seen = {}
     for p in probs:

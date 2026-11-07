@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>符文塔防 · v0.2c.2</title>
+<title>符文塔防 · v0.3</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 html,body{margin:0;background:#0d1020;color:#e5e7eb;font-family:-apple-system,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;height:100%;overflow:hidden;touch-action:manipulation}
@@ -29,6 +29,7 @@ button{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}
 .tinfo{margin-top:8px;font-size:13.5px;color:#cbd5e1;line-height:1.5}
 #ov,#bp{position:fixed;inset:0;background:rgba(5,7,15,.88);display:none;flex-direction:column;align-items:center;justify-content:center;padding:16px;z-index:9;text-align:center;overflow-y:auto}
 #bp{z-index:10;justify-content:flex-start}
+#ov{justify-content:flex-start}#ov>:first-child{margin-top:auto}#ov>:last-child{margin-bottom:auto}
 #ov h2,#bp h2{margin:0 0 4px;font-size:20px}
 .sub{color:#9aa3c7;font-size:13px;line-height:1.5}
 .cards{display:flex;flex-direction:column;gap:10px;width:100%;max-width:420px;margin-top:14px}
@@ -64,6 +65,14 @@ button{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}
 .einfo{display:flex;gap:10px;align-items:center;margin-top:8px}
 .einfo img{width:52px;height:52px;flex:none}
 .einfo .t{font-size:13px;line-height:1.55;color:#cbd5e1}
+.hbar{display:flex;gap:6px;align-items:center;margin-bottom:8px}.hbar .hn{font-size:13px;font-weight:700;white-space:nowrap}
+.hs{flex:1;background:#1e293b;border:2px solid #475569;padding:7px 4px;font-size:13px;font-weight:700;line-height:1.2}.hs small{font-weight:400;color:#a5f3fc}.hs:disabled{opacity:.5}
+.hs.ha{flex:none;font-size:12px;padding:7px 8px}.hs.ha.on{border-color:#22c55e;color:#bbf7d0}
+.lsec{text-align:left;font-weight:700;font-size:15px;margin:14px 0 6px}
+.hrow{display:flex;flex-direction:column;gap:8px}.card.hero{padding:10px 12px}.card.hero.on{border-color:#22c55e;box-shadow:0 0 14px rgba(34,197,94,.35)}.card.hero .d{font-size:12.5px}
+.chip.on{border-color:#22c55e;background:#14532d}
+.rl.art{display:flex;align-items:center;gap:10px}.buy{background:#0e7490;padding:8px 12px;font-weight:700;white-space:nowrap}.buy:disabled{opacity:.4}.own{color:#86efac;font-size:13px;white-space:nowrap}
+.card.curse{border-color:#be123c}
 .tag{display:inline-block;border-radius:6px;padding:0 6px;margin-right:4px;font-size:12px;font-weight:700;color:#0d1020}
 </style>
 </head>
@@ -86,7 +95,7 @@ button{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}
 <script src="maps.js"></script>
 <script>
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.2c.2';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.3';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -193,7 +202,7 @@ const ET={
 };
 // 数值曲线（v0.2a）：前期更有压力，Boss 降血量、靠机制
 // 敌人血量：按幕分段增长（v0.2c：前松后紧）
-const HPBASE=2.85,HPG=[1.2,1.33,1.62];
+const HPBASE=3.25,HPG=[1.2,1.33,1.62];
 const hpScale=s=>{let v=HPBASE;for(let k=2;k<=s;k++)v*=HPG[Math.min(3,Math.ceil(k/5))-1];return v;};
 const EINFO={
   norm :{name:'史莱姆',desc:'最普通的敌人，血量和速度都一般。',tip:'点击场上任何敌人、地块，都能查看它的信息。'},
@@ -319,16 +328,79 @@ const LIVE={
   L_tesla:()=>`场上已进化 ${towers.filter(t=>t.type==='tesla'&&t.lvl>=4).length} 座`,
 };
 
+// ======================= v0.3：大厅 / 英雄 / 诅咒 / 难度 =======================
+// 三个模块各有开关：网址加 ?off=meta,hero,curse 可以单独关闭（也方便出问题时直接关掉重发）
+const FEAT={meta:true,hero:true,curse:true};
+try{const q=new URLSearchParams(location.search).get('off');if(q)q.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=false;});}catch(e){}
+// 局外存档
+const META_DEF={shards:0,owned:{},hero:'wind',diff:0,unlockedDiff:0,runs:0,wins:0,auto:true};
+let META=JSON.parse(JSON.stringify(META_DEF));
+try{const m=JSON.parse(localStorage.getItem('td_meta')||'null');if(m&&typeof m==='object'&&!Array.isArray(m))META=Object.assign(META,m);}catch(e){}
+function saveMeta(){try{localStorage.setItem('td_meta',JSON.stringify(META));}catch(e){}}
+const owns=id=>!FEAT.meta||!!META.owned[id];
+// 工匠与可解锁内容（以解锁新玩法为主，属性加成有上限）
+const ARTISANS=[
+ {id:'smith',name:'符文匠',icon:'🔮',desc:'把新的符文加入奖励池。',items:[
+   {id:'pk_gold',name:'金之道',cost:30,desc:'解锁符文：战利品、贪婪之眼、回收',cards:['g5','g6','g7']},
+   {id:'pk_art',name:'秘法',cost:40,desc:'解锁符文：处决、元素共鸣',cards:['s1','s2']},
+   {id:'pk_odd',name:'奇物',cost:45,desc:'解锁符文：连珠、不稳定核心、时停沙漏、共振石',cards:['x5','x6','x7','x8']},
+ ]},
+ {id:'arch',name:'建筑师',icon:'🏗️',desc:'开局的小加成。',items:[
+   {id:'gold1',name:'储备金 I',cost:25,desc:'开局金币 +15'},
+   {id:'gold2',name:'储备金 II',cost:45,desc:'开局金币再 +15',req:'gold1'},
+   {id:'gold3',name:'储备金 III',cost:70,desc:'开局金币再 +15',req:'gold2'},
+   {id:'land',name:'地形学',cost:40,desc:'开局带一张「高地」地形卡'},
+   {id:'salv',name:'回收站',cost:35,desc:'出售塔返还 70% → 80%'},
+ ]},
+ {id:'hall',name:'英雄殿',icon:'⚔️',desc:'招募新的英雄。',items:[
+   {id:'h_fire',name:'熔岩领主',cost:60,desc:'炮塔流英雄：陨石、焦土'},
+   {id:'h_ice',name:'霜语者',cost:80,desc:'控制流英雄：冰封、寒冰壁垒'},
+ ]},
+ {id:'astro',name:'占星师',icon:'🌙',desc:'和命运做交易。',items:[
+   {id:'altar',name:'诅咒祭坛',cost:40,desc:'击败第 1、2 个 Boss 后出现祭坛：接受一个诅咒，换取强力奖励'},
+   {id:'fate',name:'命运之线',cost:50,desc:'祭坛多给一笔交易可选',req:'altar'},
+ ]},
+];
+const LOCKED_CARDS={};ARTISANS[0].items.forEach(it=>it.cards.forEach(c=>LOCKED_CARDS[c]=it.id));
+const cardUnlocked=c=>!LOCKED_CARDS[c.id]||owns(LOCKED_CARDS[c.id]);
+// 英雄：1 个被动 + 2 个技能。技能不用瞄准，自动打敌人最密集的地方；可开「自动释放」
+const HEROES={
+ wind:{name:'风行者',icon:'🏹',col:'#4ade80',unlock:null,passive:'箭塔攻速 +10%',
+   sk:[{name:'箭雨',icon:'🏹',cd:30,desc:'敌人最密集处落下 3 秒箭雨（半径 1.5 格）'},{name:'疾风号令',icon:'💨',cd:45,desc:'所有塔攻速 +30%，持续 5 秒'}]},
+ fire:{name:'熔岩领主',icon:'🌋',col:'#fb923c',unlock:'h_fire',passive:'炮塔伤害 +10%',
+   sk:[{name:'陨石',icon:'☄️',cd:35,desc:'1 秒后砸中敌人最密集处（半径 1.6 格），造成重击并点燃'},{name:'焦土',icon:'🔥',cd:50,desc:'点燃场上所有敌人 4 秒'}]},
+ ice:{name:'霜语者',icon:'❄️',col:'#60a5fa',unlock:'h_ice',passive:'冰塔减速 +10%',
+   sk:[{name:'冰封',icon:'🧊',cd:40,desc:'冻结场上所有敌人 2.5 秒（Boss 0.8 秒）'},{name:'寒冰壁垒',icon:'🛡️',cd:70,desc:'8 秒内漏过城门的敌人不扣命（Boss 除外）'}]},
+};
+const heroOK=k=>HEROES[k]&&(!HEROES[k].unlock||owns(HEROES[k].unlock));
+// 难度阶：逐级叠加
+const DIFFS=['','敌人血量 +10%','精英战多 1 个精英','开局金币 -30','敌人移速 +8%','Boss 血量 +25%','普通战斗也会出现 1 个精英','击败 Boss 只回复 2 条命','敌人血量再 +15%','精英多 1 个词缀','暴君血量 +50%'];
+let DIFF=0;const D=n=>DIFF>=n;
+// 诅咒交易：诅咒持续到本局结束
+const CURSES={
+ rush  :{name:'狂潮',desc:'敌人移速 +8%',boon:'传说符文三选一'},
+ tax   :{name:'重税',desc:'每站过关金币 -35%',boon:'立刻获得 250 金'},
+ armor :{name:'坚甲',desc:'所有敌人护甲 +5',boon:'场上所有未满级的塔升 1 级'},
+ blood :{name:'血契',desc:'立刻失去 8 条命',boon:'史诗符文三选一，再来一次稀有以上符文三选一'},
+ elites:{name:'精英潮',desc:'之后每场普通战斗多 1 个精英',boon:'稀有以上符文三选一 + 一张随机地形卡'},
+ brittle:{name:'脆城',desc:'之后击败 Boss 不再回复生命',boon:'所有塔伤害 +15%'},
+ pricey:{name:'奢靡',desc:'建塔、升级费用 +12%',boon:'所有塔射程 +15%，并获得 150 金'},
+};
+
 // ======================= 状态 =======================
-let M={},gold=0,lives=20,step=0,phase='map',curNode=null,towers=[],enemies=[],projs=[],fx=[],texts=[],queue=[],spawnT=0,speed=1,sel=null,taken={},grid={},stats={kills:0,leaked:0,bounty:0,exec:0},rerollCost=25;
+let M={},gold=0,lives=20,step=0,phase='map',curNode=null,towers=[],enemies=[],projs=[],fx=[],texts=[],queue=[],spawnT=0,speed=1,sel=null,taken={},grid={},stats={kills:0,leaked:0,bounty:0,exec:0,eliteWins:0,bossWins:0},rerollCost=25;
 let paused=false,introQ=[],bpOpen=false,banner=null,parts=[],shake=0,tcards,placing=null,spawnCount=0,pendingCards=[],pendingNodes=[],afterPick=null,cardTitle=['',''],eliteSub='',lavas=[],hourglassUsed=false,comboSeen=new Set();
 let seen=new Set();try{seen=new Set(JSON.parse(localStorage.getItem('td_seen')||'[]'));}catch(e){}
 const actOf=s=>Math.min(3,Math.ceil(Math.max(1,s)/5));
 function resetRun(mapIdx){
   setupMap(mapIdx);buildBG();
-  M={arrowDmg:1,arrowRate:1,arrowMulti:1,cannonDmg:1,cannonSplash:1,burn:0,frostSlow:.4,freeze:0,shatter:0,chain:3,teslaDmg:1,overload:0,interest:0,killGold:0,costMul:1,rangeMul:1,crit:0,allRate:1,execute:0,resonance:0,pierce:0,gale:0,hunter:0,ember:0,kindle:0,burnPlus:0,coldWave:0,shredRune:0,conductor:0,staticF:0,loot:0,greed:0,recycle:0,fifth:0,unstable:0,hourglass:0,resonStone:0};
+  M={arrowDmg:1,arrowRate:1,arrowMulti:1,cannonDmg:1,cannonSplash:1,burn:0,frostSlow:.4,freeze:0,shatter:0,chain:3,teslaDmg:1,overload:0,interest:0,killGold:0,costMul:1,rangeMul:1,crit:0,allRate:1,execute:0,resonance:0,pierce:0,gale:0,hunter:0,ember:0,kindle:0,burnPlus:0,coldWave:0,shredRune:0,conductor:0,staticF:0,loot:0,greed:0,recycle:0,fifth:0,unstable:0,hourglass:0,resonStone:0,allDmg:1};
+  DIFF=FEAT.meta?Math.min(META.diff||0,META.unlockedDiff||0):0;curses={};
   gold=170;lives=20;step=0;phase='node';curNode=null;towers=[];enemies=[];projs=[];fx=[];texts=[];parts=[];queue=[];spawnT=0;sel=null;taken={};grid={};
-  stats={kills:0,leaked:0,bounty:0,exec:0};paused=false;introQ=[];tcards={highland:0,runewell:0,swamp:0};placing=null;spawnCount=0;lavas=[];comboSeen=new Set();
+  stats={kills:0,leaked:0,bounty:0,exec:0,eliteWins:0,bossWins:0};paused=false;introQ=[];tcards={highland:0,runewell:0,swamp:0};placing=null;spawnCount=0;lavas=[];comboSeen=new Set();
+  if(FEAT.meta){for(const k of ['gold1','gold2','gold3'])if(META.owned[k])gold+=15;if(META.owned.land)tcards.highland++;}
+  if(D(3))gold-=30;
+  heroInit();
   renderPanel();
   offerCards('选择开局符文','之后每场战斗结束都能三选一，围绕你的塔叠出流派',0,offerNodes);
 }
@@ -336,8 +408,9 @@ function resetRun(mapIdx){
 // ======================= 敌人 =======================
 function spawn(type,d,pi,elite){
   const b=ET[type],isBoss=type.startsWith('boss');
-  let hp=b.hp*hpScale(step)*(MAP.hpMul||1);if(elite)hp*=2.2;
-  let armor=b.armor?b.armor+step*.5:0;
+  let hp=b.hp*hpScale(step)*(MAP.hpMul||1)*diffHpMul();if(elite)hp*=2.2;
+  if(isBoss&&D(5))hp*=1.25;if(type==='boss3'&&D(10))hp*=1.5;
+  let armor=(b.armor?b.armor+step*.5:0)+(curseOn('armor')?5:0);
   if(pi===undefined)pi=PATHS.length>1?(MAP.type==='fork'?(Math.random()<.5?0:1):(spawnCount++%PATHS.length)):0;
   const p=posAt(pi,d||0);
   const e={type,spr:type,boss:isBoss,elite:!!elite,afx:{},dir:1,hp,max:hp,spd:b.spd,r:b.r*(elite?1.25:1),col:b.col,gold:b.gold*(elite?3:1),armor,dmg:b.dmg,d:d||0,pi,x:p.x,y:p.y,
@@ -346,6 +419,7 @@ function spawn(type,d,pi,elite){
   if(e.afx.shield)e.shield=e.max*.4;
   if(e.afx.armored)e.armor+=8+step*.6;
   if(e.afx.swift)e.spd*=1.5;
+  if(D(4))e.spd*=1.08;if(curseOn('rush'))e.spd*=1.08;
   if(type==='boss1')e.nextSplit=.75;
   if(type==='boss2'){e.cycT=7;e.dmgSrc={};const cnt={};for(const t of towers)cnt[t.type]=(cnt[t.type]||0)+1;e.immune=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0]||'arrow';}
   if(type==='boss3'){e.stunT=6;e.enraged=false;}
@@ -363,14 +437,12 @@ function buildWave(s,kind){
     q.push({t,gap:t==='fast'?.35:.65});
   }
   if(kind==='normal'&&(s===3||s===8||s===13))for(let i=0;i<10;i++)q.push({t:'fast',gap:.18});
-  if(kind==='elite'){
-    const ne=act;
-    for(let k=0;k<ne;k++){
-      const base=pick(s>=6?['norm','tank','fast','split']:['norm','tank','fast']);
-      const pool=[...(act===1?AFX_ACT1:AFX_ALL)],af=[];
-      for(let j=0;j<(act===1?1:2);j++)af.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
-      q.splice(Math.floor((k+1)*q.length/(ne+1)),0,{t:base,elite:af,gap:1});
-    }
+  let ne=kind==='elite'?act+(D(2)?1:0):kind==='normal'?(D(6)?1:0)+(curseOn('elites')?1:0):0;
+  for(let k=0;k<ne;k++){
+    const base=pick(s>=6?['norm','tank','fast','split']:['norm','tank','fast']);
+    const pool=[...(act===1?AFX_ACT1:AFX_ALL)],af=[];
+    for(let j=0;j<(act===1?1:2)+(D(9)?1:0)&&pool.length;j++)af.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
+    q.splice(Math.floor((k+1)*q.length/(ne+1)),0,{t:base,elite:af,gap:1});
   }
   if(kind==='boss')q.push({t:'boss'+act,gap:1.5});
   return q;
@@ -379,7 +451,7 @@ function buildWave(s,kind){
 // ======================= 塔 =======================
 const costOf=type=>Math.round(TT[type].cost*M.costMul);
 const upCost=t=>Math.round(TT[t.type].cost*.8*t.lvl*M.costMul);
-const sellRate=()=>M.recycle?1:.7;
+const sellRate=()=>M.recycle?1:(FEAT.meta&&META.owned.salv)?.8:.7;
 function resonanceMul(){if(!M.resonance)return 1;return 1+M.resonance*new Set(towers.map(t=>t.type)).size;}
 function wellsNear(c,r){let n=0;for(let dc=-1;dc<=1;dc++)for(let dr=-1;dr<=1;dr++)if((dc||dr)&&tiles[(c+dc)+','+(r+dr)]==='runewell')n++;return n;}
 function sameNear(t){let n=0;for(const o of towers)if(o!==t&&o.type===t.type&&Math.abs(o.c-t.c)<=1&&Math.abs(o.r-t.r)<=1)n++;return n;}
@@ -401,6 +473,7 @@ function stat(t){
   if(br==='glacier')range+=.4*CS;
   if(br==='nova')dmg*=2;
   if(t.type==='frost'&&evolved(t))dmg*=1.6;
+  dmg*=M.allDmg;if(HERO&&HERO.hasteT>0)rate/=1.3;
   return{dmg,rate,range};
 }
 function hit(e,dmg,src,o){
@@ -553,7 +626,8 @@ function updEnemy(e,dt){
   if(e.lead)f*=1.25;
   e.d+=e.spd*CS*f*dt;
   if(e.d>=PATHS[e.pi].tot){
-    e.dead=true;const lost=e.boss?Math.max(1,Math.ceil(e.hp/e.max*24)):e.dmg;
+    e.dead=true;let lost=e.boss?Math.max(1,Math.ceil(e.hp/e.max*24)):e.dmg;
+    if(!e.boss&&HERO&&HERO.wallT>0){const g=clampPt(PATHS[e.pi].PP[PATHS[e.pi].PP.length-1]);txt(g.x,g.y-14,'壁垒','#7dd3fc',.8);burst(g.x,g.y,'#bae6fd',8,80,0,.4,2);return;}
     lives-=lost;stats.leaked++;shake=Math.max(shake,4);sfx('leak');fx.push({k:'flash',t:.3,T:.3});
     const g=clampPt(PATHS[e.pi].PP[PATHS[e.pi].PP.length-1]);txt(g.x,g.y-14,'-'+lost+' ❤',"#fca5a5",1.2);
     if(M.hourglass&&!hourglassUsed){hourglassUsed=true;for(const o of enemies)if(!o.dead)o.frzT=Math.max(o.frzT,o.boss?1:3);txt(W/2,H*.3,'时停沙漏！','#a5f3fc',1.4);sfx('frost');}
@@ -586,6 +660,7 @@ function step_(dt){
   for(const e of enemies)updEnemy(e,dt);
   if(phase!=='wave')return;
   for(const t of towers)updTower(t,dt);
+  updHero(dt);
   updLava(dt);
   for(const p of projs)updProj(p,dt);
   projs=projs.filter(p=>!p.done);
@@ -598,18 +673,20 @@ function interestNow(){return M.interest?Math.min(60,Math.floor(gold*M.interest)
 function waveDone(){
   projs=[];
   const elite=curNode==='elite',boss=curNode==='boss';
-  let bonus=20+step*4;if(elite)bonus=Math.round(bonus*1.5);
+  let bonus=stepBonus();if(elite){bonus=Math.round(bonus*1.5);stats.eliteWins++;}if(boss)stats.bossWins++;
+  zones=[];meteors=[];if(HERO){HERO.hasteT=0;HERO.wallT=0;}
   const it=interestNow();gold+=bonus+it;
   if(step>=MAXS){endGame(true);return;}
   projs=[];lavas=[];
   if(M.unstable&&Math.random()<.5){const c=towers.filter(t=>t.lvl>1);if(c.length){const t=pick(c);t.lvl--;if(t.lvl<3)t.branch=null;txt(t.x,t.y-30,'不稳定：降级','#fca5a5',1.6);}}
   phase='reward';renderPanel();
   let sub=`奖励 +${bonus} 金${it?`，利息 +${it}`:''}`;
-  if(boss){lives+=BOSS_HEAL;sub+=`，城墙修复 +${BOSS_HEAL} ❤️`;offerCards(`击败 ${EINFO['boss'+actOf(step)].name}！`,sub+' · Boss 宝箱：必出史诗或传说符文',2,offerNodes,true);}
+  if(boss){const heal=curseOn('brittle')?0:D(7)?2:BOSS_HEAL;lives+=heal;if(heal)sub+=`，城墙修复 +${heal} ❤️`;offerCards(`击败 ${EINFO['boss'+actOf(step)].name}！`,sub+' · Boss 宝箱：必出史诗或传说符文',2,altarAvailable()?offerAltar:offerNodes,true);}
   else if(elite)offerEliteReward(sub);
   else offerCards(`第 ${step} 站完成！`,sub+' · 选择一个符文',0,offerNodes);
 }
 const BOSS_HEAL=5;
+function stepBonus(){let b=20+Math.max(step,1)*4;if(curseOn('tax'))b=Math.round(b*.65);return b;}
 // 精英战胜利：符文（稀有以上）或地形卡，二选一
 function offerEliteReward(sub){
   phase='elitepick';eliteSub=sub;
@@ -706,7 +783,8 @@ function closeRunes(){bpOpen=false;bp.style.display='none';paused=!!(ov.style.di
 function renderRunes(){
   const ids=Object.keys(taken);
   let h=`<div class="wrap"><h2>🔮 我的符文（${ids.length}）</h2>`;
-  h+=`<div class="sum">下场战斗结束预计收入：过关奖励 <b>+${20+Math.max(step,1)*4}</b> 金${M.interest?`，利息 <b>+${interestNow()}</b> 金`:''}<br>暴击率 ${Math.round(M.crit*100)}% · 射程 +${pc(M.rangeMul)}% · 攻速 +${pc(M.allRate)}% · 费用 -${Math.round((1-M.costMul)*100)}%</div>`;
+  h+=`<div class="sum">下场战斗结束预计收入：过关奖励 <b>+${stepBonus()}</b> 金${M.interest?`，利息 <b>+${interestNow()}</b> 金`:''}<br>暴击率 ${Math.round(M.crit*100)}% · 射程 +${pc(M.rangeMul)}% · 攻速 +${pc(M.allRate)}% · 费用 ${M.costMul<=1?'-':'+'}${Math.abs(Math.round((1-M.costMul)*100))}%${M.allDmg>1?` · 全塔伤害 +${pc(M.allDmg)}%`:''}</div>`;
+  const cl=Object.keys(curses);if(cl.length||DIFF||HERO)h+=`<div class="sum">${HERO?`英雄：${HEROES[HERO.id].icon}${HEROES[HERO.id].name}（被动：${HEROES[HERO.id].passive}）<br>`:''}${DIFF?`难度 ${DIFF}<br>`:''}${cl.length?'诅咒：'+cl.map(k=>`<b style="color:#fca5a5">${CURSES[k].name}</b>（${CURSES[k].desc}）`).join('、'):''}</div>`;
   h+=`<div class="sum">${schoolLine()}<br><span style="color:#9aa3c7">两个流派各有 2 个符文（传说符文也算），就会解锁它们的合体：</span><br>${comboLines()}</div>`;
   if(!ids.length)h+=`<div class="sum" style="text-align:center;color:#9aa3c7">还没有符文。开局和每场战斗结束都能三选一获得。</div>`;
   for(const id of ids){
@@ -729,7 +807,7 @@ function ehpText(e){return e.dead?'已被击败':`生命 ${Math.ceil(Math.max(0,
 const RAR_W=[80,17,3];
 function rollCards(minR){
   const owned=new Set(towers.map(t=>t.type));
-  const pool=CARDS.filter(c=>!(c.max&&(taken[c.id]||0)>=c.max));
+  const pool=CARDS.filter(c=>cardUnlocked(c)&&!(c.max&&(taken[c.id]||0)>=c.max));
   const out=[];
   while(out.length<3&&pool.length){
     const avail=[0,1,2].filter(r=>pool.some(c=>c.r===r));let rar;
@@ -780,6 +858,145 @@ function showCards(cs,minR){
 function pickCard(i){const c=pendingCards[i];if(!c)return;takeCard(c);ov.style.display='none';pendingCards=[];renderPanel();const f=afterPick;afterPick=null;if(f)f();}
 function buildSummary(){return Object.keys(taken).map(id=>{const c=findCard(id);return c.name+(taken[id]>1?'×'+taken[id]:'');}).join('、');}
 
+// ======================= v0.3：英雄 =======================
+let HERO=null,zones=[],meteors=[],curses={};
+function unitHP(){return ET.norm.hp*hpScale(Math.max(1,step))*(MAP.hpMul||1)*diffHpMul();}
+function diffHpMul(){return (D(1)?1.1:1)*(D(8)?1.15:1);}
+function heroInit(){
+  zones=[];meteors=[];HERO=null;
+  if(!FEAT.hero)return;
+  const id=heroOK(META.hero)?META.hero:'wind';
+  HERO={id,cd:[0,0],hasteT:0,wallT:0,auto:META.auto!==false};
+  if(id==='wind')M.arrowRate+=.1;
+  if(id==='fire')M.cannonDmg+=.1;
+  if(id==='ice')M.frostSlow+=.1;
+}
+function cluster(R){let best=null,bn=0;const R2=R*R,pt=e=>e.d/PATHS[e.pi].tot;
+  for(const e of enemies){if(e.dead)continue;let n=0;for(const o of enemies)if(!o.dead&&(o.x-e.x)**2+(o.y-e.y)**2<=R2)n+=o.boss?3:1;
+    if(n>bn||(n===bn&&best&&pt(e)>pt(best))){bn=n;best=e;}}
+  return best?{x:best.x,y:best.y,n:bn}:null;}
+function heroHit(e,d){hit(e,e.boss?d*.35:d,undefined,{noCrit:true,ap:true});}
+function heroCast(i){
+  if(!HERO||phase!=='wave'||HERO.cd[i]>0)return false;
+  const H=HEROES[HERO.id],u=unitHP();let ok=true;
+  if(HERO.id==='wind'&&i===0){const c=cluster(1.5*CS);if(!c)return false;zones.push({k:'rain',x:c.x,y:c.y,r:1.5*CS,t:3,T:3,dps:u*.25});sfx('wave');}
+  else if(HERO.id==='wind'&&i===1){HERO.hasteT=5;for(const t of towers)burst(t.x,t.y,'#86efac',6,70,-40,.5,1.8);sfx('up');}
+  else if(HERO.id==='fire'&&i===0){const c=cluster(1.6*CS);if(!c)return false;meteors.push({x:c.x,y:c.y,t:1,T:1,r:1.6*CS,dmg:u*.7});sfx('boss');}
+  else if(HERO.id==='fire'&&i===1){if(!enemies.some(e=>!e.dead))return false;for(const e of enemies)if(!e.dead){burnOn(e,u*(e.boss?.03:.07),4);burst(e.x,e.y,'#fb923c',5,70,-60,.4,2);}sfx('boom');}
+  else if(HERO.id==='ice'&&i===0){if(!enemies.some(e=>!e.dead))return false;for(const e of enemies)if(!e.dead)e.frzT=Math.max(e.frzT,e.boss?.8:2.5);fx.push({k:'flash',t:.35,T:.35,c:'#bae6fd'});sfx('frost');}
+  else if(HERO.id==='ice'&&i===1){HERO.wallT=8;sfx('frost');}
+  else ok=false;
+  if(ok){HERO.cd[i]=H.sk[i].cd;txt(W/2,H_TXT_Y,H.sk[i].name+'！',H.col,1);}
+  return ok;
+}
+const H_TXT_Y=H*.42;
+function heroAutoWant(i){
+  const live=enemies.filter(e=>!e.dead);if(!live.length)return false;
+  const boss=live.some(e=>e.boss),near=f=>live.some(e=>e.d/PATHS[e.pi].tot>f);
+  const id=HERO.id;
+  if(i===0&&id!=='ice'){const c=cluster((id==='wind'?1.5:1.6)*CS);return !!c&&(c.n>=4||boss||near(.7));}
+  if(id==='wind')return live.length>=8||boss||near(.75);
+  if(id==='fire')return live.length>=6||boss;
+  if(i===0)return near(.75)||(boss&&near(.5))||live.length>=12;
+  return near(.85)&&live.length>=3;
+}
+function updHero(dt){
+  if(!HERO)return;
+  for(let i=0;i<2;i++)if(HERO.cd[i]>0)HERO.cd[i]=Math.max(0,HERO.cd[i]-dt);
+  if(HERO.hasteT>0)HERO.hasteT-=dt;if(HERO.wallT>0)HERO.wallT-=dt;
+  if(HERO.auto)for(let i=0;i<2;i++)if(HERO.cd[i]<=0&&heroAutoWant(i))heroCast(i);
+  for(const z of zones){z.t-=dt;for(const e of enemies)if(!e.dead&&(e.x-z.x)**2+(e.y-z.y)**2<=z.r*z.r)heroHit(e,z.dps*dt);
+    if(Math.random()<dt*40)parts.push({x:z.x+(Math.random()-.5)*z.r*1.6,y:z.y-40+(Math.random()-.5)*z.r,vx:-30,vy:360,g:0,t:.18,T:.18,c:'#e2e8f0',r:1.3});}
+  zones=zones.filter(z=>z.t>0);
+  for(const m of meteors){m.t-=dt;if(m.t<=0){fx.push({k:'boom',x:m.x,y:m.y,r:m.r,t:.45,T:.45,c:'#f97316'});fx.push({k:'ring',x:m.x,y:m.y,r:m.r*1.2,t:.4,T:.4,c:'#fde68a'});burst(m.x,m.y,'#fb923c',26,170,220,.6,2.6);shake=Math.max(shake,6);sfx('boom');
+    for(const e of enemies)if(!e.dead&&(e.x-m.x)**2+(e.y-m.y)**2<=m.r*m.r){heroHit(e,m.dmg);if(!e.dead)burnOn(e,m.dmg*.06,3);}}}
+  meteors=meteors.filter(m=>m.t>0);
+}
+function drawHero(){
+  for(const z of zones){const a=Math.min(1,z.t/.4);ctx.globalAlpha=.18*a;ctx.fillStyle='#e2e8f0';ctx.beginPath();ctx.arc(z.x,z.y,z.r,0,7);ctx.fill();ctx.globalAlpha=.5*a;ctx.strokeStyle='#f1f5f9';ctx.lineWidth=1.5;ctx.setLineDash([4,5]);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;}
+  for(const m of meteors){const k=1-m.t/m.T;ctx.globalAlpha=.25+.35*k;ctx.strokeStyle='#f97316';ctx.lineWidth=2;ctx.beginPath();ctx.arc(m.x,m.y,m.r*(1.2-.2*k),0,7);ctx.stroke();ctx.globalAlpha=1;
+    const y=m.y-160*(1-k);ctx.fillStyle='#fdba74';ctx.beginPath();ctx.arc(m.x+40*(1-k),y,7+5*k,0,7);ctx.fill();ctx.fillStyle='rgba(251,146,60,.5)';ctx.beginPath();ctx.arc(m.x+40*(1-k)+8,y-12,5,0,7);ctx.fill();}
+  if(HERO&&HERO.wallT>0){const g=clampPt(PATHS[0].PP[PATHS[0].PP.length-1]);ctx.globalAlpha=.35+.15*Math.sin(performance.now()/150);ctx.strokeStyle='#7dd3fc';ctx.lineWidth=4;ctx.beginPath();ctx.arc(g.x,g.y,26,0,7);ctx.stroke();ctx.globalAlpha=1;}
+}
+function heroBar(){
+  if(!HERO||!(phase==='build'||phase==='wave'))return'';
+  const H=HEROES[HERO.id];
+  return `<div class="hbar"><span class="hn" style="color:${H.col}">${H.icon}${H.name}</span>`+H.sk.map((s,i)=>`<button class="hs" id="hs${i}" data-hs="${i}">${s.icon} ${s.name}<small id="hsc${i}"></small></button>`).join('')+`<button class="hs ha${HERO.auto?' on':''}" id="hauto">自动 ${HERO.auto?'开':'关'}</button></div>`;
+}
+function syncHero(){
+  if(!HERO)return;
+  for(let i=0;i<2;i++){const b=$('hs'+i);if(!b)continue;const cd=HERO.cd[i];b.disabled=phase!=='wave'||cd>0;const s=$('hsc'+i);if(s)s.textContent=cd>0?` ${Math.ceil(cd)}s`:phase==='wave'?' 就绪':'';}
+}
+
+// ======================= v0.3：诅咒祭坛 =======================
+const curseOn=k=>!!curses[k];
+function altarAvailable(){return FEAT.curse&&owns('altar')&&step<MAXS;}
+function offerAltar(){
+  phase='altar';
+  const pool=shuffleA(Object.keys(CURSES).filter(k=>!curses[k]));const n=owns('fate')||!FEAT.meta?3:2;const offers=pool.slice(0,n);
+  let h=`<h2>🌙 诅咒祭坛</h2><div class="sub">接受一个诅咒（持续到本局结束），换取强力奖励。也可以拒绝。</div><div class="cards">`;
+  offers.forEach(k=>{const c=CURSES[k];h+=`<button class="card curse" data-k="${k}"><div class="n">${c.name}</div><div class="d"><span style="color:#fca5a5">诅咒：${c.desc}</span><br><span style="color:#86efac">获得：${c.boon}</span></div></button>`;});
+  h+=`</div><div><button class="reroll" id="altarNo">拒绝，离开祭坛</button> <button class="reroll" id="seeRunes">🔮 我的符文</button></div>`;
+  ov.innerHTML=h;ov.style.display='flex';
+  ov.querySelectorAll('.card').forEach(b=>b.onclick=()=>takeCurse(b.dataset.k));
+  $('altarNo').onclick=()=>{ov.style.display='none';offerNodes();};$('seeRunes').onclick=openRunes;
+}
+function takeCurse(k){
+  curses[k]=true;ov.style.display='none';sfx('boss');
+  banner={a:'诅咒：'+CURSES[k].name,b:CURSES[k].desc,boss:true,t:2.2,T:2.2};
+  const done=offerNodes;
+  if(k==='rush'){const lg=LEGENDS.filter(l=>!has(l.id));if(lg.length){cardTitle=['诅咒的馈赠','传说符文三选一'];rerollCost=25;afterPick=done;offerChest=false;pendingCards=shuffleA(lg).slice(0,3);showCards(pendingCards,2);}else offerCards('诅咒的馈赠','史诗符文三选一',2,done);return;}
+  if(k==='tax'){gold+=250;}
+  if(k==='armor'){for(const t of towers)if(t.lvl<4){t.lvl++;if(t.lvl===3&&!t.branch)t.branch=BRANCH[t.type][Math.random()<.5?0:1][0];burst(t.x,t.y,'#fde047',10,90,-40,.6,2);}}
+  if(k==='blood'){lives=Math.max(1,lives-8);offerCards('诅咒的馈赠','史诗符文三选一（第 1 次，共 2 次）',2,()=>offerCards('诅咒的馈赠','稀有以上符文三选一（第 2 次，共 2 次）',1,done));return;}
+  if(k==='elites'){const t=pick(Object.keys(TILEINFO));tcards[t]++;offerCards('诅咒的馈赠',`已获得地形卡「${TILEINFO[t].name}」 · 稀有以上符文三选一`,1,done);return;}
+  if(k==='brittle'){M.allDmg*=1.15;}
+  if(k==='pricey'){M.costMul*=1.12;M.rangeMul+=.15;gold+=150;}
+  renderPanel();done();
+}
+
+// ======================= v0.3：大厅 / 工匠 =======================
+function runShards(win){
+  const cleared=win?MAXS:Math.max(0,step-1);
+  const base=2*cleared+3*stats.eliteWins+8*stats.bossWins+(win?15:0);
+  return Math.round(base*(1+.15*DIFF));
+}
+function showLobby(){
+  if(!FEAT.meta){showMapSelect();return;}
+  phase='map';sel=null;renderPanel();
+  let best=0;try{best=+localStorage.getItem('td_best2')||0;}catch(e){}
+  let h=`<h2>符文塔防 ${VERSION}</h2><div class="sub">💎 符文碎片 <b style="color:#a5f3fc">${META.shards}</b>${best?` · 最佳纪录 第 ${best} 站`:''}${META.wins?` · 通关 ${META.wins} 次`:''}</div><div class="wrap">`;
+  if(FEAT.hero){
+    h+=`<div class="lsec">英雄</div><div class="hrow">`;
+    for(const k in HEROES){const H=HEROES[k],ok=heroOK(k);
+      h+=`<button class="card hero${META.hero===k&&ok?' on':''}" data-h="${k}" ${ok?'':'disabled'}><div class="n">${H.icon} ${H.name}</div><div class="d">${ok?`被动：${H.passive}<br>${H.sk.map(s=>`${s.icon}${s.name}：${s.desc}`).join('<br>')}`:'在「英雄殿」解锁'}</div></button>`;}
+    h+=`</div>`;
+  }
+  if(META.unlockedDiff>0){
+    h+=`<div class="lsec">难度</div><div>`;for(let d=0;d<=META.unlockedDiff;d++)h+=`<button class="chip dchip${META.diff===d?' on':''}" data-d="${d}">${d}</button>`;h+=`</div>`;
+    h+=`<div class="hint" style="text-align:left">${META.diff?DIFFS.slice(1,META.diff+1).map((s,i)=>`${i+1}. ${s}`).join('<br>')+`<br><b style="color:#a5f3fc">符文碎片 +${META.diff*15}%</b>`:'难度 0：标准难度。打通当前最高难度会解锁下一级。'}</div>`;
+  }else h+=`<div class="hint" style="text-align:left">打通一次后解锁「难度 1」，每升一级敌人更强，符文碎片也更多。</div>`;
+  h+=`</div><button class="big" style="max-width:420px;margin-top:14px" id="lgo">⚔️ 开始冒险</button>
+  <button class="reroll" id="lart" style="margin-top:10px">🔨 工匠铺（用碎片解锁内容）</button>`;
+  ov.innerHTML=h;ov.style.display='flex';
+  ov.querySelectorAll('.card.hero').forEach(b=>b.onclick=()=>{if(b.disabled)return;META.hero=b.dataset.h;saveMeta();showLobby();});
+  ov.querySelectorAll('.dchip').forEach(b=>b.onclick=()=>{META.diff=+b.dataset.d;saveMeta();showLobby();});
+  $('lgo').onclick=()=>{ov.style.display='none';showMapSelect();};
+  $('lart').onclick=showArtisans;
+}
+function showArtisans(){
+  let h=`<h2>🔨 工匠铺</h2><div class="sub">💎 符文碎片 <b style="color:#a5f3fc">${META.shards}</b> · 每局结束按打到的站数、精英和 Boss 获得碎片</div><div class="wrap">`;
+  for(const a of ARTISANS){
+    h+=`<div class="lsec">${a.icon} ${a.name} <span style="font-weight:400;color:#9aa3c7;font-size:12.5px">${a.desc}</span></div>`;
+    for(const it of a.items){const have=!!META.owned[it.id],reqOk=!it.req||META.owned[it.req];
+      h+=`<div class="rl art"><div style="flex:1"><div class="n">${it.name}</div><div class="d">${it.desc}${!reqOk?'（需要先解锁前一级）':''}</div></div>${have?'<span class="own">已拥有</span>':`<button class="buy" data-it="${it.id}" ${META.shards>=it.cost&&reqOk?'':'disabled'}>💎 ${it.cost}</button>`}</div>`;}
+  }
+  h+=`</div><button class="close" id="artBack">返回大厅</button>`;
+  ov.innerHTML=h;ov.style.display='flex';
+  ov.querySelectorAll('.buy').forEach(b=>b.onclick=()=>{const it=ARTISANS.flatMap(a=>a.items).find(x=>x.id===b.dataset.it);if(!it||META.owned[it.id]||META.shards<it.cost)return;META.shards-=it.cost;META.owned[it.id]=true;saveMeta();sfx('up');showArtisans();});
+  $('artBack').onclick=showLobby;
+}
+
 // ======================= 开局 / 结局 =======================
 let mapOffersCur=[];
 function shuffleA(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
@@ -796,12 +1013,13 @@ function showMapSelect(reroll){
   let best=0;try{best=+localStorage.getItem('td_best2')||0;}catch(e){}
   let h=`<h2>符文塔防 ${VERSION}</h2><div class="sub">选择这一局的地图${best?` · 最佳纪录：第 ${best} 站`:''}</div><div class="cards">`;
   mapOffersCur.forEach(i=>{const m=MAPS[i],T=MAPTYPES[m.type];h+=`<button class="card map" data-i="${i}">${mapSVG(m)}<div><div class="n">${mapTitle(m)} <span style="font-size:13px;color:#fbbf24">${'★'.repeat(m.stars||1)}${'☆'.repeat(3-(m.stars||1))}</span></div><div class="d">${T.desc}${m.type==='tutorial'&&!seen.has('run1')?'<br><b style="color:#86efac">第一次玩推荐</b>':''}</div></div></button>`;});
-  h+=`</div><button class="reroll" id="mapReroll">🎲 换一批地图</button><div class="tip"><b>地形</b>　<span class="tag" style="background:#86c46a">高地</span>塔射程 +1 格　<span class="tag" style="background:#818cf8">符文井</span>周围的塔伤害 +20%　<span class="tag" style="background:#a3b18a">沼泽</span>敌人减速 30%<br><span style="color:#9aa3c7">图库共 ${POOL.length} 张地图，每局随机抽取；星级越多越难。</span></div>`;
+  h+=`</div><div><button class="reroll" id="mapReroll">🎲 换一批地图</button>${FEAT.meta?' <button class="reroll" id="mapBack">返回大厅</button>':''}</div><div class="tip"><b>地形</b>　<span class="tag" style="background:#86c46a">高地</span>塔射程 +1 格　<span class="tag" style="background:#818cf8">符文井</span>周围的塔伤害 +20%　<span class="tag" style="background:#a3b18a">沼泽</span>敌人减速 30%<br><span style="color:#9aa3c7">图库共 ${POOL.length} 张地图，每局随机抽取；星级越多越难。</span></div>`;
   ov.innerHTML=h;ov.style.display='flex';
   ov.querySelectorAll('.card').forEach(b=>b.onclick=()=>{ov.style.display='none';const i=+b.dataset.i;
     seen.add('run1');try{localStorage.setItem('td_seen',JSON.stringify([...seen]));localStorage.setItem('td_lastmap',MAPS[i].id);}catch(e){}
     if(!seen.has('tut'))showTutorial(()=>resetRun(i));else resetRun(i);});
   $('mapReroll').onclick=()=>{mapOffersCur=rollMapOffers();showMapSelect(true);};
+  if($('mapBack'))$('mapBack').onclick=showLobby;
 }
 function showTutorial(then){
   seen.add('tut');try{localStorage.setItem('td_seen',JSON.stringify([...seen]));}catch(e){}
@@ -811,19 +1029,24 @@ function showTutorial(then){
   3. 每站都是一场战斗。打完选下一站：普通战斗稳一点；精英战斗风险大，奖励更好（稀有符文或地形卡）。打败 Boss 会回复 5 条命。<br>
   4. 每场战斗打完三选一<b>符文</b>，围绕一两种塔叠出流派。右上角 🔮 随时查看。<br>
   5. 符文分风、火、冰、雷、金五个流派，两个流派各凑 2 个会解锁「合体」；塔升到 3 级时选分支，满级再拿到传说符文就能进化。<br>
-  6. 看不懂的东西就点它：敌人、地块都有说明。</div>
+  6. 英雄的两个技能在面板最上面，默认「自动」释放；关掉自动可以自己掌握时机。<br>
+  7. 每局结束得到「符文碎片」，回大厅在工匠铺解锁新符文、英雄和诅咒祭坛。<br>
+  8. 看不懂的东西就点它：敌人、地块都有说明。</div>
   <button class="big" style="max-width:260px;margin-top:16px" id="tutok">开始</button>`;
   ov.style.display='flex';$('tutok').onclick=()=>{ov.style.display='none';then();};
 }
 function endGame(win){
   phase=win?'win':'over';sel=null;bpOpen=false;bp.style.display='none';paused=false;
   let best=0;try{best=+localStorage.getItem('td_best2')||0;if(step>best)localStorage.setItem('td_best2',step);}catch(e){}
+  let shardLine='';
+  if(FEAT.meta){const sh=runShards(win);META.shards+=sh;META.runs++;let un='';if(win){META.wins++;if(DIFF>=META.unlockedDiff&&META.unlockedDiff<10){META.unlockedDiff=DIFF+1;META.diff=DIFF+1;un=`<br><b style="color:#fde68a">解锁难度 ${DIFF+1}！</b>`;}}saveMeta();
+    shardLine=`<div class="sum" style="text-align:center">💎 获得符文碎片 <b style="color:#a5f3fc">+${sh}</b>（共 ${META.shards}）${DIFF?` · 难度 ${DIFF} 加成 +${DIFF*15}%`:''}${un}</div>`;}
   ov.innerHTML=`<h2>${win?'🏆 守住了！':'💥 城门失守'}</h2>
   <div class="sub">地图：${mapTitle(MAP)} · ${win?'15 站全部通过':'倒在第 '+step+' 站'} · 击杀 ${stats.kills} · 最佳 第 ${Math.max(best,step)} 站</div>
-  <div class="build" style="margin-top:14px">本局流派：${buildSummary()||'无'}</div>
-  <button class="big" style="max-width:300px;margin-top:18px" id="again">再来一局</button>`;
+  <div class="build" style="margin-top:14px">本局流派：${buildSummary()||'无'}</div>${shardLine}
+  <button class="big" style="max-width:300px;margin-top:18px" id="again">${FEAT.meta?'回到大厅':'再来一局'}</button>`;
   ov.style.display='flex';
-  $('again').onclick=()=>{ov.style.display='none';showMapSelect();};
+  $('again').onclick=()=>{ov.style.display='none';showLobby();};
   renderPanel();
 }
 
@@ -851,6 +1074,8 @@ $('spd').onclick=()=>{speed=speed===1?2:speed===2?3:1;$('spd').textContent=speed
 panel.addEventListener('click',ev=>{
   const b=ev.target.closest('button');if(!b||b.disabled)return;
   if(b.id==='go'){startWave();return;}
+  if(b.dataset.hs){heroCast(+b.dataset.hs);syncHero();return;}
+  if(b.id==='hauto'){HERO.auto=!HERO.auto;META.auto=HERO.auto;saveMeta();renderPanel();return;}
   if(b.dataset.tc){placing=b.dataset.tc;sel=null;renderPanel();return;}
   if(b.id==='cancelPlace'){placing=null;renderPanel();return;}
   if(!sel||sel.enemy)return;const key=sel.c+','+sel.r;
@@ -876,6 +1101,7 @@ function renderPanel(){
   if(phase==='build')h+=`<button class="big${curNode==='boss'?' red':''}" id="go">▶ 开始：第 ${step} 站 · ${NODES[curNode].name}${curNode==='boss'?' '+EINFO['boss'+actOf(step)].name:''}</button>`;
   else if(phase==='wave')h+=`<div class="wv">第 ${step} 站 · ${NODES[curNode].name}进行中</div>`;
   const live=phase==='build'||phase==='wave';
+  h+=heroBar();
   if(live&&placing){
     h+=`<div class="tinfo">放置「${TILEINFO[placing].name}」：${placing==='swamp'?'点一格没有地形的道路':'点一格没有塔的空地'}。${TILEINFO[placing].desc}</div><button class="chip" id="cancelPlace">取消</button>`;
   }else if(live&&sel&&sel.enemy){
@@ -904,7 +1130,7 @@ function renderPanel(){
     h+=`<div class="hint">点空地建塔，点塔升级/出售，点敌人或地块看说明。右上角 🔮 查看已有符文。</div>`;
   }
   if(live&&!placing){const tc=Object.keys(tcards).filter(k=>tcards[k]>0);if(tc.length)h+=`<div>${tc.map(k=>`<button class="chip" data-tc="${k}">🗺️ ${TILEINFO[k].name} ×${tcards[k]}</button>`).join('')}</div>`;}
-  panel.innerHTML=h;syncButtons();
+  panel.innerHTML=h;syncButtons();syncHero();
 }
 function syncButtons(){panel.querySelectorAll('[data-cost]').forEach(b=>{b.disabled=gold<+b.dataset.cost;});}
 
@@ -977,6 +1203,7 @@ function draw(){
     const ks=Object.keys(e.afx);ks.forEach((a,i)=>{ctx.fillStyle=AFX[a].col;ctx.beginPath();ctx.arc(e.x-(ks.length-1)*3.5+i*7,top-12,2.6,0,7);ctx.fill();});
     if(e.type==='boss2'){ctx.font='bold 11px sans-serif';ctx.fillStyle=TT[e.immune].color;ctx.fillText('免疫 '+TT[e.immune].name,e.x,top-15);}
   }
+  drawHero();
   for(const l of lavas){const a=Math.min(1,l.t/l.T*2);ctx.globalAlpha=a*(.35+.1*Math.sin(performance.now()/120));ctx.fillStyle='#f97316';ctx.beginPath();ctx.arc(l.x,l.y,l.r,0,7);ctx.fill();ctx.globalAlpha=a*.5;ctx.fillStyle='#fde047';ctx.beginPath();ctx.arc(l.x,l.y,l.r*.45,0,7);ctx.fill();ctx.globalAlpha=1;}
   // 子弹
   for(const p of projs){
@@ -1001,7 +1228,7 @@ function draw(){
       const path=()=>{ctx.beginPath();f.pts.forEach(([x,y],i)=>{if(!i){ctx.moveTo(x,y);return;}const [px,py]=f.pts[i-1];ctx.lineTo((px+x)/2+f.j[i][0],(py+y)/2+f.j[i][1]);ctx.lineTo(x,y);});};
       ctx.globalAlpha=a*.35;ctx.strokeStyle='#c084fc';ctx.lineWidth=7;path();ctx.stroke();
       ctx.globalAlpha=a;ctx.strokeStyle='#faf5ff';ctx.lineWidth=2;path();ctx.stroke();}
-    else if(f.k==='flash'){ctx.globalAlpha=a*.25;ctx.fillStyle='#ef4444';ctx.fillRect(0,0,W,H);}
+    else if(f.k==='flash'){ctx.globalAlpha=a*.25;ctx.fillStyle=f.c||'#ef4444';ctx.fillRect(0,0,W,H);}
     ctx.globalAlpha=1;
   }
   for(const q of parts){ctx.globalAlpha=Math.max(0,Math.min(1,q.t/q.T*1.4));ctx.fillStyle=q.c;ctx.beginPath();ctx.arc(q.x,q.y,q.r,0,7);ctx.fill();}
@@ -1029,12 +1256,12 @@ function loop(now){
   if(banner){banner.t-=dt;if(banner.t<=0)banner=null;}
   try{draw();}catch(err){console.error(err);}
   uiT-=dt;
-  if(uiT<=0){uiT=.15;hW.textContent=`第${actOf(step)}幕 ${step}/${MAXS}`;hG.textContent=`💰 ${Math.floor(gold||0)}`;hL.textContent=`❤️ ${lives??20}`;syncButtons();
+  if(uiT<=0){uiT=.15;hW.textContent=`第${actOf(step)}幕 ${step}/${MAXS}`;hG.textContent=`💰 ${Math.floor(gold||0)}`;hL.textContent=`❤️ ${lives??20}`;syncButtons();syncHero();
     if(sel&&sel.enemy){const el=$('ehp');if(el)el.textContent=ehpText(sel.enemy);}}
   requestAnimationFrame(loop);
 }
 loadArt();
-showMapSelect();
+showLobby();
 requestAnimationFrame(loop);
 </script>
 </body>
