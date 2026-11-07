@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>符文塔防 · v0.5c</title>
+<title>符文塔防 · v0.5c.1</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 html,body{margin:0;background:#0d1020;color:#e5e7eb;font-family:-apple-system,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;height:100%;overflow:hidden;touch-action:manipulation}
@@ -106,7 +106,7 @@ button{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}
 <script src="maps.js"></script>
 <script>
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.5c';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.5c.1';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -563,7 +563,7 @@ function kill(e){
   if(e.burnT>0&&M.ember){const R=CS*1.1;fx.push({k:'boom',x:e.x,y:e.y,r:R,t:.3,T:.3,c:'#f97316'});
     for(const o of enemies)if(o!==e&&!o.dead&&(o.x-e.x)**2+(o.y-e.y)**2<=R*R){burnOn(o,Math.max(4,e.burnD),2);hit(o,e.max*(e.boss?.03:.15),'cannon',{pure:true,noCrit:true});}}
   if(e.type==='split'){spawn('mini',Math.max(0,e.d-4),e.pi);spawn('mini',Math.max(0,e.d-16),e.pi);}
-  fx.push({k:'boom',x:e.x,y:e.y,r:e.r*1.7,t:.25,T:.25,c:e.col});fx.push({k:'ring',x:e.x,y:e.y,r:e.r*1.9,t:.22,T:.22,c:'#ffffff'});
+  fx.push({k:'boom',x:e.x,y:e.y,r:e.r*1.5,t:.22,T:.22,c:'#fffbeb'});fx.push({k:'ring',x:e.x,y:e.y,r:e.r*1.9,t:.22,T:.22,c:'#ffffff'});
   deathFx(e);burst(e.x,e.y,'#ffffff',e.boss?10:4,e.boss?120:70,0,.25,1.6);
   if(e.boss)stopT=Math.max(stopT,.18);else if(e.elite)stopT=Math.max(stopT,.05);
   if(e.boss){shake=Math.max(shake,7);sfx('bossdie');}
@@ -812,7 +812,12 @@ function sparks(x,y,c,n,sp=140,life=.22){for(let i=0;i<n;i++){const a=Math.rando
 function smoke(x,y,n,s=5,c='#6b6460',rise=-28){for(let i=0;i<n;i++)P({k:'smoke',x:x+(Math.random()-.5)*s*2,y:y+(Math.random()-.5)*s,vx:(Math.random()-.5)*20,vy:rise*(.6+Math.random()*.6),g:0,t:.7+Math.random()*.4,T:1.1,c,r:s*(.7+Math.random()*.6)});}
 function chunks(x,y,c,n,sp=150,sz=3){for(let i=0;i<n;i++){const a=-Math.PI*Math.random(),v=sp*(.4+Math.random()*.6);P({k:'chunk',x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,g:520,t:.55+Math.random()*.3,T:.85,c,r:sz*(.6+Math.random()*.7),rot:Math.random()*6,vr:(Math.random()-.5)*14});}}
 function shards(x,y,n,c='#e0f2fe',sp=120){for(let i=0;i<n;i++){const a=Math.random()*6.283,v=sp*(.5+Math.random()*.5);P({k:'shard',x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-30,g:260,t:.45+Math.random()*.25,T:.7,c,r:3+Math.random()*2,rot:a,vr:(Math.random()-.5)*10});}}
-function goo(x,y,c,n){for(let i=0;i<n;i++){const a=-Math.PI*(.1+.8*Math.random()),v=90+Math.random()*90;P({k:'goo',x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,g:520,t:.5+Math.random()*.25,T:.75,c,r:2+Math.random()*2.6});}}
+// 史莱姆消失：一团白色烟雾 + 往上飘的泡泡 + 闪烁的小星星（卡通"噗"的一下，不像液体或血）
+function poof(x,y,big=1){
+  smoke(x,y-4,Math.round(5*big),5*big,'#ffffff',-18);
+  for(let i=0;i<Math.round(5*big);i++)P({k:'bubble',x:x+(Math.random()-.5)*12*big,y:y-4,vx:(Math.random()-.5)*30,vy:-50-Math.random()*50,g:0,t:.55+Math.random()*.3,T:.85,c:'#e0f2fe',r:2.2+Math.random()*2.2*big});
+  for(let i=0;i<Math.round(4*big);i++){const a=Math.random()*6.283,v=50+Math.random()*60;P({k:'twinkle',x,y:y-6,vx:Math.cos(a)*v,vy:Math.sin(a)*v-20,g:0,t:.5,T:.5,c:'#fef9c3',r:2.6});}
+}
 function coins(x,y,n){for(let i=0;i<n;i++){const a=-Math.PI*(.25+.5*Math.random()),v=100+Math.random()*70;P({k:'coin',x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,g:380,t:.8,T:.8,c:'#fbbf24',r:3.2,rot:Math.random()*6});}}
 function flame(x,y,s=1){P({k:'flame',x:x+(Math.random()-.5)*8*s,y,vx:(Math.random()-.5)*10,vy:-40-Math.random()*30,g:0,t:.35+Math.random()*.2,T:.55,c:'#fb923c',r:2.6*s});}
 // 每种敌人的死亡方式
@@ -822,7 +827,7 @@ function deathFx(e){
   else if(e.type==='fast'){for(let i=0;i<8;i++){const a=Math.random()*6.283;P({k:'spark',x:e.x,y:e.y,vx:Math.cos(a)*200,vy:Math.sin(a)*120,g:0,t:.35,T:.35,c:i%2?'#fde68a':'#ffffff',r:1.6});}smoke(e.x,e.y,3,5,'#fef3c7',-10);sfx('pop');}
   else if(e.type==='boss2'){for(const c of ['#a5f3fc','#f9a8d4','#fde68a','#a5b4fc','#86efac'])shards(e.x,e.y,6,c,190);fx.push({k:'ring',x:e.x,y:e.y,r:e.r*4,t:.5,T:.5,c:'#e0e7ff'});}
   else if(e.type==='boss3'){fx.push({k:'boom',x:e.x,y:e.y,r:e.r*3.2,t:.5,T:.5,c:'#f97316'});chunks(e.x,e.y,'#374151',14,220,5);for(let i=0;i<16;i++)flame(e.x,e.y,2);smoke(e.x,e.y,5,8,'#78716c');decal('crater',e.x,e.y+6,e.r*2,4,'#1c1917');}
-  else{goo(e.x,e.y,e.col,Math.round(9*big));decal('goo',e.x,e.y+e.r*.6,e.r*1.1*big,2.2,e.col);sfx('squish');}
+  else{poof(e.x,e.y,big);sfx('squish');}
   if(e.elite||e.boss){coins(e.x,e.y,e.boss?14:5);sfx('coin');}
 }
 // 命中火花：按伤害来源区分颜色
@@ -861,6 +866,8 @@ function drawPart(q){
     case 'chunk':{q.rot+=q.vr*.016;ctx.save();ctx.translate(q.x,q.y);ctx.rotate(q.rot);ctx.fillStyle=q.c;ctx.fillRect(-q.r/2,-q.r/2,q.r,q.r);ctx.strokeStyle='rgba(0,0,0,.4)';ctx.lineWidth=.8;ctx.strokeRect(-q.r/2,-q.r/2,q.r,q.r);ctx.restore();break;}
     case 'shard':{q.rot+=q.vr*.016;ctx.save();ctx.translate(q.x,q.y);ctx.rotate(q.rot);ctx.fillStyle=q.c;ctx.beginPath();ctx.moveTo(0,-q.r);ctx.lineTo(q.r*.45,q.r*.6);ctx.lineTo(-q.r*.45,q.r*.6);ctx.closePath();ctx.fill();ctx.restore();break;}
     case 'goo':{ctx.fillStyle=q.c;ctx.beginPath();ctx.arc(q.x,q.y,q.r,0,7);ctx.fill();ctx.globalAlpha=a*.6;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(q.x-q.r*.3,q.y-q.r*.3,q.r*.3,0,7);ctx.fill();break;}
+    case 'bubble':{ctx.strokeStyle='#ffffff';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(q.x,q.y,q.r,0,7);ctx.stroke();ctx.fillStyle='rgba(224,242,254,.35)';ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(q.x-q.r*.35,q.y-q.r*.35,q.r*.25,0,7);ctx.fill();break;}
+    case 'twinkle':{const r=q.r*(q.t/q.T);ctx.fillStyle=q.c;ctx.beginPath();ctx.moveTo(q.x,q.y-r*1.6);ctx.lineTo(q.x+r*.4,q.y-r*.4);ctx.lineTo(q.x+r*1.6,q.y);ctx.lineTo(q.x+r*.4,q.y+r*.4);ctx.lineTo(q.x,q.y+r*1.6);ctx.lineTo(q.x-r*.4,q.y+r*.4);ctx.lineTo(q.x-r*1.6,q.y);ctx.lineTo(q.x-r*.4,q.y-r*.4);ctx.closePath();ctx.fill();break;}
     case 'coin':{q.rot+=.3;const w=Math.abs(Math.cos(q.rot))*q.r+.6;ctx.fillStyle='#f59e0b';ctx.beginPath();ctx.ellipse(q.x,q.y,w,q.r,0,0,7);ctx.fill();ctx.fillStyle='#fde68a';ctx.beginPath();ctx.ellipse(q.x-w*.2,q.y-q.r*.2,w*.45,q.r*.45,0,0,7);ctx.fill();break;}
     case 'flame':{const k=q.t/q.T;ctx.fillStyle=k>.6?'#fde047':k>.3?'#fb923c':'#dc2626';ctx.beginPath();ctx.arc(q.x,q.y,q.r*(.5+k*.7),0,7);ctx.fill();break;}
     case 'snow':{ctx.fillStyle=q.c;ctx.fillRect(q.x-q.r,q.y-q.r*.25,q.r*2,q.r*.5);ctx.fillRect(q.x-q.r*.25,q.y-q.r,q.r*.5,q.r*2);break;}
@@ -904,7 +911,7 @@ const SFX={
   crit:[.09,()=>{tone('square',1320,1760,.06,.035);tone('sine',2640,2640,.08,.03,.03);}],
   slash:[.12,()=>{noise(.14,.09,'bandpass',3200);tone('sawtooth',900,200,.12,.04);}],
   coin:[.12,()=>{tone('square',988,988,.06,.035);tone('square',1319,1319,.12,.035,.06);}],
-  squish:[.06,()=>{tone('sine',320,90,.12,.06);noise(.06,.03,'lowpass',600);}],
+  squish:[.06,()=>{tone('sine',520,980,.09,.05);tone('sine',1200,1600,.06,.025,.05);}],
   crumble:[.1,()=>{noise(.3,.12,'lowpass',500);tone('sine',120,50,.2,.08);}],
   rain:[.5,()=>{for(let i=0;i<6;i++)noise(.05,.05,'highpass',4000,i*.07);tone('triangle',800,500,.3,.03);}],
   gust:[.5,()=>{noise(.6,.08,'bandpass',900);tone('sine',300,700,.4,.04);}],
