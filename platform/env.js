@@ -9,7 +9,11 @@ function RuneEnv(host, css, bodyHTML) {
   const extra = `
 body{padding-top:${ins.top}px}
 #app{height:${appH}px}
-#cv{width:min(100vw,480px,calc((${appH}px - 190px) * 0.6429))}
+#cv{width:min(100vw,480px,calc((${appH}px - 232px) * 0.6429))}
+#panel{padding-top:6px;padding-bottom:6px}
+.big{padding:9px}
+#panel .tinfo{margin-top:5px}
+#panel .row,#panel .row2{margin-top:6px}
 #guide{top:${ins.top + 46}px}
 #ov,#bp{padding-top:${ins.top + 12}px;padding-bottom:${ins.bottom + 16}px}
 `;

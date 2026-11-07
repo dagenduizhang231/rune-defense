@@ -398,7 +398,7 @@ function layoutEl(e, x, y, w, forcedH) {
   let h = eh != null ? eh : ch + 2 * ed.bw + ed.pt + ed.pb;
   const mnh = len(cs.minHeight, null, fs); if (mnh != null && eh == null) h = Math.max(h, mnh);
   e._b.h = h; e._ch = ch + 2 * ed.bw + ed.pt + ed.pb;
-  e._scroll = (cs.overflowY === 'auto' || cs.overflowY === 'scroll' || cs.overflow === 'auto') && e._ch > h + .5;
+  e._scroll = (cs.overflowY === 'auto' || cs.overflowY === 'scroll' || cs.overflow === 'auto') && e._ch > h + 2;
   e._clip = e._scroll || cs.overflow === 'hidden' || cs.overflowY === 'auto' || cs.overflow === 'auto';
   if (e._scroll) e.scrollTop = Math.max(0, Math.min(e.scrollTop, e._ch - h)); else e.scrollTop = 0;
   return h;
@@ -693,6 +693,17 @@ function paintEl(c, e, t) {
   }
   for (const ch of e.children) if (ch.nodeType === 1 && !ch._posd) paintEl(c, ch, t);
   if (clip) c.restore();
+  // 可滚动时：右侧细滚动条 + 底部渐隐提示"下面还有"
+  if (e._scroll) {
+    const H = b.h, total = e._ch, st = e.scrollTop, bh = Math.max(24, H * H / total), by = b.y + (H - bh) * st / (total - H);
+    c.fillStyle = 'rgba(255,255,255,.35)'; rr(c, b.x + b.w - 4, by + 2, 3, bh - 4, 1.5); c.fill();
+    if (st < total - H - 2) {
+      const bg = (UI.body._cs && UI.body._cs.background) || '#000', fh = Math.min(28, H / 3);
+      const g = c.createLinearGradient(0, b.y + H - fh, 0, b.y + H); g.addColorStop(0, 'rgba(13,16,32,0)'); g.addColorStop(1, 'rgba(13,16,32,.92)');
+      c.fillStyle = g; c.fillRect(b.x, b.y + H - fh, b.w - 6, fh);
+      c.fillStyle = 'rgba(203,213,225,.85)'; c.font = '11px ' + UI.fontFamily; c.textAlign = 'center'; c.textBaseline = 'bottom'; c.fillText('▼ 上滑查看更多', b.x + b.w / 2, b.y + H - 2);
+    }
+  }
   c.restore();
 }
 function paintSvg(c, e, b, r) {

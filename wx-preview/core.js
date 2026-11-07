@@ -398,7 +398,7 @@ function layoutEl(e, x, y, w, forcedH) {
   let h = eh != null ? eh : ch + 2 * ed.bw + ed.pt + ed.pb;
   const mnh = len(cs.minHeight, null, fs); if (mnh != null && eh == null) h = Math.max(h, mnh);
   e._b.h = h; e._ch = ch + 2 * ed.bw + ed.pt + ed.pb;
-  e._scroll = (cs.overflowY === 'auto' || cs.overflowY === 'scroll' || cs.overflow === 'auto') && e._ch > h + .5;
+  e._scroll = (cs.overflowY === 'auto' || cs.overflowY === 'scroll' || cs.overflow === 'auto') && e._ch > h + 2;
   e._clip = e._scroll || cs.overflow === 'hidden' || cs.overflowY === 'auto' || cs.overflow === 'auto';
   if (e._scroll) e.scrollTop = Math.max(0, Math.min(e.scrollTop, e._ch - h)); else e.scrollTop = 0;
   return h;
@@ -693,6 +693,17 @@ function paintEl(c, e, t) {
   }
   for (const ch of e.children) if (ch.nodeType === 1 && !ch._posd) paintEl(c, ch, t);
   if (clip) c.restore();
+  // 可滚动时：右侧细滚动条 + 底部渐隐提示"下面还有"
+  if (e._scroll) {
+    const H = b.h, total = e._ch, st = e.scrollTop, bh = Math.max(24, H * H / total), by = b.y + (H - bh) * st / (total - H);
+    c.fillStyle = 'rgba(255,255,255,.35)'; rr(c, b.x + b.w - 4, by + 2, 3, bh - 4, 1.5); c.fill();
+    if (st < total - H - 2) {
+      const bg = (UI.body._cs && UI.body._cs.background) || '#000', fh = Math.min(28, H / 3);
+      const g = c.createLinearGradient(0, b.y + H - fh, 0, b.y + H); g.addColorStop(0, 'rgba(13,16,32,0)'); g.addColorStop(1, 'rgba(13,16,32,.92)');
+      c.fillStyle = g; c.fillRect(b.x, b.y + H - fh, b.w - 6, fh);
+      c.fillStyle = 'rgba(203,213,225,.85)'; c.font = '11px ' + UI.fontFamily; c.textAlign = 'center'; c.textBaseline = 'bottom'; c.fillText('▼ 上滑查看更多', b.x + b.w / 2, b.y + H - 2);
+    }
+  }
   c.restore();
 }
 function paintSvg(c, e, b, r) {
@@ -830,7 +841,11 @@ function RuneEnv(host, css, bodyHTML) {
   const extra = `
 body{padding-top:${ins.top}px}
 #app{height:${appH}px}
-#cv{width:min(100vw,480px,calc((${appH}px - 190px) * 0.6429))}
+#cv{width:min(100vw,480px,calc((${appH}px - 232px) * 0.6429))}
+#panel{padding-top:6px;padding-bottom:6px}
+.big{padding:9px}
+#panel .tinfo{margin-top:5px}
+#panel .row,#panel .row2{margin-top:6px}
 #guide{top:${ins.top + 46}px}
 #ov,#bp{padding-top:${ins.top + 12}px;padding-bottom:${ins.bottom + 16}px}
 `;
@@ -1059,7 +1074,7 @@ window.RUNE_MAPS=[{"type":"snake","paths":[[[-1,1],[1,1],[1,11],[4,11],[4,1],[7,
 var RuneMusic=window.RuneMusic;
 
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6a';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6a.1';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -2386,8 +2401,7 @@ function renderPanel(){
       const evo=t.lvl>=4&&has('L_'+t.type);
       h+=`<div class="tinfo"><b style="color:${d.color}">${bn?bn.name:d.name} Lv.${t.lvl}</b>${evo?` <b style="color:#fbbf24">★ ${EVO[t.type]}</b>`:''} · 伤害 ${s.dmg.toFixed(0)} · 每 ${s.rate.toFixed(2)} 秒 · 射程 ${(s.range/CS).toFixed(1)}${tl==='highland'?'（高地 +1）':''}${wn?` · 符文井 +${wn*20}%`:''}${t.stun>0?' · <b style="color:#f87171">被震慑</b>':''}${bn?`<br><span style="color:#9aa3c7">${bn.desc}</span>`:''}${t.lvl>=4&&!evo?`<br><span style="color:#fda4af">得到传说符文「${LEGENDS.find(l=>l.tag===t.type).name}」后进化为「${EVO[t.type]}」</span>`:''}</div>`;
       if(t.lvl===2&&!t.branch){
-        h+=`<div class="tinfo" style="color:#fde68a">升到 3 级时选择分支（选了不能改）：</div><div class="row2">${BRANCH[t.type].map(([id,nm,ds])=>`<button class="tb br" data-br="${id}" data-cost="${uc}"><b>${nm}</b> · ${uc} 金<br>${ds}</button>`).join('')}</div>`;
-        h+=`<div class="row2"><button class="tb" data-sell>出售 +${Math.floor(t.spent*sellRate())} 金</button></div>`;
+        h+=`<div class="tinfo" style="color:#fde68a"><button class="chip" data-sell style="float:right;margin:0;padding:1px 10px;line-height:1.3">出售 +${Math.floor(t.spent*sellRate())} 金</button>升到 3 级时选择分支（选了不能改）：</div><div class="row2">${BRANCH[t.type].map(([id,nm,ds])=>`<button class="tb br" data-br="${id}" data-cost="${uc}"><b>${nm}</b> · ${uc} 金<br>${ds}</button>`).join('')}</div>`;
       }else h+=`<div class="row2"><button class="tb" data-up data-cost="${t.lvl>=4?99999:uc}">${t.lvl>=4?'已满级':'⬆ 升级 '+uc+' 金'}</button><button class="tb" data-sell>出售 +${Math.floor(t.spent*sellRate())} 金</button></div>`;
     }
   }else if(live){

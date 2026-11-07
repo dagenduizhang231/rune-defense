@@ -1,7 +1,8 @@
 // 符文塔防 · 微信小游戏宿主：屏幕画布、触摸、存储、音频、图片。
 // 注意：微信里第一次 wx.createCanvas() 得到的是上屏画布，之后创建的都是离屏画布。
 var __HOST = (function () {
-  const sys = wx.getSystemInfoSync();
+  // 新接口 getWindowInfo（基础库 2.20.1+），老版本退回 getSystemInfoSync
+  let sys; try { sys = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync(); } catch (e) { sys = wx.getSystemInfoSync(); }
   const screen = wx.createCanvas();
   const W = sys.windowWidth, H = sys.windowHeight, dpr = Math.min(3, sys.pixelRatio || 2);
   screen.width = Math.round(W * dpr); screen.height = Math.round(H * dpr);
