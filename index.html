@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>符文塔防 · v0.5a</title>
+<title>符文塔防 · v0.5b</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 html,body{margin:0;background:#0d1020;color:#e5e7eb;font-family:-apple-system,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;height:100%;overflow:hidden;touch-action:manipulation}
@@ -102,10 +102,11 @@ button{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}
 <div id="ov"></div><div id="guide"></div>
 <div id="bp"></div>
 <script src="art.js"></script>
+<script src="music.js"></script>
 <script src="maps.js"></script>
 <script>
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.5a';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.5b';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -796,9 +797,11 @@ function burst(x,y,c,n,sp,g,life,r){for(let i=0;i<n;i++){const a=Math.random()*6
 function txt(x,y,s,c,T){texts.push({x,y,s,c,t:T||.8,T:T||.8});}
 
 // ======================= 音效 =======================
-let AC=null,MG=null,muted=false,lastS={};
-try{muted=localStorage.getItem('td_mute')==='1';}catch(e){}
-function audioInit(){if(AC||(typeof AudioContext==='undefined'&&typeof webkitAudioContext==='undefined'))return;try{AC=new (window.AudioContext||window.webkitAudioContext)();MG=AC.createGain();MG.gain.value=muted?0:.55;MG.connect(AC.destination);}catch(e){AC=null;}}
+let AC=null,MG=null,muted=false,lastS={},sndMode='0';
+// 声音三档：0 全开 · m 只有音效（关音乐）· 1 全部静音
+try{sndMode=localStorage.getItem('td_mute')||'0';}catch(e){}
+muted=sndMode==='1';
+function audioInit(){if(AC||(typeof AudioContext==='undefined'&&typeof webkitAudioContext==='undefined'))return;try{AC=new (window.AudioContext||window.webkitAudioContext)();MG=AC.createGain();MG.gain.value=muted?0:.55;MG.connect(AC.destination);if(window.RuneMusic){RuneMusic.init(AC);RuneMusic.setEnabled(sndMode==='0');}}catch(e){AC=null;}}
 function tone(type,f1,f2,dur,vol,delay){const t0=AC.currentTime+(delay||0),o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.setValueAtTime(f1,t0);o.frequency.exponentialRampToValueAtTime(Math.max(20,f2),t0+dur);g.gain.setValueAtTime(vol,t0);g.gain.exponentialRampToValueAtTime(.0005,t0+dur);o.connect(g);g.connect(MG);o.start(t0);o.stop(t0+dur+.02);}
 function noise(dur,vol,ftype,freq,delay){const t0=AC.currentTime+(delay||0),n=Math.floor(AC.sampleRate*dur),b=AC.createBuffer(1,n,AC.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;const s=AC.createBufferSource();s.buffer=b;const f=AC.createBiquadFilter();f.type=ftype;f.frequency.value=freq;const g=AC.createGain();g.gain.setValueAtTime(vol,t0);g.gain.exponentialRampToValueAtTime(.0005,t0+dur);s.connect(f);f.connect(g);g.connect(MG);s.start(t0);}
 const SFX={
@@ -818,8 +821,19 @@ const SFX={
 };
 function sfx(n){if(!AC||muted)return;const now=AC.currentTime,s=SFX[n];if(!s)return;if(lastS[n]&&now-lastS[n]<s[0])return;lastS[n]=now;try{s[1]();}catch(e){}}
 document.addEventListener('pointerdown',()=>{audioInit();if(AC&&AC.state==='suspended')AC.resume();},{capture:true});
-const sndBtn=$('snd');sndBtn.textContent=muted?'🔇':'🔊';
-sndBtn.onclick=()=>{muted=!muted;sndBtn.textContent=muted?'🔇':'🔊';if(MG)MG.gain.value=muted?0:.55;try{localStorage.setItem('td_mute',muted?'1':'0');}catch(e){}};
+const sndBtn=$('snd');const SNDICON={'0':'🔊','m':'🔉','1':'🔇'};sndBtn.textContent=SNDICON[sndMode]||'🔊';
+sndBtn.onclick=()=>{sndMode=sndMode==='0'?'m':sndMode==='m'?'1':'0';muted=sndMode==='1';sndBtn.textContent=SNDICON[sndMode];if(MG)MG.gain.value=muted?0:.55;
+  if(window.RuneMusic)RuneMusic.setEnabled(sndMode==='0');txt(W/2,H*.45,{'0':'音乐和音效：开','m':'只有音效（音乐关）','1':'全部静音'}[sndMode],'#e5e7eb',1.2);
+  try{localStorage.setItem('td_mute',sndMode);}catch(e){}};
+// 背景音乐跟着画面切换：大厅/选图/结算 → 大厅曲；局内 → 当前主题的战斗曲（建造时只有氛围层，开战后鼓和旋律进来）；Boss 战 → Boss 曲
+let musT=0;
+function musicTick(dt){
+  if(!window.RuneMusic||!AC)return;musT-=dt;if(musT>0)return;musT=.25;
+  const inRun=MAP&&!['map','win','over'].includes(phase);
+  if(!inRun){RuneMusic.want('lobby',0);return;}
+  if(curNode==='boss'&&phase==='wave'){RuneMusic.want('boss',1);return;}
+  RuneMusic.want(BIOME,phase==='wave'?1:0);
+}
 
 // ======================= 介绍卡 / 符文面板 =======================
 function infoOf(k){
@@ -1469,6 +1483,7 @@ function loop(now){
   else updFx(dt);
   }catch(err){console.error(err);}
   if(banner){banner.t-=dt;if(banner.t<=0)banner=null;}
+  try{musicTick(dt);}catch(e){}
   try{draw();}catch(err){console.error(err);}
   uiT-=dt;
   if(uiT<=0){uiT=.15;hW.textContent=`第${actOf(step)}幕 ${step}/${MAXS}`;hG.textContent=`💰 ${Math.floor(gold||0)}`;hL.textContent=`❤️ ${lives??20}`;syncButtons();syncHero();
