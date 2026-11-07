@@ -1,0 +1,30 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>符文塔防 · 微信版预览</title><link rel="icon" href="data:,">
+<style>html,body{margin:0;background:#222;height:100%;overflow:hidden}#scr{display:block;touch-action:none}
+#cap{position:fixed;right:7px;width:87px;height:32px;border-radius:16px;background:rgba(255,255,255,.85);border:1px solid #ddd;pointer-events:none;font:12px sans-serif;color:#333;display:flex;align-items:center;justify-content:center;letter-spacing:6px}</style>
+</head><body><canvas id="scr"></canvas><div id="cap">•••◉</div>
+<script src="core.js"></script>
+<script>
+(function(){
+const W=innerWidth,H=innerHeight,dpr=Math.min(3,devicePixelRatio||1),cv=document.getElementById('scr');
+cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+'px';cv.style.height=H+'px';
+// 模拟微信顶部胶囊按钮（状态栏 47 + 胶囊 32）
+const capTop=Math.round(H>=800?51:28),top=capTop+32+6;document.getElementById('cap').style.top=capTop+'px';
+const t0=performance.now();
+const host={width:W,height:H,dpr,screenCtx:cv.getContext('2d'),insets:{top,bottom:H>=800?34:0},fontFamily:'-apple-system,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif',
+ createCanvas:()=>document.createElement('canvas'),Image:window.Image,
+ loadImage(src,cb){const im=new Image();im.onload=cb;im.src=src;return im;},
+ pngBase:'images/',pngKeys:["arrow", "arrowBase", "arrowTop", "ashroad", "basalt0", "basalt1", "boss1", "boss1_snow", "boss1_volcano", "boss2", "boss2_snow", "boss2_volcano", "boss3", "boss3_snow", "boss3_volcano", "cannon", "cannonBase", "cannonTop", "fast", "fast_snow", "fast_volcano", "frost", "frostBase", "frostTop", "grass0", "grass1", "highland", "highland_snow", "highland_volcano", "ice", "lava", "mini", "mini_snow", "mini_volcano", "norm", "norm_snow", "norm_volcano", "path", "runewell", "runewell_snow", "runewell_volcano", "snow0", "snow1", "snowroad", "split", "split_snow", "split_volcano", "swamp", "tank", "tank_snow", "tank_volcano", "tesla", "teslaBase", "teslaTop"],search:location.search,
+ storage:{get:k=>localStorage.getItem('wxp_'+k),set:(k,v)=>localStorage.setItem('wxp_'+k,v),remove:k=>localStorage.removeItem('wxp_'+k),clear(){for(const k of Object.keys(localStorage))if(k.startsWith('wxp_'))localStorage.removeItem(k);}},
+ rAF:cb=>requestAnimationFrame(cb),now:()=>performance.now()-t0,
+ audioCtor:window.AudioContext||window.webkitAudioContext,
+ bindTouch(ui){let down=false;const p=e=>[e.clientX,e.clientY];
+  cv.addEventListener('pointerdown',e=>{down=true;cv.setPointerCapture(e.pointerId);ui.touchStart(...p(e));});
+  cv.addEventListener('pointermove',e=>{if(down)ui.touchMove(...p(e));});
+  cv.addEventListener('pointerup',e=>{if(!down)return;down=false;ui.touchEnd(...p(e));});
+  cv.addEventListener('pointercancel',()=>{down=false;ui.touchCancel();});
+  cv.addEventListener('wheel',e=>{ui.wheel(e.clientX,e.clientY,e.deltaY);e.preventDefault();},{passive:false});}};
+window.__ENV=__BOOT(host);
+})();
+</script></body></html>

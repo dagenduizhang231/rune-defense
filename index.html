@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>符文塔防 · v0.5c.1</title>
+<title>符文塔防 · v0.6a</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 html,body{margin:0;background:#0d1020;color:#e5e7eb;font-family:-apple-system,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;height:100%;overflow:hidden;touch-action:manipulation}
@@ -106,7 +106,7 @@ button{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}
 <script src="maps.js"></script>
 <script>
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.5c.1';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6a';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -199,18 +199,24 @@ function towerTip(t,len){const p=towerPivot(t),a=t.ang||0;return[p.x+Math.sin(a)
 const ARTKEYS=['arrow','cannon','frost','tesla','norm','fast','tank','split','mini','boss1','boss2','boss3'];
 const TILEKEYS=['highland','runewell','swamp','grass0','grass1','path'];
 function raster(svgStr,px){return new Promise(res=>{if(typeof Image==='undefined'){res(null);return;}const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=c.height=px;c.getContext('2d').drawImage(im,0,0,px,px);res(c);};im.onerror=()=>res(null);im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgStr.replace('<svg ','<svg width="'+px+'" height="'+px+'" '));});}
+// 所有要预先栅格化的贴图：[键名, 生成 SVG 的函数, 像素尺寸]。微信版用 tools/build_wx.py 把它们提前烤成 PNG
+const ENEMYK=['norm','fast','tank','split','mini','boss1','boss2','boss3'];
+function artJobs(){
+  const A=window.RuneArt,px=Math.max(96,Math.ceil(72*DPR)),J=[];if(!A)return J;
+  for(const k of ARTKEYS)J.push([k,()=>A[k](),px]);
+  if(A.arrowBase)for(const k of ['arrow','cannon','frost','tesla'])for(const p of ['Base','Top'])J.push([k+p,()=>A[k+p](),px]);
+  J.push(['grass0',()=>A.grass(0),128],['grass1',()=>A.grass(1),128],['path',()=>A.path(),128],['highland',()=>A.highland(),128],['runewell',()=>A.runewell(),128],['swamp',()=>A.swamp(),128]);
+  if(A.snow){J.push(['snow0',()=>A.snow(0),128],['snow1',()=>A.snow(1),128],['snowroad',()=>A.snowroad(),128],['ice',()=>A.ice(),128],
+      ['basalt0',()=>A.basalt(0),128],['basalt1',()=>A.basalt(1),128],['ashroad',()=>A.ashroad(),128],['lava',()=>A.lava(),128]);
+    for(const b of ['snow','volcano']){J.push(['highland_'+b,()=>A.highland(BIOMES[b].bg),128],['runewell_'+b,()=>A.runewell(BIOMES[b].bg),128]);
+      for(const k of ENEMYK)J.push([k+'_'+b,()=>A.tint(A[k](),b),px]);}}
+  return J;
+}
+function loadPNG(k){return new Promise(res=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>res(null);im.src=window.RUNE_PNG+k+'.png';});}
 async function loadArt(){
-  if(!window.RuneArt)return;
-  const A=window.RuneArt,px=Math.max(96,Math.ceil(72*DPR));
-  await Promise.all(ARTKEYS.map(async k=>{SPR[k]=await raster(A[k](),px);}));
-  if(A.arrowBase)await Promise.all(['arrow','cannon','frost','tesla'].flatMap(k=>[k+'Base',k+'Top']).map(async k=>{SPR[k]=await raster(A[k](),px);}));
-  for(const k of ['norm','fast','tank','split','mini','boss1','boss2','boss3']){const sp=SPR[k];if(!sp)continue;const c=document.createElement('canvas');c.width=sp.width;c.height=sp.height;const x=c.getContext('2d');x.drawImage(sp,0,0);x.globalCompositeOperation='source-in';x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);SPRW[k]=c;}
-  SPR.grass0=await raster(A.grass(0),128);SPR.grass1=await raster(A.grass(1),128);SPR.path=await raster(A.path(),128);
-  SPR.highland=await raster(A.highland(),128);SPR.runewell=await raster(A.runewell(),128);SPR.swamp=await raster(A.swamp(),128);
-  if(A.snow){SPR.snow0=await raster(A.snow(0),128);SPR.snow1=await raster(A.snow(1),128);SPR.snowroad=await raster(A.snowroad(),128);SPR.ice=await raster(A.ice(),128);
-    SPR.basalt0=await raster(A.basalt(0),128);SPR.basalt1=await raster(A.basalt(1),128);SPR.ashroad=await raster(A.ashroad(),128);SPR.lava=await raster(A.lava(),128);
-    for(const b of ['snow','volcano']){SPR['highland_'+b]=await raster(A.highland(BIOMES[b].bg),128);SPR['runewell_'+b]=await raster(A.runewell(BIOMES[b].bg),128);}
-    await Promise.all(['snow','volcano'].flatMap(b=>['norm','fast','tank','split','mini','boss1','boss2','boss3'].map(async k=>{SPR[k+'_'+b]=await raster(A.tint(A[k](),b),px);})));}
+  if(window.RUNE_PNG){await Promise.all(window.RUNE_PNG_KEYS.map(async k=>{SPR[k]=await loadPNG(k);}));}
+  else{if(!window.RuneArt)return;await Promise.all(artJobs().map(async([k,f,px])=>{SPR[k]=await raster(f(),px);}));}
+  for(const k of ENEMYK){const sp=SPR[k];if(!sp)continue;const c=document.createElement('canvas');c.width=sp.width;c.height=sp.height;const x=c.getContext('2d');x.drawImage(sp,0,0);x.globalCompositeOperation='source-in';x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);SPRW[k]=c;}
   buildBG();
 }
 function buildBG(){
@@ -229,7 +235,7 @@ function buildBG(){
   BG=b;
 }
 const ARTURL={};
-function artURL(k){if(!window.RuneArt)return'';if(ARTURL[k])return ARTURL[k];const A=window.RuneArt,f=A[k];if(!f)return'';return ARTURL[k]='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(f());}
+function artURL(k){if(window.RUNE_PNG)return window.RUNE_PNG+k+'.png';if(!window.RuneArt)return'';if(ARTURL[k])return ARTURL[k];const A=window.RuneArt,f=A[k];if(!f)return'';return ARTURL[k]='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(f());}
 
 // ======================= 数据 =======================
 const TT={

@@ -1,0 +1,19 @@
+{
+  "appid": "touristappid",
+  "projectname": "rune-defense",
+  "compileType": "game",
+  "description": "符文塔防",
+  "setting": {
+    "es6": true,
+    "enhance": true,
+    "minified": true,
+    "postcss": false,
+    "urlCheck": false
+  },
+  "libVersion": "3.6.0",
+  "packOptions": {
+    "ignore": [],
+    "include": []
+  },
+  "condition": {}
+}

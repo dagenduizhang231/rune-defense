@@ -21,7 +21,45 @@ import sys, time, random, json, multiprocessing as mp
 from playwright.sync_api import sync_playwright
 
 import os
-ROOT = os.environ.get('QA_URL', 'file:///home/claude/rune-defense/index.html')
+# QA_WX=1：测微信版（wx-preview，用模拟 wx 环境跑迷你 DOM，点击走 canvas 坐标）
+WX = os.environ.get('QA_WX') == '1'
+ROOT = os.environ.get('QA_URL', 'http://localhost:8765/wx-preview/index.html' if WX else 'file:///home/claude/rune-defense/index.html')
+
+class Drv:
+    """统一网页版（真 DOM）和微信版（canvas 迷你 DOM）的操作"""
+    def __init__(s, pg): s.pg = pg
+    def ev(s, js):
+        if not WX: return s.pg.evaluate(js)
+        return s.pg.evaluate("s=>__ENV.window.__rune_eval('var __qa=window.__qa;'+s)", js)
+    def inject(s, bot):
+        if not WX: s.pg.evaluate(bot); return
+        s.ev(bot)
+    def _pt(s, sel, i=0):
+        return s.pg.evaluate("""([s,i])=>{const U=__ENV.ui;U.find('body');const e=__ENV.document.querySelectorAll(s)[i];if(!e)return null;U.scrollTo(e);const f=U.find(e);if(f&&!U.covers(e,f.x,f.y))f.vis=false;return f;}""", [sel, i])
+    def vis(s, sel):
+        if not WX: return s.pg.is_visible(sel)
+        r = s.pg.evaluate("s=>{const a=__ENV.ui.findAll(s);return a.some(x=>x.vis)}", sel); return bool(r)
+    def enabled(s, sel):
+        if not WX: return s.pg.is_enabled(sel, timeout=500)
+        return s.pg.evaluate("s=>{const e=__ENV.document.querySelector(s);return !!e&&!e.disabled}", sel)
+    def all(s, sel):
+        """返回 [(序号, 可见, 可用)]"""
+        if not WX:
+            return [(i, e.is_visible(), e.is_enabled()) for i, e in enumerate(s.pg.query_selector_all(sel))]
+        return [(i, x['vis'], not x['dis']) for i, x in enumerate(s.pg.evaluate("s=>__ENV.ui.findAll(s).map(({el,...r})=>r)", sel))]
+    def click(s, sel, i=0):
+        if not WX:
+            try:
+                if i: s.pg.query_selector_all(sel)[i].click(timeout=1500)
+                else: s.pg.click(sel, timeout=1500)
+                return True
+            except Exception: return False
+        r = s._pt(sel, i)
+        if not r or not r['vis']: return False
+        s.pg.mouse.click(r['x'], r['y']); return True
+    def box(s, sel):
+        if not WX: return s.pg.query_selector(sel).bounding_box()
+        r = s.pg.evaluate("s=>__ENV.ui.find(s)", sel); return {'x': r['x'] - r['w'] / 2, 'y': r['y'] - r['h'] / 2, 'width': r['w'], 'height': r['h']}
 
 BOT_JS = r"""
 window.__qa={
@@ -69,25 +107,23 @@ def run_worker(args):
         pg.on('console', lambda m: m.type == 'error' and errs.append('console.error: ' + m.text))
         pg.goto(ROOT); pg.wait_for_timeout(800)
         if wid % 2 == 0:
-            pg.evaluate("localStorage.setItem('td_meta',JSON.stringify({shards:900,owned:{altar:true,fate:true,h_fire:true,h_ice:true,pk_odd:true},hero:'fire',diff:0,unlockedDiff:3,runs:0,wins:0,auto:true}))")
+            pg.evaluate("localStorage.setItem('"+('wxp_' if WX else '')+"td_meta',JSON.stringify({shards:900,owned:{altar:true,fate:true,h_fire:true,h_ice:true,pk_odd:true},hero:'fire',diff:0,unlockedDiff:3,runs:0,wins:0,auto:true}))")
             pg.reload(); pg.wait_for_timeout(800)
-        pg.evaluate(BOT_JS)
-        ev = pg.evaluate
+        D = Drv(pg)
+        D.inject(BOT_JS)
+        ev = D.ev
 
         def prob(run, msg):
             s = ev('__qa.state()')
             problems.append(f'[进程{wid} 第{run}局 第{s["step"]}站 {s["phase"]}] {msg}')
 
-        def click(sel):
-            try:
-                pg.click(sel, timeout=1500); return True
-            except Exception:
-                return False
+        def click(sel, i=0):
+            return D.click(sel, i)
 
         def runes_roundtrip(run, where):
             """打开再关掉符文面板，确认不会卡住暂停"""
             for sel in ['#seeRunes', '#runes']:
-                if pg.is_visible(sel):
+                if D.vis(sel):
                     before = ev('paused')
                     if not click(sel): continue
                     pg.wait_for_timeout(80)
@@ -103,7 +139,7 @@ def run_worker(args):
         cv = None
         def tap_cell(c, r):
             nonlocal cv
-            cv = pg.query_selector('#cv').bounding_box()
+            cv = D.box('#cv')
             cols, rows = ev('[COLS,ROWS]')
             pg.mouse.click(cv['x'] + (c + .5) * cv['width'] / cols, cv['y'] + (r + .5) * cv['height'] / rows)
             pg.wait_for_timeout(60)
@@ -138,54 +174,53 @@ def run_worker(args):
                                         'legs': s['legs'], 'combos': s['combos'], 'runes': s['runes'], 'route': route, 'sec': round(time.time() - t0)})
                         if not click('#again'): prob(run, '结束界面点不了「回到大厅」')
                         pg.wait_for_timeout(200)
-                        if ev('phase') != 'map' or not pg.is_visible('#lgo'): prob(run, '结束后没有回到大厅')
+                        if ev('phase') != 'map' or not D.vis('#lgo'): prob(run, '结束后没有回到大厅')
                         if run_sh0 is not None and ev('META.shards') <= run_sh0 and s['step'] > 1: prob(run, '打完一局没有获得符文碎片')
                         done = True; break
                     if rnd.random() < .4 and s['phase'] != 'map': runes_roundtrip(run, f'弹窗({s["phase"]})')
-                    if pg.is_visible('#lgo'):
+                    if D.vis('#lgo'):
                         if rnd.random() < .5: click('#lart'); pg.wait_for_timeout(80)
                         else:
-                            hs = [x for x in pg.query_selector_all('.card.hero') if x.is_enabled()]
-                            if hs and rnd.random() < .7: rnd.choice(hs).click(); pg.wait_for_timeout(60)
-                            ds = pg.query_selector_all('.dchip')
-                            if ds and rnd.random() < .5: rnd.choice(ds).click(); pg.wait_for_timeout(60)
+                            hs = [i for i, v, e in D.all('.card.hero') if e and v]
+                            if hs and rnd.random() < .7: click('.card.hero', rnd.choice(hs)); pg.wait_for_timeout(60)
+                            ds = [i for i, v, e in D.all('.dchip') if v]
+                            if ds and rnd.random() < .5: click('.dchip', rnd.choice(ds)); pg.wait_for_timeout(60)
                             run_sh0 = ev('META.shards'); click('#lgo')
                         continue
-                    if pg.is_visible('#artBack'):
-                        buys = [x for x in pg.query_selector_all('.buy') if x.is_enabled()]
+                    if D.vis('#artBack'):
+                        buys = [i for i, v, e in D.all('.buy') if e]
                         if buys and rnd.random() < .7:
-                            before = ev('META.shards'); rnd.choice(buys).click(); C('工匠铺购买'); pg.wait_for_timeout(60)
+                            before = ev('META.shards'); click('.buy', rnd.choice(buys)); C('工匠铺购买'); pg.wait_for_timeout(60)
                             if ev('META.shards') >= before: prob(run, '工匠铺：买了东西碎片没扣')
                         else: click('#artBack')
                         continue
-                    if pg.is_visible('#altarNo'):
+                    if D.vis('#altarNo'):
                         C('诅咒祭坛')
                         if rnd.random() < .3: click('#altarNo')
-                        else: C('接受诅咒'); rnd.choice([c for c in pg.query_selector_all('#ov .card.curse') if c.is_visible()]).click()
+                        else: C('接受诅咒'); click('#ov .card.curse', rnd.choice([i for i, v, e in D.all('#ov .card.curse') if v]))
                         pg.wait_for_timeout(60); continue
                     if s['intro']: C('敌人介绍'); click('#okIntro')
-                    elif pg.is_visible('#tutok'): click('#tutok')
-                    elif pg.is_visible('#ov .card.node'):
+                    elif D.vis('#tutok'): click('#tutok')
+                    elif D.vis('#ov .card.node'):
                         nodes = ev('pendingNodes')
                         want = 'elite' if route == 'greedy' else ('elite' if route == 'mixed' and rnd.random() < .35 else 'normal')
                         i = nodes.index(want) if want in nodes else 0
                         click(f'#ov .card.node[data-i="{i}"]')
-                    elif pg.is_visible('#erRune'):
+                    elif D.vis('#erRune'):
                         C('精英奖励'); click('#erTile' if rnd.random() < .35 else '#erRune')
                     else:
-                        cards = pg.query_selector_all('#ov .card')
-                        vis = [c for c in cards if c.is_visible()]
-                        if vis: rnd.choice(vis).click()
+                        vis = [i for i, v, e in D.all('#ov .card') if v]
+                        if vis: click('#ov .card', rnd.choice(vis))
                         else:
-                            bs = [x for x in pg.query_selector_all('#ov button') if x.is_visible()]
-                            rnd.choice(bs).click()
+                            bs = [i for i, v, e in D.all('#ov button') if v]
+                            click('#ov button', rnd.choice(bs))
                     pg.wait_for_timeout(60)
                     continue
                 if s['phase'] == 'build' and not resumed and s['step'] >= 2 and rnd.random() < .25:
                     # 存档测试：建造阶段刷新页面，从大厅「继续上一局」，状态必须一致
                     resumed = True; C('刷新后继续上一局')
                     key = "JSON.stringify({g:Math.floor(gold),l:lives,t:towers.length,tl:towers.map(t=>t.lvl).join(''),k:Object.keys(taken).sort().join(','),s:step,b:BIOME,m:MAPI})"
-                    before = ev(key); pg.reload(); pg.wait_for_timeout(900); pg.evaluate(BOT_JS)
+                    before = ev(key); pg.reload(); pg.wait_for_timeout(900); D.inject(BOT_JS)
                     if not click('#lcont'): prob(run, '刷新后大厅没有「继续上一局」按钮')
                     else:
                         pg.wait_for_timeout(200); after = ev(key)
@@ -199,14 +234,14 @@ def run_worker(args):
                     if sp and s['gold'] >= 60:
                         tap_cell(sp['c'], sp['r'])
                         t = rnd.choice(['arrow', 'cannon', 'frost', 'tesla'])
-                        if pg.is_visible(f'button[data-b="{t}"]'):
+                        if D.vis(f'button[data-b="{t}"]'):
                             click(f'button[data-b="{t}"]')
                     tw = ev('towers.length')
                     if tw:
                         k = rnd.randrange(tw); c, r = ev(f'[towers[{k}].c,towers[{k}].r]')
                         tap_cell(c, r)
-                        if pg.is_visible('button[data-br]'): click(f'button[data-br] >> nth={rnd.randrange(2)}')
-                        elif pg.is_visible('button[data-up]'): click('button[data-up]')
+                        if D.vis('button[data-br]'): click('button[data-br]', rnd.randrange(2))
+                        elif D.vis('button[data-up]'): click('button[data-up]')
                     ev('__qa.spend()')
                     if rnd.random() < .3: runes_roundtrip(run, '建造阶段')
                     if not click('#go'): prob(run, '建造阶段找不到「开始」按钮'); break
@@ -219,7 +254,7 @@ def run_worker(args):
                     if rnd.random() < .08:
                         for sel_ in ['#hs0', '#hs1', '#hauto']:
                             try:
-                                if pg.is_visible(sel_) and pg.is_enabled(sel_, timeout=500) and rnd.random() < .5: click(sel_); C('点英雄按钮')
+                                if D.vis(sel_) and D.enabled(sel_) and rnd.random() < .5: click(sel_); C('点英雄按钮')
                             except Exception: pass
                     # 战斗卡住检测：有怪在排队但 3 秒内一个都没刷出
                     if s['q'] > 0 and s['en'] == 0 and not s['paused']:
@@ -237,7 +272,7 @@ def run_worker(args):
             if not done:
                 if time.time() - t0 >= 420: prob(run, '一局超过 7 分钟没打完')
                 # 恢复：重新加载
-                pg.goto(ROOT); pg.wait_for_timeout(1000); pg.evaluate(BOT_JS)
+                pg.goto(ROOT); pg.wait_for_timeout(1000); D.inject(BOT_JS)
         b.close()
     cov['英雄技能释放(含自动)'] = 0
     return problems, results, cov
