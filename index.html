@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>符文塔防 · v0.2b</title>
+<title>符文塔防 · v0.2c</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 html,body{margin:0;background:#0d1020;color:#e5e7eb;font-family:-apple-system,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;height:100%;overflow:hidden;touch-action:manipulation}
@@ -86,7 +86,7 @@ button{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}
 <script src="maps.js"></script>
 <script>
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.2b';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.2c';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -192,8 +192,9 @@ const ET={
   boss3:{hp:700,spd:.45,r:18,col:'#ef4444',gold:200,armor:7,dmg:0},
 };
 // 数值曲线（v0.2a）：前期更有压力，Boss 降血量、靠机制
-const HPBASE=3.3,HPGROW=1.245,BOSS_ACT=[1,1,1];
-const hpScale=s=>HPBASE*Math.pow(HPGROW,s-1);
+// 敌人血量：按幕分段增长（v0.2c：前松后紧）
+const HPBASE=2.85,HPG=[1.2,1.33,1.62];
+const hpScale=s=>{let v=HPBASE;for(let k=2;k<=s;k++)v*=HPG[Math.min(3,Math.ceil(k/5))-1];return v;};
 const EINFO={
   norm :{name:'史莱姆',desc:'最普通的敌人，血量和速度都一般。',tip:'点击场上任何敌人、地块，都能查看它的信息。'},
   fast :{name:'风灵',desc:'速度很快、血量少，容易冲过防线。',tip:'用冰塔减速，或者用攻速快的箭塔拦截。'},
@@ -278,10 +279,10 @@ const COMBOS=[
 COMBOS.forEach(c=>{c.r=3;c.max=1;c.ap=()=>{};});
 // 传说：只在 Boss 宝箱出现，让满级塔进化
 const LEGENDS=[
- {id:'L_arrow',tag:'arrow',name:'风之心',desc:'满级（4 级）箭塔进化为「神射手」：每支箭额外打中目标周围 3 个敌人，暴击率 +20%'},
+ {id:'L_arrow',tag:'arrow',name:'风之心',desc:'满级（4 级）箭塔进化为「神射手」：每支箭再波及目标周围 2 个敌人（50% 伤害），暴击率 +20%'},
  {id:'L_cannon',tag:'cannon',name:'火之心',desc:'满级炮塔进化为「火山」：爆炸处留下 2.5 秒熔岩，每秒造成炮塔伤害 40% 的真实伤害'},
- {id:'L_frost',tag:'frost',name:'冰之心',desc:'满级冰塔进化为「永冻」：每次脉冲必定冻结敌人 0.8 秒（Boss 0.3 秒），伤害 ×3'},
- {id:'L_tesla',tag:'tesla',name:'雷之心',desc:'满级电塔进化为「雷神」：每次攻击放出两道闪电链，连锁 +3'},
+ {id:'L_frost',tag:'frost',name:'冰之心',desc:'满级冰塔进化为「永冻」：脉冲必定冻结敌人 0.8 秒（Boss 0.3 秒；同一个敌人每 3 秒最多冻一次），伤害 ×1.6'},
+ {id:'L_tesla',tag:'tesla',name:'雷之心',desc:'满级电塔进化为「雷神」：每次攻击多放一道闪电链（60% 伤害），连锁 +2'},
 ];
 LEGENDS.forEach(c=>{c.r=4;c.max=1;c.school=TAG2S[c.tag];c.ap=()=>{};});
 const ALLCARDS=[...CARDS,...COMBOS,...LEGENDS];
@@ -291,7 +292,7 @@ const EVO={arrow:'神射手',cannon:'火山',frost:'永冻',tesla:'雷神'};
 const BRANCH={
   arrow:[['sniper','狙击','射程 +1.8 格、伤害 ×2.4、无视护甲，优先打血最多的敌人；攻速减半'],['repeater','连弩','每次射 3 支箭（可打 3 个目标），每支 60% 伤害']],
   cannon:[['mortar','迫击炮','射程 +2.5 格、伤害 ×1.5、爆炸范围 +30%；攻速变慢'],['cluster','集束弹','爆炸后再散出 4 颗子炸弹，各造成 35% 伤害']],
-  frost:[['glacier','冰川','减速再 +25%（最高 85%）、冻结几率 +15%、射程 +0.4 格'],['nova','寒霜新星','脉冲伤害 ×5，并让敌人护甲 -3（持续 3 秒）']],
+  frost:[['glacier','冰川','减速再 +25%（最高 85%）、冻结几率 +15%、射程 +0.4 格'],['nova','寒霜新星','脉冲伤害 ×2，并让敌人护甲 -3（持续 3 秒）']],
   tesla:[['coil','特斯拉线圈','连锁 +3 个目标，每跳伤害几乎不衰减'],['storm','风暴','除了普通攻击，每 3 秒在全图随机劈中 3 个敌人（伤害 ×1.8）']],
 };
 const BR={};for(const k in BRANCH)for(const [id,name,desc] of BRANCH[k])BR[id]={name,desc,ch:{sniper:'狙',repeater:'弩',mortar:'迫',cluster:'束',glacier:'川',nova:'星',coil:'线',storm:'暴'}[id]};
@@ -398,8 +399,8 @@ function stat(t){
   if(br==='repeater'){dmg*=.6;rate*=.9;}
   if(br==='mortar'){range+=2.5*CS;dmg*=1.5;rate*=1.35;}
   if(br==='glacier')range+=.4*CS;
-  if(br==='nova')dmg*=5;
-  if(t.type==='frost'&&evolved(t))dmg*=3;
+  if(br==='nova')dmg*=2;
+  if(t.type==='frost'&&evolved(t))dmg*=1.6;
   return{dmg,rate,range};
 }
 function hit(e,dmg,src,o){
@@ -455,7 +456,7 @@ function chainZap(first,n,dmg,decay,from,o){
   }
   fx.push({k:'zap',pts,t:.15,T:.15});
 }
-function teslaChainN(t){let n=M.chain;if(t.branch==='coil')n+=3;if(evolved(t))n+=3;if(has('C_harvest'))n+=Math.min(3,Math.floor(gold/100));return n;}
+function teslaChainN(t){let n=M.chain;if(t.branch==='coil')n+=3;if(evolved(t))n+=2;if(has('C_harvest'))n+=Math.min(3,Math.floor(gold/100));return n;}
 function teslaDecay(t){return has('C_supercond')?1:t.branch==='coil'?.95:.85;}
 function updTower(t,dt){
   t.flash=Math.max(0,(t.flash||0)-dt);
@@ -485,7 +486,7 @@ function updTower(t,dt){
     const fz=M.freeze+(t.branch==='glacier'?.15:0);
     for(const e of list){
       e.slowA=e.slowT>0?Math.max(e.slowA,slow):slow;e.slowT=1.6;
-      if(evo)e.frzT=Math.max(e.frzT,e.boss?.3:.8);else if(fz&&Math.random()<fz)e.frzT=e.boss?.35:1;
+      if(evo){if(!(e.frzCd>0)){e.frzT=Math.max(e.frzT,e.boss?.3:.8);e.frzCd=3;}}else if(fz&&Math.random()<fz)e.frzT=e.boss?.35:1;
       if(t.branch==='nova'){e.shredT=3;e.shredV=Math.max(e.shredV||0,3);}
       else if(M.shredRune){e.shredT=3;e.shredV=Math.max(e.shredV||0,2);}
       burst(e.x,e.y,'#e0f2fe',3,40,0,.4,1.6);hit(e,s.dmg,'frost',{crit:fifth});
@@ -493,7 +494,7 @@ function updTower(t,dt){
   }else if(t.type==='tesla'){
     sfx('zap');
     chainZap(list[0],teslaChainN(t),s.dmg,teslaDecay(t),[t.x,t.y-CS*.75],{crit:fifth});
-    if(evo){const other=list.find(e=>e!==list[0])||list[0];chainZap(other,teslaChainN(t),s.dmg,teslaDecay(t),[t.x,t.y-CS*.75]);}
+    if(evo){const other=list.find(e=>e!==list[0])||list[0];chainZap(other,teslaChainN(t),s.dmg*.6,teslaDecay(t),[t.x,t.y-CS*.75]);}
   }
 }
 function nearest(x,y,R,skip){let best=null,bd=R*R;for(const e of enemies){if(e.dead||skip.has(e))continue;const q=(e.x-x)**2+(e.y-y)**2;if(q<bd){bd=q;best=e;}}return best;}
@@ -513,7 +514,7 @@ function updProj(p,dt){
     if(has('C_firearrow'))burnOn(e,4*p.lvl,2);
     if(has('C_icearrow')){e.slowA=e.slowT>0?Math.max(e.slowA,.25):.25;e.slowT=Math.max(e.slowT,1);}
     const skip=new Set([e]);
-    if(p.evo){for(let k=0;k<3;k++){const o=nearest(p.tx,p.ty,1.2*CS,skip);if(!o)break;skip.add(o);hit(o,p.dmg,'arrow',{ap:p.ap,evo:true});burst(o.x,o.y,'#bbf7d0',3,60,0,.25,1.5);}}
+    if(p.evo){for(let k=0;k<2;k++){const o=nearest(p.tx,p.ty,1.2*CS,skip);if(!o)break;skip.add(o);hit(o,p.dmg*.5,'arrow',{ap:p.ap,evo:true});burst(o.x,o.y,'#bbf7d0',3,60,0,.25,1.5);}}
     else if(M.pierce){const o=nearest(p.tx,p.ty,1.2*CS,skip);if(o)hit(o,p.dmg*.6,'arrow',{ap:p.ap});}
     return;
   }
@@ -530,7 +531,7 @@ function updProj(p,dt){
 }
 function updEnemy(e,dt){
   if(e.dead)return;
-  e.hitT+=dt;if(e.markT>0)e.markT-=dt;if(e.shredT>0)e.shredT-=dt;if(e.steamCd>0)e.steamCd-=dt;
+  e.hitT+=dt;if(e.frzCd>0)e.frzCd-=dt;if(e.markT>0)e.markT-=dt;if(e.shredT>0)e.shredT-=dt;if(e.steamCd>0)e.steamCd-=dt;
   if(e.burnT>0){e.burnT-=dt;hit(e,e.burnD*dt,'cannon',{noCrit:true,pure:true});if(e.dead)return;}
   if(has('C_steam')&&e.burnT>0&&(e.slowT>0||e.frzT>0)&&!(e.steamCd>0)){
     e.steamCd=3;const R=1.2*CS,dm=e.max*(e.boss?.03:.12);
