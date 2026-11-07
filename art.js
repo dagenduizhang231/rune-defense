@@ -297,9 +297,9 @@
       `<path d="M4 30 q4 -1 7 1 M52 54 q3 -2 7 0 M28 58 q3 -1 5 0" stroke="#8a7254" stroke-width="1" fill="none" opacity=".6"/>`,
       lin(t, [[0, "#c4a982"], [1, "#ae946d"]]));
   };
-  A.highland = () => {
+  A.highland = (bg = "#407432") => {
     const t = uid("ht"), f = uid("hf");
-    return svg(`<rect width="64" height="64" fill="#407432"/>` +
+    return svg(`<rect width="64" height="64" fill="${bg}"/>` +
       `<path d="M5 50 L12 18 H52 L59 50 Q32 56 5 50Z" fill="url(#${f})" stroke="${O}" stroke-width="1.4" stroke-linejoin="round"/>` +
       `<path d="M10 40 Q32 45 54 40" fill="none" stroke="#4a3a2a" stroke-width="1" opacity=".6"/>` +
       `<path d="M12 18 H52 L55 30 Q32 35 9 30 Z" fill="url(#${t})" stroke="${O}" stroke-width="1.4" stroke-linejoin="round"/>` +
@@ -307,9 +307,9 @@
       `<path d="M27 28 l5 -5 l5 5" stroke="#fde68a" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
       lin(t, [[0, "#7cc35c"], [1, "#4d8a3a"]]) + lin(f, [[0, "#8a7155"], [1, "#5a4632"]]));
   };
-  A.runewell = () => {
+  A.runewell = (bg = "#407432") => {
     const t = uid("rt"), g = uid("rg"), s = uid("rs");
-    return svg(`<rect width="64" height="64" fill="#407432"/>` +
+    return svg(`<rect width="64" height="64" fill="${bg}"/>` +
       `<circle cx="32" cy="33" r="23" fill="url(#${s})" stroke="${O}" stroke-width="1.5"/>` +
       `<path d="M14 26 L22 14 M42 14 L50 26 M50 40 L42 52 M22 52 L14 40" stroke="#4b5266" stroke-width="1.2"/>` +
       `<circle cx="32" cy="33" r="15.5" fill="url(#${t})" stroke="${O}" stroke-width="1.3" filter="url(#${g})"/>` +
@@ -326,6 +326,76 @@
       `<path d="M8 50 Q14 46 20 50 T32 50" stroke="#a3b18a" stroke-width="1.2" fill="none" opacity=".6"/>` +
       `<path d="M50 54 q-1 -7 1 -11 M53 54 q0 -6 3 -9" stroke="#55703a" stroke-width="1.6" fill="none" stroke-linecap="round"/><ellipse cx="51" cy="42" rx="1.4" ry="3" fill="#7c4a1e"/>`,
       lin(t, [[0, "#4c5c3b"], [1, "#36442a"]]));
+  };
+
+
+  // ======================= 地图主题 =======================
+  // 雪原地面
+  A.snow = (alt) => {
+    const t = uid("sn");
+    const drift = (x, y, w) => `<path d="M${x - w} ${y} q${w} ${-w * .55} ${w * 2} 0 Z" fill="#ffffff" opacity=".75"/><path d="M${x - w} ${y} q${w} ${-w * .55} ${w * 2} 0" fill="none" stroke="#9fb7d4" stroke-width=".8" opacity=".8"/>`;
+    return svg(`<rect width="64" height="64" fill="url(#${t})"/>` +
+      `<ellipse cx="${alt ? 44 : 18}" cy="${alt ? 22 : 42}" rx="15" ry="9" fill="#ffffff" opacity=".35"/>` +
+      drift(alt ? 16 : 46, alt ? 48 : 20, 6) + drift(alt ? 50 : 14, alt ? 14 : 54, 4) +
+      (alt ? `<path d="M30 34 l0 -9 M26.5 30 l7 0 M27.5 27 l5 6 M32.5 27 l-5 6" stroke="#ffffff" stroke-width=".9" opacity=".8"/>`
+           : `<path d="M36 30 l-4 -9 l-4 9 Z M35 25 l-3 -6 l-3 6 Z" fill="#3f6f5a" stroke="#1a1528" stroke-width=".7"/><rect x="31.2" y="30" width="1.6" height="2.4" fill="#5a3a1e"/><path d="M29 24.5 q3 -1 6 0" stroke="#fff" stroke-width="1.1" fill="none"/>`) +
+      `<circle cx="${alt ? 8 : 54}" cy="36" r=".9" fill="#fff"/><circle cx="${alt ? 54 : 10}" cy="30" r=".7" fill="#fff"/>`,
+      lin(t, alt ? [[0, "#dbe7f5"], [1, "#c3d4e8"]] : [[0, "#e4eef8"], [1, "#cbdaec"]]));
+  };
+  A.snowroad = () => {
+    const t = uid("sr");
+    return svg(`<rect width="64" height="64" fill="url(#${t})"/>` +
+      `<path d="M10 0 V64 M54 0 V64" stroke="#8c9db5" stroke-width="1.2" opacity=".35" stroke-dasharray="5 7"/>` +
+      `<ellipse cx="18" cy="20" rx="4.5" ry="3" fill="#a7b4c6" stroke="#6d7d94" stroke-width=".6"/><ellipse cx="44" cy="44" rx="5.5" ry="3.4" fill="#b2bfcf" stroke="#6d7d94" stroke-width=".6"/>` +
+      `<ellipse cx="17" cy="19" rx="2" ry="1.2" fill="#fff" opacity=".7"/><ellipse cx="43" cy="43" rx="2.4" ry="1.3" fill="#fff" opacity=".7"/>` +
+      `<path d="M28 52 q4 -2 8 0 M40 12 q3 -1.5 6 0" stroke="#fff" stroke-width="1.2" fill="none" opacity=".8"/>`,
+      lin(t, [[0, "#b9c6d6"], [1, "#a3b2c5"]]));
+  };
+  A.ice = () => {
+    const t = uid("ic");
+    return svg(`<rect width="64" height="64" fill="url(#${t})"/>` +
+      `<path d="M6 14 L22 26 L18 44 M22 26 L40 22 L52 34 M40 22 L46 6 M18 44 L36 52" stroke="#e0f2fe" stroke-width="1.1" fill="none" opacity=".8"/>` +
+      `<path d="M10 52 L26 36 M38 58 L58 40" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" opacity=".55"/>` +
+      `<path d="M14 10 L24 4" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" opacity=".7"/>`,
+      lin(t, [[0, "#a5d8f3"], [.5, "#7cc0ea"], [1, "#5aa6dc"]], 1, 1));
+  };
+  // 火山地面（玄武岩，带微光裂缝）
+  A.basalt = (alt) => {
+    const t = uid("ba"), g = uid("bg2");
+    return svg(`<rect width="64" height="64" fill="url(#${t})"/>` +
+      `<path d="M0 ${alt ? 22 : 40} L14 ${alt ? 26 : 36} L26 ${alt ? 18 : 44} L40 ${alt ? 24 : 38} M40 ${alt ? 24 : 38} L52 ${alt ? 30 : 46} L64 ${alt ? 26 : 42}" stroke="#141018" stroke-width="2" fill="none"/>` +
+      `<path d="M0 ${alt ? 22 : 40} L14 ${alt ? 26 : 36} L26 ${alt ? 18 : 44} L40 ${alt ? 24 : 38}" stroke="#f97316" stroke-width=".8" fill="none" opacity=".55" filter="url(#${g})"/>` +
+      `<path d="M${alt ? 40 : 12} 6 l6 4 l-2 7 l-7 1 l-3 -6 Z" fill="#4a4049" stroke="#1a1528" stroke-width=".8"/><path d="M${alt ? 41 : 13} 7 l4 3" stroke="#7a6c76" stroke-width="1"/>` +
+      `<circle cx="${alt ? 14 : 50}" cy="52" r="2.4" fill="#3d343e" stroke="#1a1528" stroke-width=".6"/>`,
+      lin(t, alt ? [[0, "#4d4149"], [1, "#3a3038"]] : [[0, "#54474f"], [1, "#40353d"]]) + glow(g, 1.2));
+  };
+  A.ashroad = () => {
+    const t = uid("ar");
+    return svg(`<rect width="64" height="64" fill="url(#${t})"/>` +
+      `<ellipse cx="16" cy="18" rx="5" ry="3.2" fill="#6b5e5a" stroke="#3b302e" stroke-width=".6"/><ellipse cx="46" cy="42" rx="6" ry="3.6" fill="#76685f" stroke="#3b302e" stroke-width=".6"/>` +
+      `<ellipse cx="44" cy="12" rx="3" ry="2" fill="#625651"/><ellipse cx="20" cy="50" rx="4" ry="2.5" fill="#625651"/>` +
+      `<circle cx="32" cy="30" r="1" fill="#fb923c" opacity=".7"/><circle cx="10" cy="40" r=".8" fill="#fbbf24" opacity=".6"/>`,
+      lin(t, [[0, "#8a7a70"], [1, "#74655c"]]));
+  };
+  A.lava = () => {
+    const t = uid("lv"), g = uid("lg");
+    return svg(`<rect width="64" height="64" fill="#40353d"/>` +
+      `<path d="M5 30 Q4 8 26 6 Q50 3 58 20 Q63 40 52 54 Q36 62 18 56 Q4 48 5 30Z" fill="url(#${t})" stroke="#1a1528" stroke-width="1.6" filter="url(#${g})"/>` +
+      `<path d="M14 24 Q22 16 32 18 M30 40 Q38 34 48 38 M18 46 Q24 44 28 48" stroke="#fde68a" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".85"/>` +
+      `<path d="M38 14 l5 3 l-2 5 l-6 -1 Z M12 36 l4 2 l-1 4 l-5 -1 Z" fill="#2a2228" stroke="#1a1528" stroke-width=".7"/>` +
+      `<circle cx="44" cy="46" r="2" fill="#fef3c7" opacity=".9"/>`,
+      rad(t, "#fde047", "#dc2626", .5, .45, .75) + glow(g, 1.6));
+  };
+  // 敌人主题配色：给整张 svg 套一层颜色矩阵（雪原偏冷白、火山偏暗红）
+  const TINT = {
+    snow: "0.62 0.14 0.18 0 0.06  0.10 0.72 0.18 0 0.09  0.10 0.16 0.84 0 0.16  0 0 0 1 0",
+    volcano: "0.92 0.22 0.06 0 0.05  0.12 0.6 0.05 0 0  0.04 0.06 0.42 0 0  0 0 0 1 0",
+  };
+  A.tint = (svgStr, kind) => {
+    if (!TINT[kind]) return svgStr;
+    const id = uid("tn"), i = svgStr.indexOf(">") + 1;
+    return svgStr.slice(0, i) + `<defs><filter id="${id}" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="${TINT[kind]}"/></filter></defs><g filter="url(#${id})">` +
+      svgStr.slice(i).replace(/<\/svg>$/, "</g></svg>");
   };
 
   A.list = {

@@ -25,7 +25,7 @@ ROOT = os.environ.get('QA_URL', 'file:///home/claude/rune-defense/index.html')
 
 BOT_JS = r"""
 window.__qa={
- cands(){const out=[];for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const k=c+','+r;if(pathSet.has(k)||grid[k]||tiles[k]==='runewell')continue;let n=0;for(let dc=-2;dc<=2;dc++)for(let dr=-2;dr<=2;dr++)if(pathSet.has((c+dc)+','+(r+dr)))n+=(Math.abs(dc)<=1&&Math.abs(dr)<=1)?2:1;if(tiles[k]==='highland')n+=6;n+=wellsNear(c,r)*3;out.push({c,r,n});}return out.sort((a,b)=>b.n-a.n);},
+ cands(){const out=[];for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const k=c+','+r;if(pathSet.has(k)||grid[k]||tiles[k]==='runewell'||tiles[k]==='lava')continue;let n=0;for(let dc=-2;dc<=2;dc++)for(let dr=-2;dr<=2;dr++)if(pathSet.has((c+dc)+','+(r+dr)))n+=(Math.abs(dc)<=1&&Math.abs(dr)<=1)?2:1;if(tiles[k]==='highland')n+=6;n+=wellsNear(c,r)*3;out.push({c,r,n});}return out.sort((a,b)=>b.n-a.n);},
  types:null,ti:0,
  spend(){if(!this.types)this.types=[['arrow','cannon','frost','tesla','arrow','cannon'],['arrow','cannon'],['frost','tesla','cannon']][Math.floor(Math.random()*3)];
   let g=0;while(g++<60){const type=this.types[this.ti%this.types.length];const spot=this.cands()[0];const up=towers.filter(t=>t.lvl<4).sort((a,b)=>upCost(a)-upCost(b))[0];
@@ -41,6 +41,7 @@ window.__qa={
   if(!fin(gold))bad.push('金币异常 '+gold);if(!fin(lives)||lives>60)bad.push('生命异常 '+lives);
   for(const e of enemies)if(!e.dead&&(!fin(e.hp)||!fin(e.x)||!fin(e.y)))bad.push('敌人数值异常 '+e.type);
   for(const t of towers){try{const s=stat(t);if(!fin(s.dmg)||!fin(s.range))bad.push('塔数值异常 '+t.type+' lv'+t.lvl);}catch(err){bad.push('stat() 报错 '+err);}}
+  for(const t of towers)if(tiles[t.c+','+t.r]==='lava'||pathSet.has(t.c+','+t.r))bad.push('塔建在了岩浆或道路上');
   if(HERO&&(!fin(HERO.cd[0])||!fin(HERO.cd[1])))bad.push('英雄冷却异常');
   for(const cb of COMBOS){const ok=schoolCount(cb.a)>=2&&schoolCount(cb.b)>=2;if(ok!==(comboReady(cb)||has(cb.id)))bad.push('合体条件不一致 '+cb.id);}
   return bad;},
@@ -108,6 +109,7 @@ def run_worker(args):
             pg.wait_for_timeout(60)
 
         for run in range(1, runs + 1):
+            pass
             if run > 1 and rnd.random() < .5:
                 ev("localStorage.removeItem('td_seen')")   # 一半的局重新看到敌人介绍
             t0 = time.time(); errs.clear(); run_sh0 = ev('META.shards')
@@ -180,6 +182,7 @@ def run_worker(args):
                     pg.wait_for_timeout(60)
                     continue
                 if s['phase'] == 'build':
+                    if s['step'] <= 1: C('主题:' + ev('BIOME'))
                     ev('__qa.placeCards()')
                     # 真实点击：建 1 座塔、点它升级、遇到分支点分支
                     sp = ev('__qa.spot()')
