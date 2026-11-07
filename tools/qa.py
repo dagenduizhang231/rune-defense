@@ -115,7 +115,7 @@ def run_worker(args):
             t0 = time.time(); errs.clear(); run_sh0 = ev('META.shards')
             last_sig, last_change = None, time.time()
             done = False; route = rnd.choice(['safe', 'mixed', 'greedy'])
-            ev('__qa.types=null')
+            ev('__qa.types=null'); resumed = False
             while time.time() - t0 < 420:
                 for e in errs: prob(run, e)
                 errs.clear()
@@ -180,6 +180,16 @@ def run_worker(args):
                             bs = [x for x in pg.query_selector_all('#ov button') if x.is_visible()]
                             rnd.choice(bs).click()
                     pg.wait_for_timeout(60)
+                    continue
+                if s['phase'] == 'build' and not resumed and s['step'] >= 2 and rnd.random() < .25:
+                    # 存档测试：建造阶段刷新页面，从大厅「继续上一局」，状态必须一致
+                    resumed = True; C('刷新后继续上一局')
+                    key = "JSON.stringify({g:Math.floor(gold),l:lives,t:towers.length,tl:towers.map(t=>t.lvl).join(''),k:Object.keys(taken).sort().join(','),s:step,b:BIOME,m:MAPI})"
+                    before = ev(key); pg.reload(); pg.wait_for_timeout(900); pg.evaluate(BOT_JS)
+                    if not click('#lcont'): prob(run, '刷新后大厅没有「继续上一局」按钮')
+                    else:
+                        pg.wait_for_timeout(200); after = ev(key)
+                        if after != before: prob(run, f'读档后状态不一致：{before} → {after}')
                     continue
                 if s['phase'] == 'build':
                     if s['step'] <= 1: C('主题:' + ev('BIOME'))
