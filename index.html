@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>符文塔防 · v0.3.1</title>
+<title>符文塔防 · v0.4a</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 html,body{margin:0;background:#0d1020;color:#e5e7eb;font-family:-apple-system,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;height:100%;overflow:hidden;touch-action:manipulation}
@@ -102,7 +102,7 @@ button{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}
 <script src="maps.js"></script>
 <script>
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.3.1';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.4a';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -162,6 +162,12 @@ function mapSVG(m){
 
 // ======================= 美术 =======================
 const SPR={};let BG=null;
+const SPRW={};let stopT=0;
+const TOPY=(window.RuneArt&&window.RuneArt.TOP_Y)||22;
+// 塔的炮头位置：返回旋转中心和沿炮管方向 len（相对塔尺寸）处的点
+function towerSize(t){return CS*(1.22+.05*(t.lvl-1));}
+function towerPivot(t){const s=towerSize(t);return{x:t.x,y:t.y+CS*.5-s*.95+s*TOPY/64,s};}
+function towerTip(t,len){const p=towerPivot(t),a=t.ang||0;return[p.x+Math.sin(a)*p.s*len,p.y-Math.cos(a)*p.s*len];}
 const ARTKEYS=['arrow','cannon','frost','tesla','norm','fast','tank','split','mini','boss1','boss2','boss3'];
 const TILEKEYS=['highland','runewell','swamp','grass0','grass1','path'];
 function raster(svgStr,px){return new Promise(res=>{if(typeof Image==='undefined'){res(null);return;}const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=c.height=px;c.getContext('2d').drawImage(im,0,0,px,px);res(c);};im.onerror=()=>res(null);im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgStr.replace('<svg ','<svg width="'+px+'" height="'+px+'" '));});}
@@ -169,6 +175,8 @@ async function loadArt(){
   if(!window.RuneArt)return;
   const A=window.RuneArt,px=Math.max(96,Math.ceil(72*DPR));
   await Promise.all(ARTKEYS.map(async k=>{SPR[k]=await raster(A[k](),px);}));
+  if(A.arrowBase)await Promise.all(['arrow','cannon','frost','tesla'].flatMap(k=>[k+'Base',k+'Top']).map(async k=>{SPR[k]=await raster(A[k](),px);}));
+  for(const k of ['norm','fast','tank','split','mini','boss1','boss2','boss3']){const sp=SPR[k];if(!sp)continue;const c=document.createElement('canvas');c.width=sp.width;c.height=sp.height;const x=c.getContext('2d');x.drawImage(sp,0,0);x.globalCompositeOperation='source-in';x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);SPRW[k]=c;}
   SPR.grass0=await raster(A.grass(0),128);SPR.grass1=await raster(A.grass(1),128);SPR.path=await raster(A.path(),128);
   SPR.highland=await raster(A.highland(),128);SPR.runewell=await raster(A.runewell(),128);SPR.swamp=await raster(A.swamp(),128);
   buildBG();
@@ -500,7 +508,7 @@ function hit(e,dmg,src,o){
   const arm=Math.max(0,e.armor-(e.shredT>0?e.shredV:0));
   if(!o.pure&&!o.ap)dmg=Math.max(dmg*.25,dmg-arm);
   if(e.shield>0){const m=src==='tesla'?2:1,ab=Math.min(e.shield,dmg*m);e.shield-=ab;dmg-=ab/m;if(e.shield<=0)burst(e.x,e.y,'#93c5fd',10,90,0,.35,2);}
-  e.hp-=dmg;if(!o.pure)e.hitT=0;
+  e.hp-=dmg;if(!o.pure){e.hitT=0;e.flT=.09;}
   if(crit){txt(e.x,e.y-14,Math.round(dmg)+'!','#fde047');burst(e.x,e.y,'#fde047',5,100,0,.3,1.8);}
   if(M.execute&&!e.boss&&e.hp>0&&e.hp<e.max*M.execute){e.hp=0;stats.exec++;txt(e.x,e.y-14,'处决','#f87171');}
   if(e.type==='boss1')while(e.hp>0&&e.hp<=e.max*e.nextSplit&&e.nextSplit>0){e.nextSplit-=.25;for(let k=0;k<5;k++)spawn('mini',Math.max(0,e.d-6-k*9),e.pi);txt(e.x,e.y-26,'分裂！','#f5d0fe',1.2);}
@@ -517,7 +525,9 @@ function kill(e){
   if(e.burnT>0&&M.ember){const R=CS*1.1;fx.push({k:'boom',x:e.x,y:e.y,r:R,t:.3,T:.3,c:'#f97316'});
     for(const o of enemies)if(o!==e&&!o.dead&&(o.x-e.x)**2+(o.y-e.y)**2<=R*R){burnOn(o,Math.max(4,e.burnD),2);hit(o,e.max*(e.boss?.03:.15),'cannon',{pure:true,noCrit:true});}}
   if(e.type==='split'){spawn('mini',Math.max(0,e.d-4),e.pi);spawn('mini',Math.max(0,e.d-16),e.pi);}
-  fx.push({k:'boom',x:e.x,y:e.y,r:e.r*1.7,t:.25,T:.25,c:e.col});burst(e.x,e.y,e.col,e.boss?30:7,e.boss?160:80,220,.5,e.boss?3:2);
+  fx.push({k:'boom',x:e.x,y:e.y,r:e.r*1.7,t:.25,T:.25,c:e.col});fx.push({k:'ring',x:e.x,y:e.y,r:e.r*1.9,t:.22,T:.22,c:'#ffffff'});
+  burst(e.x,e.y,e.col,e.boss?34:11,e.boss?180:120,380,.6,e.boss?3.6:2.8);burst(e.x,e.y,'#ffffff',e.boss?10:4,e.boss?120:70,0,.25,1.6);
+  if(e.boss)stopT=Math.max(stopT,.18);else if(e.elite)stopT=Math.max(stopT,.05);
   if(e.boss){shake=Math.max(shake,7);sfx('bossdie');}else sfx('pop');
 }
 const targetable=e=>!e.dead&&(!e.afx.stealth||e.revealed);
@@ -539,7 +549,8 @@ function chainZap(first,n,dmg,decay,from,o){
 function teslaChainN(t){let n=M.chain;if(t.branch==='coil')n+=3;if(evolved(t))n+=2;if(has('C_harvest'))n+=Math.min(3,Math.floor(gold/100));return n;}
 function teslaDecay(t){return has('C_supercond')?1:t.branch==='coil'?.95:.85;}
 function updTower(t,dt){
-  t.flash=Math.max(0,(t.flash||0)-dt);
+  t.flash=Math.max(0,(t.flash||0)-dt);t.kick=Math.max(0,(t.kick||0)-dt*7);
+  if(t.aim!==undefined){let d=t.aim-(t.ang||0);d=Math.atan2(Math.sin(d),Math.cos(d));t.ang=(t.ang||0)+d*Math.min(1,dt*16);}
   if(t.stun>0){t.stun-=dt;return;}
   // 风暴分支：每 3 秒全图落雷
   if(t.branch==='storm'){t.stormCd=(t.stormCd??3)-dt;if(t.stormCd<=0){t.stormCd=3;const s=stat(t),pool=enemies.filter(targetable);
@@ -548,18 +559,20 @@ function updTower(t,dt){
   t.cd-=dt;if(t.cd>0)return;
   const s=stat(t),list=inRange(t,s.range);
   if(!list.length){t.cd=0;return;}
-  list.sort((a,b)=>b.d-a.d);t.cd=s.rate;t.flash=.1;
+  list.sort((a,b)=>b.d-a.d);t.cd=s.rate;t.flash=.1;t.kick=1;
+  {const e0=t.type==='arrow'&&t.branch==='sniper'?list.slice().sort((a,b)=>b.hp-a.hp)[0]:list[0];t.aim=Math.atan2(e0.x-t.x,-(e0.y-t.y));if(t.ang===undefined)t.ang=t.aim;}
   t.shots=(t.shots||0)+1;
   const fifth=M.fifth&&t.shots%5===0,evo=evolved(t);
   if(t.type==='arrow'){
     let tg;
     if(t.branch==='sniper')tg=[list.slice().sort((a,b)=>b.hp-a.hp)[0]];
     else{const n=t.branch==='repeater'?3:M.arrowMulti;tg=list.slice(0,Math.min(n,list.length));if(t.branch==='repeater')while(tg.length<3)tg.push(tg[0]);}
-    for(const e of tg)projs.push({k:'arrow',x:t.x,y:t.y-CS*.55,tg:e,tx:e.x,ty:e.y,v:t.branch==='sniper'?900:520,dmg:s.dmg,crit:fifth,ap:t.branch==='sniper',evo,lvl:t.lvl});
-    if(has('C_thunderarrow')&&t.shots%4===0)chainZap(tg[0],3,s.dmg,.9,[t.x,t.y-CS*.6]);
+    const [ax,ay]=towerTip(t,.36);
+    for(const e of tg)projs.push({k:'arrow',x:ax,y:ay,tg:e,tx:e.x,ty:e.y,v:t.branch==='sniper'?900:520,dmg:s.dmg,crit:fifth,ap:t.branch==='sniper',evo,lvl:t.lvl});
+    if(has('C_thunderarrow')&&t.shots%4===0)chainZap(tg[0],3,s.dmg,.9,[ax,ay]);
     sfx('arrow');
   }else if(t.type==='cannon'){
-    const e=list[0];projs.push({k:'shell',x:t.x,y:t.y-CS*.45,sx:t.x,sy:t.y-CS*.45,tg:e,tx:e.x,ty:e.y,v:t.branch==='mortar'?260:300,dmg:s.dmg,lvl:t.lvl,crit:fifth,cluster:t.branch==='cluster',splash:t.branch==='mortar'?1.3:1,evo});sfx('cannon');
+    const e=list[0],[cx,cy]=towerTip(t,.38);burst(cx,cy,'#fde68a',5,90,0,.18,1.8);burst(cx,cy,'#9ca3af',3,40,-30,.4,2.4);projs.push({k:'shell',x:cx,y:cy,sx:cx,sy:cy,tg:e,tx:e.x,ty:e.y,v:t.branch==='mortar'?260:300,dmg:s.dmg,lvl:t.lvl,crit:fifth,cluster:t.branch==='cluster',splash:t.branch==='mortar'?1.3:1,evo});sfx('cannon');
   }else if(t.type==='frost'){
     fx.push({k:'ring',x:t.x,y:t.y,r:s.range,t:.35,T:.35,c:t.branch==='nova'?'#e0f2fe':'#93c5fd'});sfx('frost');
     const slow=Math.min(t.branch==='glacier'?.85:.8,M.frostSlow+(t.branch==='glacier'?.25:0));
@@ -611,7 +624,7 @@ function updProj(p,dt){
 }
 function updEnemy(e,dt){
   if(e.dead)return;
-  e.hitT+=dt;if(e.frzCd>0)e.frzCd-=dt;if(e.markT>0)e.markT-=dt;if(e.shredT>0)e.shredT-=dt;if(e.steamCd>0)e.steamCd-=dt;
+  e.hitT+=dt;if(e.flT>0)e.flT-=dt;if(e.frzCd>0)e.frzCd-=dt;if(e.markT>0)e.markT-=dt;if(e.shredT>0)e.shredT-=dt;if(e.steamCd>0)e.steamCd-=dt;
   if(e.burnT>0){e.burnT-=dt;hit(e,e.burnD*dt,'cannon',{noCrit:true,pure:true});if(e.dead)return;}
   if(has('C_steam')&&e.burnT>0&&(e.slowT>0||e.frzT>0)&&!(e.steamCd>0)){
     e.steamCd=3;const R=1.2*CS,dm=e.max*(e.boss?.03:.12);
@@ -957,7 +970,7 @@ function heroBar(){
 }
 function syncHero(){
   if(!HERO)return;
-  for(let i=0;i<2;i++){const b=$('hs'+i);if(!b)continue;const cd=HERO.cd[i];b.disabled=phase!=='wave'||cd>0;b.classList.toggle('ready',phase==='wave'&&cd<=0);const s=$('hsc'+i);if(s)s.textContent=cd>0?Math.ceil(cd)+'s':phase==='wave'?'就绪':'';}
+  for(let i=0;i<2;i++){const b=$('hs'+i);if(!b)continue;const cd=HERO.cd[i];b.disabled=phase!=='wave'||cd>0;if(b.classList)b.classList.toggle('ready',phase==='wave'&&cd<=0);const s=$('hsc'+i);if(s)s.textContent=cd>0?Math.ceil(cd)+'s':phase==='wave'?'就绪':'';}
 }
 
 // ======================= v0.3：诅咒祭坛 =======================
@@ -1194,8 +1207,25 @@ function draw(){
   if(placing){const pa=.18+.12*Math.sin(performance.now()/250);ctx.fillStyle=`rgba(253,224,71,${pa})`;ctx.strokeStyle='rgba(253,224,71,.7)';ctx.lineWidth=1.5;for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const k=c+','+r,onP=pathSet.has(k);if(placing==='swamp'?(onP&&!tiles[k]):(!onP&&!tiles[k]&&!grid[k])){ctx.fillRect(c*CS+3,r*CS+3,CS-6,CS-6);ctx.strokeRect(c*CS+3,r*CS+3,CS-6,CS-6);}}}
   // 塔
   for(const t of [...towers].sort((a,b)=>a.r-b.r)){
-    const d=TT[t.type],sp=SPR[t.type],s=CS*(1.22+.05*(t.lvl-1));
-    if(sp){
+    const d=TT[t.type],sp=SPR[t.type],s=towerSize(t),sb=SPR[t.type+'Base'],st=SPR[t.type+'Top'];
+    if(sb&&st){
+      if(t.stun>0)ctx.globalAlpha=.45;
+      const y0=t.y+CS*.5-s*.95,pv=towerPivot(t),k=t.kick||0,now=performance.now()/1000;
+      ctx.drawImage(sb,t.x-s/2,y0,s,s);
+      ctx.save();ctx.translate(pv.x,pv.y);
+      if(t.type==='arrow'||t.type==='cannon'){
+        ctx.rotate(t.ang||0);const back=(t.type==='cannon'?.1:.06)*k*k;ctx.translate(0,back*s);
+        if(t.type==='cannon')ctx.scale(1+.06*k,1-.06*k);
+        ctx.drawImage(st,-s/2,-s/2,s,s);
+        if(t.type==='cannon'&&k>.55){ctx.globalAlpha=(k-.55)*2;ctx.fillStyle='#fde68a';ctx.beginPath();ctx.arc(0,-s*.4,s*.09,0,7);ctx.fill();ctx.fillStyle='#fb923c';ctx.beginPath();ctx.arc(0,-s*.45,s*.06,0,7);ctx.fill();}
+      }else{
+        const bob=t.type==='frost'?Math.sin(now*2.2+t.c)*s*.03:0,sc=1+(t.type==='frost'?.12:.07)*k;
+        ctx.translate(0,bob);ctx.scale(sc,sc);ctx.drawImage(st,-s/2,-s/2,s,s);
+        if(t.type==='tesla'&&k>0){ctx.globalAlpha=k*.7;ctx.fillStyle='#f5d0fe';ctx.beginPath();ctx.arc(0,-s*.33,s*.16*k+s*.04,0,7);ctx.fill();}
+        if(t.type==='frost'&&k>0){ctx.globalAlpha=k*.5;ctx.fillStyle='#e0f2fe';ctx.beginPath();ctx.arc(0,-s*.12,s*.22*k,0,7);ctx.fill();}
+      }
+      ctx.restore();ctx.globalAlpha=1;
+    }else if(sp){
       if(t.stun>0)ctx.globalAlpha=.45;
       ctx.drawImage(sp,t.x-s/2,t.y+CS*.5-s*.95,s,s);ctx.globalAlpha=1;
       if(t.flash>0){ctx.globalAlpha=.7;ctx.fillStyle=d.color;ctx.beginPath();ctx.arc(t.x,t.y+CS*.5-s*.9,4,0,7);ctx.fill();ctx.globalAlpha=1;}
@@ -1221,7 +1251,11 @@ function draw(){
     if(hidden)ctx.globalAlpha=.3;
     if(sp){
       const s=e.r*2.9;top=e.y-s*.62;
-      ctx.save();ctx.translate(e.x,e.y);if(e.dir<0)ctx.scale(-1,1);ctx.drawImage(sp,-s/2,-s*.62,s,s);ctx.restore();
+      const hop=e.frzT>0?0:Math.abs(Math.sin(e.d*(e.boss?.06:.16))),fk=Math.max(0,(e.flT||0)/.09);
+      const sx=(1+.06*hop*(e.boss?.5:1))*(1+.12*fk),sy=(1-.07*hop*(e.boss?.5:1))*(1-.1*fk);
+      ctx.save();ctx.translate(e.x,e.y-hop*s*(e.boss?.02:.05));if(e.dir<0)ctx.scale(-1,1);ctx.scale(sx,sy);ctx.drawImage(sp,-s/2,-s*.62,s,s);
+      if(fk>0&&SPRW[e.spr]){ctx.globalAlpha*=.8*fk;ctx.drawImage(SPRW[e.spr],-s/2,-s*.62,s,s);}
+      ctx.restore();
       if(e.frzT>0){ctx.fillStyle='rgba(224,242,254,.45)';ctx.beginPath();ctx.arc(e.x,e.y,e.r*1.15,0,7);ctx.fill();}
     }else{ctx.fillStyle=e.col;ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,7);ctx.fill();}
     ctx.globalAlpha=1;
@@ -1281,7 +1315,8 @@ let last=performance.now(),uiT=0;
 function loop(now){
   const dt=Math.min(.05,(now-last)/1000);last=now;
   try{
-  if(phase==='wave'&&!paused){for(let s=0;s<speed&&phase==='wave'&&!paused;s++)step_(dt);}
+  if(stopT>0){stopT-=dt;updFx(dt*.15);}
+  else if(phase==='wave'&&!paused){for(let s=0;s<speed&&phase==='wave'&&!paused;s++)step_(dt);}
   else updFx(dt);
   }catch(err){console.error(err);}
   if(banner){banner.t-=dt;if(banner.t<=0)banner=null;}
