@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>符文塔防 · v0.2c</title>
+<title>符文塔防 · v0.2c.1</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 html,body{margin:0;background:#0d1020;color:#e5e7eb;font-family:-apple-system,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;height:100%;overflow:hidden;touch-action:manipulation}
@@ -86,7 +86,7 @@ button{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}
 <script src="maps.js"></script>
 <script>
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.2c';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.2c.1';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -570,7 +570,7 @@ function updLava(dt){
 // ======================= 流程 =======================
 function startWave(){
   if(phase!=='build')return;
-  queue=buildWave(step,curNode);spawnT=.9;phase='wave';hourglassUsed=false;if(sel&&sel.enemy)sel=null;placing=null;renderPanel();
+  queue=buildWave(step,curNode);spawnT=.9;phase='wave';paused=false;bpOpen=false;bp.style.display='none';hourglassUsed=false;if(sel&&sel.enemy)sel=null;placing=null;renderPanel();
   const isB=curNode==='boss';
   banner={a:isB?'Boss 来袭':`第 ${step} 站 · ${NODES[curNode].name}`,b:isB?EINFO['boss'+actOf(step)].name:`第 ${actOf(step)} 幕`,boss:isB||curNode==='elite',t:2,T:2};sfx(isB?'boss':'wave');
 }
@@ -702,7 +702,7 @@ function showIntro(){
   $('okIntro').onclick=()=>{ov.style.display='none';if(introQ.length)showIntro();else paused=false;};
 }
 function openRunes(){if(phase==='over'||phase==='win'||phase==='map')return;bpOpen=true;paused=true;renderRunes();bp.style.display='flex';}
-function closeRunes(){bpOpen=false;bp.style.display='none';if(ov.style.display!=='flex')paused=false;}
+function closeRunes(){bpOpen=false;bp.style.display='none';paused=!!(ov.style.display==='flex'&&$('okIntro'));}
 function renderRunes(){
   const ids=Object.keys(taken);
   let h=`<div class="wrap"><h2>🔮 我的符文（${ids.length}）</h2>`;
@@ -1022,10 +1022,12 @@ const hW=$('hW'),hG=$('hG'),hL=$('hL');
 let last=performance.now(),uiT=0;
 function loop(now){
   const dt=Math.min(.05,(now-last)/1000);last=now;
+  try{
   if(phase==='wave'&&!paused){for(let s=0;s<speed&&phase==='wave'&&!paused;s++)step_(dt);}
   else updFx(dt);
+  }catch(err){console.error(err);}
   if(banner){banner.t-=dt;if(banner.t<=0)banner=null;}
-  draw();
+  try{draw();}catch(err){console.error(err);}
   uiT-=dt;
   if(uiT<=0){uiT=.15;hW.textContent=`第${actOf(step)}幕 ${step}/${MAXS}`;hG.textContent=`💰 ${Math.floor(gold||0)}`;hL.textContent=`❤️ ${lives??20}`;syncButtons();
     if(sel&&sel.enemy){const el=$('ehp');if(el)el.textContent=ehpText(sel.enemy);}}
