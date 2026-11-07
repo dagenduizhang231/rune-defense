@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>符文塔防 · v0.4b</title>
+<title>符文塔防 · v0.4c</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 html,body{margin:0;background:#0d1020;color:#e5e7eb;font-family:-apple-system,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;height:100%;overflow:hidden;touch-action:manipulation}
@@ -102,7 +102,7 @@ button{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}
 <script src="maps.js"></script>
 <script>
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.4b';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.4c';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -279,37 +279,37 @@ const TAG2S={arrow:'wind',cannon:'fire',frost:'ice',tesla:'thunder'};
 const CARDS=[
  {id:'a1',tag:'arrow',r:0,name:'锋利箭头',desc:'箭塔伤害 +35%',ap:()=>M.arrowDmg+=.35},
  {id:'a2',tag:'arrow',r:0,name:'急速上弦',desc:'箭塔攻速 +30%',ap:()=>M.arrowRate+=.3},
- {id:'a3',tag:'arrow',r:1,max:2,name:'多重射击',desc:'箭塔每次多射 1 个目标',ap:()=>M.arrowMulti++},
+ {id:'a3',tag:'arrow',r:1,max:2,name:'多重射击',desc:'箭塔每次多射 1 支箭打另一个目标，多出来的箭造成 70% 伤害（连弩分支不叠加）',ap:()=>M.arrowMulti++},
  {id:'c1',tag:'cannon',r:0,name:'高爆火药',desc:'炮塔伤害 +40%',ap:()=>M.cannonDmg+=.4},
  {id:'c2',tag:'cannon',r:0,max:3,name:'冲击波',desc:'炮塔爆炸范围 +40%',ap:()=>M.cannonSplash+=.4},
  {id:'c3',tag:'cannon',r:1,max:3,name:'燃烧弹',desc:'炮击点燃敌人，每秒 6×塔等级 真实伤害，持续 2 秒；燃烧中的敌人不能再生、不能复活',ap:()=>M.burn+=6},
- {id:'f1',tag:'frost',r:0,max:2,name:'极寒',desc:'冰塔减速效果 +15%',ap:()=>M.frostSlow+=.15},
+ {id:'f1',tag:'frost',r:0,max:2,name:'极寒',desc:'冰塔减速效果 +15%，冰塔伤害 +50%',ap:()=>{M.frostSlow+=.15;M.frostDmg=(M.frostDmg||1)+.5;}},
  {id:'f2',tag:'frost',r:1,max:2,name:'冰封',desc:'冰塔有 20% 几率冻结敌人 1 秒',ap:()=>M.freeze+=.2},
  {id:'f3',tag:'frost',r:1,max:2,name:'碎冰',desc:'被减速/冻结的敌人受到所有伤害 +30%',ap:()=>M.shatter+=.3},
- {id:'t1',tag:'tesla',r:0,max:3,name:'超导',desc:'电塔连锁目标 +2',ap:()=>M.chain+=2},
+ {id:'t1',tag:'tesla',r:0,max:3,name:'电弧延伸',desc:'电塔连锁目标 +2',ap:()=>M.chain+=2},
  {id:'t2',tag:'tesla',r:0,name:'高压',desc:'电塔伤害 +35%',ap:()=>M.teslaDmg+=.35},
- {id:'t3',tag:'tesla',r:1,max:2,name:'过载',desc:'电塔每次跳跃 25% 几率造成 3 倍伤害',ap:()=>M.overload+=.25},
+ {id:'t3',tag:'tesla',r:1,max:2,name:'过载',desc:'电塔每次跳跃 18% 几率造成 3 倍伤害',ap:()=>M.overload+=.18},
  {id:'g1',r:0,name:'意外之财',desc:'立即获得 120 金币',ap:()=>{gold+=120}},
  {id:'g2',r:1,max:1,name:'复利',desc:'每场战斗结束获得持有金币 10% 的利息（上限 60）',ap:()=>M.interest+=.1},
- {id:'g3',r:0,max:3,name:'赏金猎人',desc:'每次击杀额外 +1 金币',ap:()=>M.killGold++},
+ {id:'g3',r:0,max:2,name:'赏金猎人',desc:'每次击杀额外 +1 金币',ap:()=>M.killGold++},
  {id:'g4',r:1,max:2,name:'工程学',desc:'建造和升级费用 -15%',ap:()=>M.costMul-=.15},
- {id:'x1',r:1,max:2,name:'鹰眼',desc:'所有塔射程 +15%',ap:()=>M.rangeMul+=.15},
+ {id:'x1',r:0,max:2,name:'鹰眼',desc:'所有塔射程 +20%',ap:()=>M.rangeMul+=.2},
  {id:'x2',r:1,max:3,name:'致命一击',desc:'所有伤害 12% 几率暴击（×2.5）',ap:()=>M.crit+=.12},
  {id:'x3',r:0,name:'城墙加固',desc:'生命 +6',ap:()=>{lives+=6}},
- {id:'x4',r:2,max:2,name:'狂热',desc:'所有塔攻速 +18%',ap:()=>M.allRate+=.18},
- {id:'s1',r:2,max:1,name:'处决',desc:'非 Boss 敌人生命低于 15% 时直接击杀',ap:()=>{M.execute=.15}},
+ {id:'x4',r:2,max:2,name:'狂热',desc:'所有塔攻速 +30%',ap:()=>M.allRate+=.3},
+ {id:'s1',r:2,max:1,name:'处决',desc:'非 Boss 敌人生命低于 20% 时直接击杀',ap:()=>{M.execute=.2}},
  {id:'s2',r:2,max:1,name:'元素共鸣',desc:'场上每有一种不同的塔，所有伤害 +8%',ap:()=>{M.resonance=.08}},
  // ---- v0.2b 新增：改规则的符文 ----
  {id:'w1',tag:'arrow',r:1,max:1,name:'穿云',desc:'箭矢命中后，再穿透打中附近 1 个敌人（60% 伤害）',ap:()=>{M.pierce=1}},
  {id:'w3',tag:'arrow',r:0,max:1,name:'疾风',desc:'箭塔攻速 +15%；对快速的敌人（风灵、小史莱姆、迅捷精英等）伤害再 +60%',ap:()=>{M.gale=1;M.arrowRate+=.15}},
  {id:'w4',tag:'arrow',r:0,max:1,name:'猎手',desc:'箭塔对精英和 Boss 伤害 +40%',ap:()=>{M.hunter=1}},
  {id:'c4',tag:'cannon',r:1,max:1,name:'余烬',desc:'炮击会点燃敌人（每秒 3×塔等级）；燃烧中的敌人被击败时爆炸，点燃周围敌人并造成其最大生命 15% 的伤害（Boss 3%）',ap:()=>{M.ember=1;M.burn+=3}},
- {id:'c5',tag:'cannon',r:0,max:1,name:'助燃',desc:'炮击会点燃敌人（每秒 3×塔等级），燃烧多持续 1 秒；炮塔对燃烧中的敌人伤害 +40%',ap:()=>{M.kindle=1;M.burnPlus=1;M.burn+=3}},
- {id:'f4',tag:'frost',r:0,max:1,name:'寒潮',desc:'冰塔攻速 +40%',ap:()=>{M.coldWave=1}},
- {id:'f5',tag:'frost',r:1,max:1,name:'冰甲碎裂',desc:'被冰塔命中的敌人护甲 -2，持续 3 秒',ap:()=>{M.shredRune=1}},
+ {id:'c5',tag:'cannon',r:0,max:1,name:'助燃',desc:'炮击会点燃敌人（每秒 3×塔等级），燃烧多持续 1 秒；炮塔对燃烧中的敌人伤害 +20%',ap:()=>{M.kindle=1;M.burnPlus=1;M.burn+=3}},
+ {id:'f4',tag:'frost',r:0,max:1,name:'寒潮',desc:'冰塔攻速 +40%、射程 +1 格；减速多持续 1 秒',ap:()=>{M.coldWave=1}},
+ {id:'f5',tag:'frost',r:1,max:1,name:'冰甲碎裂',desc:'被冰塔命中的敌人护甲 -4、受到的所有伤害 +10%，持续 3 秒',ap:()=>{M.shredRune=1}},
  {id:'t4',tag:'tesla',r:1,max:1,name:'导体',desc:'电塔连锁 +1；闪电打到被减速或冻结的敌人时，伤害翻倍',ap:()=>{M.conductor=1;M.chain+=1}},
  {id:'t5',tag:'tesla',r:0,max:1,name:'静电场',desc:'被闪电打中的敌人，4 秒内受到的所有伤害 +15%',ap:()=>{M.staticF=1}},
- {id:'g5',r:0,max:1,name:'战利品',desc:'精英和 Boss 被击败时，掉落的金币变成 3 倍',ap:()=>{M.loot=1}},
+ {id:'g5',r:1,max:1,name:'战利品',desc:'精英和 Boss 被击败时，掉落的金币翻倍',ap:()=>{M.loot=1}},
  {id:'g6',r:1,max:1,name:'贪婪之眼',desc:'每持有 100 金，所有伤害 +5%（最多 +40%）',ap:()=>{M.greed=1}},
  {id:'g7',r:0,max:1,name:'回收',desc:'立即获得 60 金；出售塔返还 100% 的花费（原来是 70%）',ap:()=>{M.recycle=1;gold+=60}},
  {id:'x5',r:1,max:1,name:'连珠',desc:'每座塔每第 5 次攻击必定暴击',ap:()=>{M.fifth=1}},
@@ -511,7 +511,7 @@ function stat(t){
   if(t.type==='arrow'){dmg*=M.arrowDmg;rate/=M.arrowRate;}
   if(t.type==='cannon')dmg*=M.cannonDmg;
   if(t.type==='tesla')dmg*=M.teslaDmg;
-  if(t.type==='frost'&&M.coldWave)rate/=1.4;
+  if(t.type==='frost'){if(M.coldWave){rate/=1.4;range+=CS;}dmg*=M.frostDmg||1;}
   if(br==='sniper'){range+=1.8*CS;dmg*=2.4;rate*=2;}
   if(br==='repeater'){dmg*=.6;rate*=.9;}
   if(br==='mortar'){range+=2.5*CS;dmg*=1.5;rate*=1.35;}
@@ -530,8 +530,9 @@ function hit(e,dmg,src,o){
   const ctrl=e.slowT>0||e.frzT>0;
   if(M.shatter&&ctrl)dmg*=1+M.shatter;
   if(e.markT>0)dmg*=1.15;
+  if(M.shredRune&&e.shredT>0)dmg*=1.1;
   if(M.greed)dmg*=1+Math.min(.4,Math.floor(gold/100)*.05);
-  if(src==='cannon'&&M.kindle&&e.burnT>0)dmg*=1.4;
+  if(src==='cannon'&&M.kindle&&e.burnT>0)dmg*=1.2;
   if(src==='arrow'&&M.hunter&&(e.elite||e.boss))dmg*=1.4;
   if(src==='arrow'&&M.gale&&(e.spd>=1.6))dmg*=1.6;
   if(src==='tesla'&&ctrl){if(M.conductor)dmg*=2;if(has('C_supercond'))dmg*=1.5;}
@@ -550,7 +551,7 @@ function kill(e){
   if(e.afx.undying&&!e.revived&&e.burnT<=0){e.revived=true;e.hp=e.max*.4;txt(e.x,e.y-16,'不灭！','#fde68a',1);burst(e.x,e.y,'#fde68a',14,80,-60,.6,2);return;}
   e.dead=true;
   let g=e.gold+M.killGold;
-  if(M.loot&&(e.elite||e.boss))g+=e.gold*2;
+  if(M.loot&&(e.elite||e.boss))g+=e.gold;
   if(e.burnT>0&&has('C_moltengold')){g*=2;txt(e.x,e.y-12,'熔金','#fbbf24',.7);}
   gold+=g;stats.bounty+=M.killGold;stats.kills++;
   if(e.burnT>0&&M.ember){const R=CS*1.1;fx.push({k:'boom',x:e.x,y:e.y,r:R,t:.3,T:.3,c:'#f97316'});
@@ -599,7 +600,7 @@ function updTower(t,dt){
     if(t.branch==='sniper')tg=[list.slice().sort((a,b)=>b.hp-a.hp)[0]];
     else{const n=t.branch==='repeater'?3:M.arrowMulti;tg=list.slice(0,Math.min(n,list.length));if(t.branch==='repeater')while(tg.length<3)tg.push(tg[0]);}
     const [ax,ay]=towerTip(t,.36);
-    for(const e of tg)projs.push({k:'arrow',x:ax,y:ay,tg:e,tx:e.x,ty:e.y,v:t.branch==='sniper'?900:520,dmg:s.dmg,crit:fifth,ap:t.branch==='sniper',evo,lvl:t.lvl});
+    tg.forEach((e,ti)=>projs.push({k:'arrow',x:ax,y:ay,tg:e,tx:e.x,ty:e.y,v:t.branch==='sniper'?900:520,dmg:(ti>0&&t.branch!=='repeater')?s.dmg*.7:s.dmg,crit:fifth,ap:t.branch==='sniper',evo,lvl:t.lvl}));
     if(has('C_thunderarrow')&&t.shots%4===0)chainZap(tg[0],3,s.dmg,.9,[ax,ay]);
     sfx('arrow');
   }else if(t.type==='cannon'){
@@ -609,10 +610,10 @@ function updTower(t,dt){
     const slow=Math.min(t.branch==='glacier'?.85:.8,M.frostSlow+(t.branch==='glacier'?.25:0))*(BIO.slow||1);
     const fz=M.freeze+(t.branch==='glacier'?.15:0);
     for(const e of list){
-      e.slowA=e.slowT>0?Math.max(e.slowA,slow):slow;e.slowT=1.6;
+      e.slowA=e.slowT>0?Math.max(e.slowA,slow):slow;e.slowT=M.coldWave?2.6:1.6;
       if(evo){if(!(e.frzCd>0)){e.frzT=Math.max(e.frzT,e.boss?.3:.8);e.frzCd=3;}}else if(fz&&Math.random()<fz)e.frzT=e.boss?.35:1;
       if(t.branch==='nova'){e.shredT=3;e.shredV=Math.max(e.shredV||0,3);}
-      else if(M.shredRune){e.shredT=3;e.shredV=Math.max(e.shredV||0,2);}
+      else if(M.shredRune){e.shredT=3;e.shredV=Math.max(e.shredV||0,4);}
       burst(e.x,e.y,'#e0f2fe',3,40,0,.4,1.6);hit(e,s.dmg,'frost',{crit:fifth});
     }
   }else if(t.type==='tesla'){
