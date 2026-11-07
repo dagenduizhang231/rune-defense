@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>符文塔防 · v0.3</title>
+<title>符文塔防 · v0.3.1</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 html,body{margin:0;background:#0d1020;color:#e5e7eb;font-family:-apple-system,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;height:100%;overflow:hidden;touch-action:manipulation}
@@ -65,6 +65,13 @@ button{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}
 .einfo{display:flex;gap:10px;align-items:center;margin-top:8px}
 .einfo img{width:52px;height:52px;flex:none}
 .einfo .t{font-size:13px;line-height:1.55;color:#cbd5e1}
+ #stage{position:relative}
+#hfloat{position:absolute;display:none;flex-direction:column;pointer-events:none}
+#hfloat button{pointer-events:auto;flex:1;margin:2px;border-radius:12px;background:rgba(15,20,40,.82);border:2px solid #475569;position:relative;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;overflow:hidden}
+#hfloat .ic{font-size:20px}#hfloat .cd{font-size:10.5px;color:#a5f3fc;margin-top:2px;font-weight:700}
+#hfloat button.ready{border-color:#fde047;box-shadow:0 0 10px rgba(253,224,71,.55)}
+#hfloat button:disabled .ic{opacity:.45}
+#hfloat .ha{font-size:11px;font-weight:700;color:#cbd5e1}#hfloat .ha.on{border-color:#22c55e;color:#bbf7d0}
 .hbar{display:flex;gap:6px;align-items:center;margin-bottom:8px}.hbar .hn{font-size:13px;font-weight:700;white-space:nowrap}
 .hs{flex:1;background:#1e293b;border:2px solid #475569;padding:7px 4px;font-size:13px;font-weight:700;line-height:1.2}.hs small{font-weight:400;color:#a5f3fc}.hs:disabled{opacity:.5}
 .hs.ha{flex:none;font-size:12px;padding:7px 8px}.hs.ha.on{border-color:#22c55e;color:#bbf7d0}
@@ -86,7 +93,7 @@ button{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}
     <button id="spd">1×</button>
     <button id="snd">🔊</button>
   </div>
-  <canvas id="cv"></canvas>
+  <div id="stage"><canvas id="cv"></canvas><div id="hfloat"></div></div>
   <div id="panel"></div>
 </div>
 <div id="ov"></div>
@@ -95,7 +102,7 @@ button{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}
 <script src="maps.js"></script>
 <script>
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.3';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.3.1';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -124,7 +131,7 @@ const POOL=(typeof window!=='undefined'&&window.RUNE_MAPS)||[];
 const MAPS=[TUTORIAL,...POOL];
 const mapTitle=m=>m.type==='tutorial'?'新手长廊':`${MAPTYPES[m.type].name} · ${m.place}`;
 let MAP,MAPI=0,PATHS=[],pathSet=new Set(),tiles={};
-function setupMap(i){
+function setupMap(i){heroSpot=null;
   MAPI=i;MAP=MAPS[i];pathSet=new Set();tiles={...MAP.tiles};
   PATHS=MAP.paths.map(wp=>{
     for(let k=0;k<wp.length-1;k++){
@@ -886,7 +893,7 @@ function heroCast(i){
   else if(HERO.id==='ice'&&i===0){if(!enemies.some(e=>!e.dead))return false;for(const e of enemies)if(!e.dead)e.frzT=Math.max(e.frzT,e.boss?.8:2.5);fx.push({k:'flash',t:.35,T:.35,c:'#bae6fd'});sfx('frost');}
   else if(HERO.id==='ice'&&i===1){HERO.wallT=8;sfx('frost');}
   else ok=false;
-  if(ok){HERO.cd[i]=H.sk[i].cd;txt(W/2,H_TXT_Y,H.sk[i].name+'！',H.col,1);}
+  if(ok){HERO.cd[i]=H.sk[i].cd;txt(W/2,H_TXT_Y-i*22,H.sk[i].name+'！',H.col,1);}
   return ok;
 }
 const H_TXT_Y=H*.42;
@@ -918,6 +925,31 @@ function drawHero(){
     const y=m.y-160*(1-k);ctx.fillStyle='#fdba74';ctx.beginPath();ctx.arc(m.x+40*(1-k),y,7+5*k,0,7);ctx.fill();ctx.fillStyle='rgba(251,146,60,.5)';ctx.beginPath();ctx.arc(m.x+40*(1-k)+8,y-12,5,0,7);ctx.fill();}
   if(HERO&&HERO.wallT>0){const g=clampPt(PATHS[0].PP[PATHS[0].PP.length-1]);ctx.globalAlpha=.35+.15*Math.sin(performance.now()/150);ctx.strokeStyle='#7dd3fc';ctx.lineWidth=4;ctx.beginPath();ctx.arc(g.x,g.y,26,0,7);ctx.stroke();ctx.globalAlpha=1;}
 }
+// 英雄按钮放在地图角落：自动挑一个挡住可建塔格子最少、又不挡入口和城门的角落（1 列 × 3 行）
+let heroSpot=null;
+function pickHeroSpot(){
+  const ends=new Set();for(const P of PATHS){for(const pt of [P.PP[0],P.PP[P.PP.length-1]]){const g=clampPt(pt);ends.add(Math.floor(g.x/CS)+','+Math.floor(g.y/CS));}}
+  let best=null,bs=1e9;
+  for(const c of [COLS-1,0])for(const r0 of [ROWS-3,0]){let sc=0;
+    for(let r=r0;r<r0+3;r++){const k=c+','+r;if(ends.has(k))sc+=100;else if(pathSet.has(k))sc+=1;else if(tiles[k]==='highland')sc+=6;else if(!tiles[k])sc+=4;}
+    if(c===COLS-1&&r0===ROWS-3)sc-=.5;
+    if(sc<bs){bs=sc;best={c,r:r0};}}
+  heroSpot=best;
+}
+function renderHeroFloat(){
+  const el=$('hfloat');if(!el)return;
+  const show=HERO&&(phase==='build'||phase==='wave');
+  if(!show){el.style.display='none';return;}
+  if(!heroSpot)pickHeroSpot();
+  Object.assign(el.style,{display:'flex',left:(heroSpot.c/COLS*100)+'%',top:(heroSpot.r/ROWS*100)+'%',width:(100/COLS)+'%',height:(300/ROWS)+'%'});
+  const HH=HEROES[HERO.id];
+  el.innerHTML=HH.sk.map((s,i)=>`<button id="hs${i}" data-hs="${i}" title="${s.name}：${s.desc}"><span class="ic">${s.icon}</span><span class="cd" id="hsc${i}"></span></button>`).join('')+`<button id="hauto" class="ha${HERO.auto?' on':''}">${HERO.auto?'自动':'手动'}</button>`;
+}
+$('hfloat').addEventListener('click',ev=>{
+  const b=ev.target.closest('button');if(!b||b.disabled||!HERO)return;
+  if(b.dataset.hs){heroCast(+b.dataset.hs);syncHero();return;}
+  if(b.id==='hauto'){HERO.auto=!HERO.auto;META.auto=HERO.auto;saveMeta();txt(W/2,H*.42,HERO.auto?'英雄技能：自动释放':'英雄技能：手动释放','#e5e7eb',1.2);renderHeroFloat();syncHero();}
+});
 function heroBar(){
   if(!HERO||!(phase==='build'||phase==='wave'))return'';
   const H=HEROES[HERO.id];
@@ -925,7 +957,7 @@ function heroBar(){
 }
 function syncHero(){
   if(!HERO)return;
-  for(let i=0;i<2;i++){const b=$('hs'+i);if(!b)continue;const cd=HERO.cd[i];b.disabled=phase!=='wave'||cd>0;const s=$('hsc'+i);if(s)s.textContent=cd>0?` ${Math.ceil(cd)}s`:phase==='wave'?' 就绪':'';}
+  for(let i=0;i<2;i++){const b=$('hs'+i);if(!b)continue;const cd=HERO.cd[i];b.disabled=phase!=='wave'||cd>0;b.classList.toggle('ready',phase==='wave'&&cd<=0);const s=$('hsc'+i);if(s)s.textContent=cd>0?Math.ceil(cd)+'s':phase==='wave'?'就绪':'';}
 }
 
 // ======================= v0.3：诅咒祭坛 =======================
@@ -1101,7 +1133,6 @@ function renderPanel(){
   if(phase==='build')h+=`<button class="big${curNode==='boss'?' red':''}" id="go">▶ 开始：第 ${step} 站 · ${NODES[curNode].name}${curNode==='boss'?' '+EINFO['boss'+actOf(step)].name:''}</button>`;
   else if(phase==='wave')h+=`<div class="wv">第 ${step} 站 · ${NODES[curNode].name}进行中</div>`;
   const live=phase==='build'||phase==='wave';
-  h+=heroBar();
   if(live&&placing){
     h+=`<div class="tinfo">放置「${TILEINFO[placing].name}」：${placing==='swamp'?'点一格没有地形的道路':'点一格没有塔的空地'}。${TILEINFO[placing].desc}</div><button class="chip" id="cancelPlace">取消</button>`;
   }else if(live&&sel&&sel.enemy){
@@ -1127,10 +1158,10 @@ function renderPanel(){
       }else h+=`<div class="row2"><button class="tb" data-up data-cost="${t.lvl>=4?99999:uc}">${t.lvl>=4?'已满级':'⬆ 升级 '+uc+' 金'}</button><button class="tb" data-sell>出售 +${Math.floor(t.spent*sellRate())} 金</button></div>`;
     }
   }else if(live){
-    h+=`<div class="hint">点空地建塔，点塔升级/出售，点敌人或地块看说明。右上角 🔮 查看已有符文。</div>`;
+    h+=`<div class="hint">点空地建塔，点塔升级/出售，点敌人或地块看说明。右上角 🔮 查看已有符文。${HERO?`<br>地图角落是英雄技能：${HEROES[HERO.id].sk.map(s=>s.icon+s.name+'：'+s.desc).join('；')}。`:''}</div>`;
   }
   if(live&&!placing){const tc=Object.keys(tcards).filter(k=>tcards[k]>0);if(tc.length)h+=`<div>${tc.map(k=>`<button class="chip" data-tc="${k}">🗺️ ${TILEINFO[k].name} ×${tcards[k]}</button>`).join('')}</div>`;}
-  panel.innerHTML=h;syncButtons();syncHero();
+  panel.innerHTML=h;syncButtons();renderHeroFloat();syncHero();
 }
 function syncButtons(){panel.querySelectorAll('[data-cost]').forEach(b=>{b.disabled=gold<+b.dataset.cost;});}
 
