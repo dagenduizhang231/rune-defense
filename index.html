@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>符文塔防 · v0.6c</title>
+<title>符文塔防 · v0.6c.1</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 html,body{margin:0;background:#0d1020;color:#e5e7eb;font-family:-apple-system,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;height:100%;overflow:hidden;touch-action:manipulation}
@@ -106,7 +106,7 @@ button{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}
 <script src="maps.js"></script>
 <script>
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6c';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6c.1';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -384,8 +384,8 @@ const LIVE={
 
 // ======================= v0.3：大厅 / 英雄 / 诅咒 / 难度 =======================
 // 三个模块各有开关：网址加 ?off=meta,hero,curse 可以单独关闭（也方便出问题时直接关掉重发）
-const FEAT={meta:true,hero:true,curse:true,fx2:true};
-try{const q=new URLSearchParams(location.search).get('off');if(q)q.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=false;});}catch(e){}
+const FEAT={meta:true,hero:true,curse:true,fx2:false};
+try{const u=new URLSearchParams(location.search),q=u.get('off'),q2=u.get('on');if(q)q.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=false;});if(q2)q2.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=true;});}catch(e){}
 // 局外存档
 const META_DEF={shards:0,owned:{},hero:'wind',diff:0,unlockedDiff:0,runs:0,wins:0,auto:true};
 let META=JSON.parse(JSON.stringify(META_DEF));
@@ -1046,6 +1046,18 @@ function fx2BossDeath(e){
   decal('crater',x,y+6,R*1.2,4,'#1c1917');sfx('boom');later(.18,()=>sfx('boom'));
 }
 
+
+// 合成完成的那一刻：相关的塔各升起一道光柱，脚下一圈光环、往上飘星光，配「合成：xx」横幅；只放这一次
+const SC2T={wind:'arrow',fire:'cannon',ice:'frost',thunder:'tesla'};
+function comboFormFx(c){
+  const types=[SC2T[c.a],SC2T[c.b]].filter(Boolean),col=SC[c.a].col,col2=SC[c.b].col;
+  banner={a:'合成：'+c.name,b:SC[c.a].name+' + '+SC[c.b].name,boss:false,t:2.2,T:2.2};sfx('chime');
+  for(const t of towers)if(types.includes(t.type)){const pv=towerPivot(t);
+    fx.push({k:'pillar',x:t.x,y:t.y+CS*.35,h:CS*2.6,w:CS*.55,c:col,t:.9,T:.9});
+    texP('glow',col,t.x,t.y,{s0:20,s1:CS*1.8,t:.6,T:.6,a0:.9,add:true});texP('ring',col2,t.x,t.y+CS*.25,{s0:10,s1:CS*1.6,t:.55,T:.55,a0:.9,add:true});
+    for(let i=0;i<6;i++)later(i*.06,()=>texP(i%2?'star':'star2',i%2?col:col2,t.x+rnd(-CS*.35,CS*.35),pv.y,{vy:-rnd(50,90),s0:rnd(10,16),s1:4,t:.7,T:.7,a0:1,add:true}));}
+}
+
 // ======================= 音效 =======================
 let AC=null,MG=null,muted=false,lastS={},sndMode='0';
 // 声音三档：0 全开 · m 只有音效（关音乐）· 1 全部静音
@@ -1165,7 +1177,7 @@ function rollOffer(minR,chest){
   if(ready.length){const cb=pick(ready);const k=out.findIndex(c=>c.r<2);out[k>=0?k:out.length-1]=cb;}
   return out;
 }
-function takeCard(c){c.ap();taken[c.id]=(taken[c.id]||0)+1;
+function takeCard(c){c.ap();taken[c.id]=(taken[c.id]||0)+1;if(c.id.startsWith('C_'))later(.35,()=>comboFormFx(c));
   for(const cb of COMBOS)if(comboReady(cb)&&!comboSeen.has(cb.id)){comboSeen.add(cb.id);banner={a:'解锁合体：'+cb.name,b:SC[cb.a].name+' + '+SC[cb.b].name+' · 下次奖励必定出现',boss:false,t:2.4,T:2.4};}}
 let offerChest=false;
 function offerCards(title,sub,minR,then,chest){
@@ -1716,6 +1728,8 @@ function draw(){
       const path=()=>{ctx.beginPath();f.pts.forEach(([x,y],i)=>{if(!i){ctx.moveTo(x,y);return;}const [px,py]=f.pts[i-1];ctx.lineTo((px+x)/2+f.j[i][0],(py+y)/2+f.j[i][1]);ctx.lineTo(x,y);});};
       ctx.globalAlpha=a*.35;ctx.strokeStyle='#c084fc';ctx.lineWidth=7;path();ctx.stroke();
       ctx.globalAlpha=a;ctx.strokeStyle='#faf5ff';ctx.lineWidth=2;path();ctx.stroke();}
+    else if(f.k==='pillar'){const k=1-a,h=f.h*Math.min(1,k*4),w=f.w*(1-k*.5),g=ctx.createLinearGradient(0,f.y-h,0,f.y);g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(.6,f.c);g.addColorStop(1,'#ffffff');
+      ctx.globalCompositeOperation='lighter';ctx.globalAlpha=a*.75;ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(f.x,f.y-h/2,w/2,h/2,0,0,7);ctx.fill();ctx.globalAlpha=a;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.ellipse(f.x,f.y-h/2,w/6,h/2,0,0,7);ctx.fill();ctx.globalCompositeOperation='source-over';}
     else if(f.k==='dome'){const k=1-a;ctx.globalAlpha=a*.95;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(f.x,f.y,f.r*(.55+.45*k),0,7);ctx.fill();ctx.globalAlpha=a;ctx.strokeStyle='#fde68a';ctx.lineWidth=2.5;ctx.stroke();}
     else if(f.k==='bolt')drawBolt(f);
     else if(f.k==='frostwave')drawFrostWave(f);
