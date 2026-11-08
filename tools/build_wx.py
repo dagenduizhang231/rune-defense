@@ -111,10 +111,15 @@ def main():
     for d in (out, prev): os.makedirs(d, exist_ok=True)
     img = os.path.join(out, 'images')
     if '--no-bake' in args and os.path.isdir(img):
-        keys = sorted(f[:-4] for f in os.listdir(img) if f.endswith('.png'))
+        keys = sorted(f[:-4] for f in os.listdir(img) if f.endswith('.png') and not f.startswith('fx_'))
     else:
         if os.path.isdir(img): shutil.rmtree(img)
         print('烤贴图…'); keys = bake(img); compress(img)
+    # 特效贴图（Kenney 粒子包，CC0）：复制成 images/fx_*.png，不算进角色贴图列表
+    for f in os.listdir(J('fx')):
+        if f.endswith('.png'): shutil.copy(J('fx', f), os.path.join(img, 'fx_' + f))
+    keys = [k for k in keys if not k.startswith('fx_')]
+    shutil.copy(J('THIRD_PARTY.md'), os.path.join(out, 'THIRD_PARTY.md'))
     # 微信工程
     open(os.path.join(out, 'game.js'), 'w', encoding='utf-8').write(
         f"// 符文塔防 {ver} · 微信小游戏版（由 tools/build_wx.py 生成，不要手改）\n" + read('platform/wx-host.js') + '\n' + core(css, body, game, False) +
