@@ -1,4 +1,4 @@
-// 符文塔防 v0.6b · 微信小游戏版（由 tools/build_wx.py 生成，不要手改）
+// 符文塔防 v0.6c · 微信小游戏版（由 tools/build_wx.py 生成，不要手改）
 // 符文塔防 · 微信小游戏宿主：屏幕画布、触摸、存储、音频、图片。
 // 注意：微信里第一次 wx.createCanvas() 得到的是上屏画布，之后创建的都是离屏画布。
 var __HOST = (function () {
@@ -1127,7 +1127,7 @@ window.RUNE_MAPS=[{"type":"snake","paths":[[[-1,1],[1,1],[1,11],[4,11],[4,1],[7,
 var RuneMusic=window.RuneMusic;
 
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6b';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6c';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -1225,7 +1225,7 @@ const ENEMYK=['norm','fast','tank','split','mini','boss1','boss2','boss3'];
 function artJobs(){
   const A=window.RuneArt,px=Math.max(96,Math.ceil(72*DPR)),J=[];if(!A)return J;
   for(const k of ARTKEYS)J.push([k,()=>A[k](),px]);
-  if(A.arrowBase)for(const k of ['arrow','cannon','frost','tesla'])for(const p of ['Base','Top'])J.push([k+p,()=>A[k+p](),px]);
+  if(A.arrowBase)for(const k of ['arrow','cannon','frost','tesla'])for(const p of ['Base','Top']){J.push([k+p,()=>A[k+p](),px]);for(const l of [1,2,3,4])J.push([k+p+l,()=>A[k+p](l),px]);}
   J.push(['grass0',()=>A.grass(0),128],['grass1',()=>A.grass(1),128],['path',()=>A.path(),128],['highland',()=>A.highland(),128],['runewell',()=>A.runewell(),128],['swamp',()=>A.swamp(),128]);
   if(A.snow){J.push(['snow0',()=>A.snow(0),128],['snow1',()=>A.snow(1),128],['snowroad',()=>A.snowroad(),128],['ice',()=>A.ice(),128],
       ['basalt0',()=>A.basalt(0),128],['basalt1',()=>A.basalt(1),128],['ashroad',()=>A.ashroad(),128],['lava',()=>A.lava(),128]);
@@ -2652,7 +2652,7 @@ function draw(){
   if(placing){const pa=.18+.12*Math.sin(performance.now()/250);ctx.fillStyle=`rgba(253,224,71,${pa})`;ctx.strokeStyle='rgba(253,224,71,.7)';ctx.lineWidth=1.5;for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const k=c+','+r,onP=pathSet.has(k);if(placing==='swamp'?(onP&&(!tiles[k]||tiles[k]==='ice')):(!onP&&!tiles[k]&&!grid[k])){ctx.fillRect(c*CS+3,r*CS+3,CS-6,CS-6);ctx.strokeRect(c*CS+3,r*CS+3,CS-6,CS-6);}}}
   // 塔
   for(const t of [...towers].sort((a,b)=>a.r-b.r)){
-    const d=TT[t.type],sp=SPR[t.type],s=towerSize(t),sb=SPR[t.type+'Base'],st=SPR[t.type+'Top'];
+    const d=TT[t.type],sp=SPR[t.type],s=towerSize(t),lv=Math.max(1,Math.min(4,t.lvl||1)),sb=SPR[t.type+'Base'+lv]||SPR[t.type+'Base'],st=SPR[t.type+'Top'+lv]||SPR[t.type+'Top'];
     if(sb&&st){
       if(t.stun>0)ctx.globalAlpha=.45;
       const y0=t.y+CS*.5-s*.95,pv=towerPivot(t),k=t.kick||0,now=performance.now()/1000;
@@ -2792,5 +2792,5 @@ requestAnimationFrame(loop);
 return __E;
 }
 
-__HOST.pngKeys=["arrow", "arrowBase", "arrowTop", "ashroad", "basalt0", "basalt1", "boss1", "boss1_snow", "boss1_volcano", "boss2", "boss2_snow", "boss2_volcano", "boss3", "boss3_snow", "boss3_volcano", "cannon", "cannonBase", "cannonTop", "fast", "fast_snow", "fast_volcano", "frost", "frostBase", "frostTop", "grass0", "grass1", "highland", "highland_snow", "highland_volcano", "ice", "lava", "mini", "mini_snow", "mini_volcano", "norm", "norm_snow", "norm_volcano", "path", "runewell", "runewell_snow", "runewell_volcano", "snow0", "snow1", "snowroad", "split", "split_snow", "split_volcano", "swamp", "tank", "tank_snow", "tank_volcano", "tesla", "teslaBase", "teslaTop"];
+__HOST.pngKeys=["arrow", "arrowBase", "arrowBase1", "arrowBase2", "arrowBase3", "arrowBase4", "arrowTop", "arrowTop1", "arrowTop2", "arrowTop3", "arrowTop4", "ashroad", "basalt0", "basalt1", "boss1", "boss1_snow", "boss1_volcano", "boss2", "boss2_snow", "boss2_volcano", "boss3", "boss3_snow", "boss3_volcano", "cannon", "cannonBase", "cannonBase1", "cannonBase2", "cannonBase3", "cannonBase4", "cannonTop", "cannonTop1", "cannonTop2", "cannonTop3", "cannonTop4", "fast", "fast_snow", "fast_volcano", "frost", "frostBase", "frostBase1", "frostBase2", "frostBase3", "frostBase4", "frostTop", "frostTop1", "frostTop2", "frostTop3", "frostTop4", "grass0", "grass1", "highland", "highland_snow", "highland_volcano", "ice", "lava", "mini", "mini_snow", "mini_volcano", "norm", "norm_snow", "norm_volcano", "path", "runewell", "runewell_snow", "runewell_volcano", "snow0", "snow1", "snowroad", "split", "split_snow", "split_volcano", "swamp", "tank", "tank_snow", "tank_volcano", "tesla", "teslaBase", "teslaBase1", "teslaBase2", "teslaBase3", "teslaBase4", "teslaTop", "teslaTop1", "teslaTop2", "teslaTop3", "teslaTop4"];
 __BOOT(__HOST);
