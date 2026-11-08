@@ -30,3 +30,9 @@ SOFTWARE.
 ## Kenney Particle Pack（CC0）
 fx/ 目录下的烟雾、光晕、星光贴图来自 Kenney Particle Pack（https://kenney.nl/assets/particle-pack），
 CC0 1.0 公有领域授权，可商用，无需署名。感谢 Kenney（www.kenney.nl）。
+
+## 序列帧特效素材（v0.6d 起）
+炮塔爆炸由以下两个素材组合、缩放后使用：
+- **Free Explosion Animations 2** — Sinestesia Studio（https://opengameart.org/node/74923），CC0。感谢 Sinestesia Studio。
+- **Brackeys VFX Bundle**（https://brackeysgames.itch.io/brackeys-vfx-bundle），CC0。其中预绘序列图来自 CodeManu（https://codemanu.itch.io/vfx-free-pack），
+  粒子贴图来自 Picster 与 Kenney，Flipbook 来自 Thomas Iché。感谢以上作者。

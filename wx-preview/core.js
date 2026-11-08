@@ -1074,7 +1074,7 @@ window.RUNE_MAPS=[{"type":"snake","paths":[[[-1,1],[1,1],[1,11],[4,11],[4,1],[7,
 var RuneMusic=window.RuneMusic;
 
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6c.1';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6d';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -1352,7 +1352,7 @@ const LIVE={
 
 // ======================= v0.3：大厅 / 英雄 / 诅咒 / 难度 =======================
 // 三个模块各有开关：网址加 ?off=meta,hero,curse 可以单独关闭（也方便出问题时直接关掉重发）
-const FEAT={meta:true,hero:true,curse:true,fx2:false};
+const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true};
 try{const u=new URLSearchParams(location.search),q=u.get('off'),q2=u.get('on');if(q)q.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=false;});if(q2)q2.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=true;});}catch(e){}
 // 局外存档
 const META_DEF={shards:0,owned:{},hero:'wind',diff:0,unlockedDiff:0,runs:0,wins:0,auto:true};
@@ -1629,7 +1629,12 @@ function updProj(p,dt){
   }
   // 炮弹 / 子炸弹
   const R=(p.k==='bomblet'?.55:.9*(p.splash||1))*CS*M.cannonSplash;
-  if(FEAT.fx2){fx2Boom(p.tx,p.ty,R,p.k!=='shell');if(p.k==='shell'){chunks(p.tx,p.ty,BIOME==='snow'?'#e2e8f0':BIOME==='volcano'?'#3f3f46':'#7c6a4f',5,150,2.6);decal('scorch',p.tx,p.ty+3,R*.7,2.4);shake=Math.max(shake,p.splash>1?4:2.5);sfx('boom');}}
+  if(FEAT.sprfx&&!FEAT.fx2&&SPS.boom){
+    if(p.k==='shell'){const busy=fx.filter(f=>f.k==='sprite'&&f.t>f.T*.4).length>=5;spriteFx('boom',p.tx,p.ty-R*.2,R*2.3*(busy?.75:1),busy?.35:.5);
+      chunks(p.tx,p.ty,BIOME==='snow'?'#e2e8f0':BIOME==='volcano'?'#3f3f46':'#7c6a4f',5,140,2.6);decal('scorch',p.tx,p.ty+3,R*.7,2.4);shake=Math.max(shake,p.splash>1?4:2.5);sfx('boom');}
+    else spriteFx('boom',p.tx,p.ty-R*.15,R*2.3*.55,.3);
+  }
+  else if(FEAT.fx2){fx2Boom(p.tx,p.ty,R,p.k!=='shell');if(p.k==='shell'){chunks(p.tx,p.ty,BIOME==='snow'?'#e2e8f0':BIOME==='volcano'?'#3f3f46':'#7c6a4f',5,150,2.6);decal('scorch',p.tx,p.ty+3,R*.7,2.4);shake=Math.max(shake,p.splash>1?4:2.5);sfx('boom');}}
   else{fx.push({k:'boom',x:p.tx,y:p.ty,r:R,t:.3,T:.3,c:'#fb923c'});
   if(p.k==='shell'){fx.push({k:'ring',x:p.tx,y:p.ty,r:R*1.1,t:.3,T:.3,c:'#fed7aa'});fx.push({k:'core',x:p.tx,y:p.ty,r:R*.45,t:.1,T:.1});burst(p.tx,p.ty,'#fdba74',10,110,260,.45,2.2);chunks(p.tx,p.ty,BIOME==='snow'?'#e2e8f0':BIOME==='volcano'?'#3f3f46':'#7c6a4f',6,140,2.6);smoke(p.tx,p.ty-4,2,R*.18,'#78716c');decal('scorch',p.tx,p.ty+3,R*.7,2.4);shake=Math.max(shake,p.splash>1?4:2.5);sfx('boom');}
   else sparks(p.tx,p.ty,'#fdba74',4,110,.2);}
@@ -1783,7 +1788,7 @@ function txt(x,y,s,c,T){texts.push({x,y,s,c,t:T||.8,T:T||.8});}
 // ======================= v0.5c：特效 =======================
 // 地面印记（焦痕、弹坑、黏液、冰霜）画在地面之上、塔和敌人之下；粒子分多种形状。
 let decals=[];
-function decal(k,x,y,r,T,c){decals.push({k,x,y,r,t:T,T,c,rot:Math.random()*6.28});if(decals.length>45)decals.shift();}
+function decal(k,x,y,r,T,c){if(k==='scorch'&&FEAT.sprfx){T=Math.min(T,1.2);r*=.75;}decals.push({k,x,y,r,t:T,T,c,rot:Math.random()*6.28});if(decals.length>(FEAT.sprfx?12:45))decals.shift();}
 function P(o){parts.push(o);}
 function sparks(x,y,c,n,sp=140,life=.22){for(let i=0;i<n;i++){const a=Math.random()*6.283,v=sp*(.5+Math.random()*.5);P({k:'spark',x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,g:0,t:life,T:life,c,r:1.4});}}
 function smoke(x,y,n,s=5,c='#6b6460',rise=-28){for(let i=0;i<n;i++)P({k:'smoke',x:x+(Math.random()-.5)*s*2,y:y+(Math.random()-.5)*s,vx:(Math.random()-.5)*20,vy:rise*(.6+Math.random()*.6),g:0,t:.7+Math.random()*.4,T:1.1,c,r:s*(.7+Math.random()*.6)});}
@@ -2025,6 +2030,20 @@ function comboFormFx(c){
     texP('glow',col,t.x,t.y,{s0:20,s1:CS*1.8,t:.6,T:.6,a0:.9,add:true});texP('ring',col2,t.x,t.y+CS*.25,{s0:10,s1:CS*1.6,t:.55,T:.55,a0:.9,add:true});
     for(let i=0;i<6;i++)later(i*.06,()=>texP(i%2?'star':'star2',i%2?col:col2,t.x+rnd(-CS*.35,CS*.35),pv.y,{vy:-rnd(50,90),s0:rnd(10,16),s1:4,t:.7,T:.7,a0:1,add:true}));}
 }
+
+
+// ======================= v0.6d：序列帧特效 =======================
+// 美术手绘的序列帧（素材见 THIRD_PARTY.md），一次命中播放一段画好的动画。
+// 防乱规则：前 40% 时间（火球、火舌）画在怪上面；后 60%（烟）画在怪下面；血条在所有特效之后再画一遍；
+// 同屏 5 个以上时新爆炸缩小、变快；子母弹的小炸弹用迷你版；地上焦痕更短更少。
+const SPS={};
+function spriteFx(k,x,y,s,T){fx.push({k:'sprite',sp:k,x,y,s,t:T,T});}
+function spriteInit(){
+  if(typeof Image==='undefined')return;
+  for(const k of ['boom']){try{const im=new Image();im.onload=()=>{SPS[k]=im;};im.src=(window.RUNE_PNG?window.RUNE_PNG+'fx_':'fx/')+'sp_'+k+'.png';}catch(e){}}
+}
+function drawSprite(f,alpha){const im=SPS[f.sp];if(!im)return;const a=f.t/f.T,n=Math.round(im.width/im.height),i=Math.min(n-1,Math.floor((1-a)*n)),fw=im.height;
+  ctx.globalAlpha=alpha;ctx.drawImage(im,i*fw,0,fw,fw,f.x-f.s/2,f.y-f.s/2,f.s,f.s);ctx.globalAlpha=1;}
 
 // ======================= 音效 =======================
 let AC=null,MG=null,muted=false,lastS={},sndMode='0';
@@ -2642,7 +2661,8 @@ function draw(){
     if(t.lvl>=4&&has('L_'+t.type)){const a=.5+.3*Math.sin(performance.now()/300);ctx.strokeStyle=`rgba(251,191,36,${a})`;ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(t.x,t.y+CS*.38,CS*.48,CS*.16,0,0,7);ctx.stroke();ctx.fillStyle='#fbbf24';ctx.font='bold 11px sans-serif';ctx.fillText('★',t.c*CS+7,t.r*CS+7);}
     if(t.stun>0){ctx.fillStyle='#fca5a5';ctx.font='bold 12px sans-serif';const a=performance.now()/200;ctx.fillText('✦',t.x+Math.cos(a)*9,t.y-CS*.6+Math.sin(a)*3);ctx.fillText('✦',t.x-Math.cos(a)*9,t.y-CS*.6-Math.sin(a)*3);}
   }
-  // 敌人
+  // 敌人（序列帧特效的后半段——烟——先画，压在怪下面）
+  for(const f of fx)if(f.k==='sprite'&&f.t/f.T<.6)drawSprite(f,Math.min(1,f.t/f.T/.6)*.85);
   for(const e of [...enemies].sort((a,b)=>a.y-b.y)){
     const sp=SPR[e.spr+'_'+BIOME]||SPR[e.spr],hidden=e.afx.stealth&&!e.revealed;
     if(e.elite){ctx.strokeStyle='rgba(251,191,36,.9)';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(e.x,e.y+e.r*.8,e.r*1.25,e.r*.48,0,0,7);ctx.stroke();}
@@ -2664,7 +2684,7 @@ function draw(){
     ctx.globalAlpha=1;
     if(e.shield>0){ctx.fillStyle='rgba(96,165,250,.22)';ctx.strokeStyle='rgba(147,197,253,.8)';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(e.x,e.y-e.r*.3,e.r*1.35,0,7);ctx.fill();ctx.stroke();}
     drawStatus(e,0,top);
-    const w=Math.max(e.r*2+4,18),p=Math.max(0,e.hp/e.max);
+    const w=Math.max(e.r*2+4,18),p=Math.max(0,e.hp/e.max);e._bar=hidden?null:[e.x-w/2,top-5,w,p];
     ctx.fillStyle='#000a';ctx.fillRect(e.x-w/2,top-5,w,3);
     ctx.fillStyle=p>.5?'#4ade80':p>.25?'#facc15':'#ef4444';ctx.fillRect(e.x-w/2,top-5,w*p,3);
     if(e.shield>0){ctx.fillStyle='#93c5fd';ctx.fillRect(e.x-w/2,top-8,w*Math.min(1,e.shield/(e.max*.4)),2);}
@@ -2698,6 +2718,7 @@ function draw(){
       ctx.globalAlpha=a;ctx.strokeStyle='#faf5ff';ctx.lineWidth=2;path();ctx.stroke();}
     else if(f.k==='pillar'){const k=1-a,h=f.h*Math.min(1,k*4),w=f.w*(1-k*.5),g=ctx.createLinearGradient(0,f.y-h,0,f.y);g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(.6,f.c);g.addColorStop(1,'#ffffff');
       ctx.globalCompositeOperation='lighter';ctx.globalAlpha=a*.75;ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(f.x,f.y-h/2,w/2,h/2,0,0,7);ctx.fill();ctx.globalAlpha=a;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.ellipse(f.x,f.y-h/2,w/6,h/2,0,0,7);ctx.fill();ctx.globalCompositeOperation='source-over';}
+    else if(f.k==='sprite'){if(f.t/f.T>=.6)drawSprite(f,1);}
     else if(f.k==='dome'){const k=1-a;ctx.globalAlpha=a*.95;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(f.x,f.y,f.r*(.55+.45*k),0,7);ctx.fill();ctx.globalAlpha=a;ctx.strokeStyle='#fde68a';ctx.lineWidth=2.5;ctx.stroke();}
     else if(f.k==='bolt')drawBolt(f);
     else if(f.k==='frostwave')drawFrostWave(f);
@@ -2713,6 +2734,7 @@ function draw(){
   }
   for(const q of parts)if(q.k==='puff')puffOutline(q);
   for(const q of parts)drawPart(q);
+  ctx.globalAlpha=1;for(const e of enemies)if(!e.dead&&e._bar){const[x,y,w,p]=e._bar;ctx.fillStyle='#000a';ctx.fillRect(x,y,w,3);ctx.fillStyle=p>.5?'#4ade80':p>.25?'#facc15':'#ef4444';ctx.fillRect(x,y,w*p,3);}
   ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.font='bold 13px sans-serif';
   for(const t of texts){ctx.globalAlpha=Math.min(1,t.t/t.T*1.5);ctx.fillStyle=t.c;ctx.fillText(t.s,t.x,t.y);}
   ctx.globalAlpha=1;ctx.restore();
@@ -2744,7 +2766,7 @@ function loop(now){
     if(sel&&sel.enemy){const el=$('ehp');if(el)el.textContent=ehpText(sel.enemy);}}
   requestAnimationFrame(loop);
 }
-loadArt();fxTexInit();
+loadArt();fxTexInit();spriteInit();
 showLobby();
 requestAnimationFrame(loop);
 
