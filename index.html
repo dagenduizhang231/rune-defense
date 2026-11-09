@@ -106,7 +106,7 @@ button{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}
 <script src="maps.js"></script>
 <script>
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6j';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6j.1';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -1668,7 +1668,16 @@ const SFX={
   chime:[.5,()=>{tone('sine',1047,1047,.6,.05);tone('sine',1568,1568,.6,.04,.1);tone('sine',2093,2093,.7,.03,.2);}],
 };
 function sfx(n){if(!AC||muted)return;const now=AC.currentTime,s=SFX[n];if(!s)return;if(lastS[n]&&now-lastS[n]<s[0])return;lastS[n]=now;try{s[1]();}catch(e){}}
-document.addEventListener('pointerdown',()=>{audioInit();if(AC&&AC.state==='suspended')AC.resume();},{capture:true});
+// 声音解锁：手机浏览器要求在用户点击时启动声音。多挂几个事件（iOS Safari 只认 touchend/click），每次点击都检查一下是否被系统挂起；
+// iOS 上再放一段无声的 <audio>，把音频会话切到“媒体播放”，这样手机侧边静音键打开时网页游戏也能出声（和看视频一样）。
+let audUnlocked=false,silentEl=null;
+function silentWav(){const n=800,b=new Uint8Array(44+n*2),dv=new DataView(b.buffer),ws=(o,t)=>{for(let i=0;i<t.length;i++)b[o+i]=t.charCodeAt(i);};ws(0,'RIFF');dv.setUint32(4,36+n*2,true);ws(8,'WAVE');ws(12,'fmt ');dv.setUint32(16,16,true);dv.setUint16(20,1,true);dv.setUint16(22,1,true);dv.setUint32(24,8000,true);dv.setUint32(28,16000,true);dv.setUint16(32,2,true);dv.setUint16(34,16,true);ws(36,'data');dv.setUint32(40,n*2,true);let s='';for(const x of b)s+=String.fromCharCode(x);return 'data:audio/wav;base64,'+btoa(s);}
+function audioUnlock(){audioInit();if(!AC)return;try{if(AC.state!=='running')AC.resume();}catch(e){}
+  if(audUnlocked)return;audUnlocked=true;
+  try{const bf=AC.createBuffer(1,1,22050),src=AC.createBufferSource();src.buffer=bf;src.connect(AC.destination);src.start(0);}catch(e){}
+  try{if(typeof Audio!=='undefined'&&/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent||'')&&!window.wx){silentEl=new Audio(silentWav());silentEl.loop=true;silentEl.setAttribute&&silentEl.setAttribute('playsinline','');const pr=silentEl.play();if(pr&&pr.catch)pr.catch(()=>{});}}catch(e){}}
+for(const ev of ['pointerdown','touchstart','touchend','click','keydown'])document.addEventListener(ev,audioUnlock,{capture:true});
+try{document.addEventListener('visibilitychange',()=>{if(!document.hidden&&AC&&AC.state!=='running'){try{AC.resume();}catch(e){}}});}catch(e){}
 const sndBtn=$('snd');const SNDICON={'0':'🔊','m':'🔉','1':'🔇'};sndBtn.textContent=SNDICON[sndMode]||'🔊';
 sndBtn.onclick=()=>{sndMode=sndMode==='0'?'m':sndMode==='m'?'1':'0';muted=sndMode==='1';sndBtn.textContent=SNDICON[sndMode];if(MG)MG.gain.value=muted?0:.55;
   if(window.RuneMusic)RuneMusic.setEnabled(sndMode==='0');txt(W/2,H*.45,{'0':'音乐和音效：开','m':'只有音效（音乐关）','1':'全部静音'}[sndMode],'#e5e7eb',1.2);
