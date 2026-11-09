@@ -1,4 +1,4 @@
-// 符文塔防 v0.6j.2 · 微信小游戏版（由 tools/build_wx.py 生成，不要手改）
+// 符文塔防 v0.6k · 微信小游戏版（由 tools/build_wx.py 生成，不要手改）
 // 符文塔防 · 微信小游戏宿主：屏幕画布、触摸、存储、音频、图片。
 // 注意：微信里第一次 wx.createCanvas() 得到的是上屏画布，之后创建的都是离屏画布。
 var __HOST = (function () {
@@ -1127,7 +1127,7 @@ window.RUNE_MAPS=[{"type":"snake","paths":[[[-1,1],[1,1],[1,11],[4,11],[4,1],[7,
 var RuneMusic=window.RuneMusic;
 
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6j.2';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6k';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -1596,7 +1596,7 @@ const LIVE={
 
 // ======================= v0.3：大厅 / 英雄 / 诅咒 / 难度 =======================
 // 三个模块各有开关：网址加 ?off=meta,hero,curse 可以单独关闭（也方便出问题时直接关掉重发）
-const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true,map2:true,amb:true,ambsnd:true};
+const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true,map2:true,amb:true,ambsnd:true,lava2:true};
 try{const u=new URLSearchParams(location.search),q=u.get('off'),q2=u.get('on');if(q)q.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=false;});if(q2)q2.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=true;});}catch(e){}
 // 局外存档
 const META_DEF={shards:0,owned:{},hero:'wind',diff:0,unlockedDiff:0,runs:0,wins:0,auto:true};
@@ -1893,7 +1893,7 @@ function updProj(p,dt){
   if(p.k==='shell'){
     if(p.cluster)for(let k=0;k<4;k++){const a=Math.random()*6.283,r=CS*(.6+Math.random()*.7);projs.push({k:'bomblet',x:p.tx,y:p.ty,sx:p.tx,sy:p.ty,tx:p.tx+Math.cos(a)*r,ty:p.ty+Math.sin(a)*r,v:160,dmg:p.dmg*.35,lvl:p.lvl});}
     if(has('C_plasma')){const f=nearest(p.tx,p.ty,1.6*CS,new Set());if(f)chainZap(f,2,p.dmg*.5,.9,[p.tx,p.ty]);}
-    if(p.evo)lavas.push({x:p.tx,y:p.ty,r:R*.9,t:2.5,T:2.5,dps:p.dmg*.4});
+    if(p.evo){const lr=R*.9*(FEAT.lava2?lavaSize():1);lavas.push({x:p.tx,y:p.ty,r:lr,t:2.5,T:2.5,dps:p.dmg*.4,seed:Math.random()*100,bub:0,...lavaForm(lr)});}
   }
 }
 function updEnemy(e,dt){
@@ -2487,6 +2487,57 @@ function drawBossFall(f){const el=f.T-f.t,hy=f.y+f.s*.3,R=f.r*2.1;
     // 洞口前沿压在 Boss 身上，看起来是掉"进"洞里
     if(k>.01){ctx.save();ctx.globalAlpha=.95;ctx.strokeStyle='#c084fc';ctx.lineWidth=2.4;ctx.beginPath();ctx.ellipse(f.x,hy,rx,ry,0,0,Math.PI);ctx.stroke();ctx.globalAlpha=.5;ctx.strokeStyle='#4c1d95';ctx.lineWidth=5;ctx.beginPath();ctx.ellipse(f.x,hy+1.5,rx,ry,0,.15,Math.PI-.15);ctx.stroke();ctx.restore();}}
 }
+
+// 火之心（进化炮塔「火山」）的熔岩池（FEAT.lava2）：画在地面层（怪踩在上面）。
+// 形状是不规则的一摊（边缘慢慢蠕动），外圈焦黑硬壳、里面由橙红到亮黄的岩浆，表面漂着几块暗色结痂、亮色裂纹在流动，
+// 偶尔“啵”地冒个泡；快消失的最后 0.7 秒冷却变暗、结成黑壳再淡掉。多个池子重叠时不叠加发光，全场气泡最多 4 个。
+// 熔岩大小轮换：一摊稍大，其余是它的 七成 / 六成 / 四成（打乱顺序轮流出）。
+// 为了不改数值，按“平均面积和原来一样”整体放大：1.41 / 0.99 / 0.85 / 0.56 倍原半径（伤害范围跟着看到的大小走）。
+let lavaBag=[];function lavaSize(){if(!lavaBag.length)lavaBag=shuffleA([1.41,.99,.85,.56]);return lavaBag.pop();}
+// 每一摊都不一样。三种落地形状随机：
+//  溅射（一半概率）：中间一坨，向四周甩出 5~8 根粗细长短不一的“手指”，指尖挂着圆滴，外面还有甩飞的小滴——胶状岩浆砸到地上溅开的样子
+//  拖尾（四分之一）：沿一个方向拉长的一摊，前端甩出几道长条和滴
+//  瓣状（四分之一）：3~4 个不规则的瓣拼在一起（比原来更不圆）
+function lavaForm(r){const R=()=>Math.random(),N=72,rad=new Array(N).fill(0),drops=[],type=R()<.5?'splat':R()<.5?'smear':'lobe',dir=R()*6.283;
+  const bump=(c,h,w)=>{for(let k=0;k<N;k++){let d=Math.abs(k/N*6.283-c);d=Math.min(d,6.283-d);rad[k]+=h*Math.exp(-(d*d)/(2*w*w));}};
+  if(type==='splat'){const base=r*(.48+.12*R());for(let k=0;k<N;k++)rad[k]=base;bump(R()*6.28,r*.12,.9);const nf=5+Math.floor(R()*4);
+    for(let f=0;f<nf;f++){const c=f/nf*6.283+R()*.6,h=r*(.25+.6*R()),w=.07+.09*R();bump(c,h,w);const tip=base+h;if(R()<.75)drops.push({x:Math.cos(c)*(tip+r*.06),y:Math.sin(c)*(tip+r*.06),rx:r*(.07+.07*R()),ry:r*(.06+.06*R()),a:c});
+      if(R()<.5)drops.push({x:Math.cos(c+R()*.2-.1)*(tip+r*(.25+.3*R())),y:Math.sin(c+R()*.2-.1)*(tip+r*(.25+.3*R())),rx:r*(.04+.05*R()),ry:r*(.035+.04*R()),a:c});}}
+  else if(type==='smear'){const base=r*.42;for(let k=0;k<N;k++)rad[k]=base;bump(dir,r*.75,.45);bump(dir+3.14,r*.2,.6);for(let f=0;f<4;f++){const c=dir+(R()-.5)*1.1,h=r*(.4+.6*R());bump(c,h,.06+.05*R());if(R()<.7)drops.push({x:Math.cos(c)*(base+h+r*.1),y:Math.sin(c)*(base+h+r*.1),rx:r*(.05+.06*R()),ry:r*(.05+.05*R()),a:c});}
+    for(let f=0;f<3;f++){const c=R()*6.28;bump(c,r*(.1+.15*R()),.12);}}
+  else{const base=r*.5;for(let k=0;k<N;k++)rad[k]=base;const nl=3+Math.floor(R()*2);for(let f=0;f<nl;f++)bump(f/nl*6.283+R()*.7,r*(.25+.35*R()),.25+.2*R());for(let f=0;f<4;f++)bump(R()*6.28,r*(.1+.25*R()),.07+.05*R());
+    for(let f=0;f<2+Math.floor(R()*3);f++){const c=R()*6.28,d=r*(1+.3*R());drops.push({x:Math.cos(c)*d,y:Math.sin(c)*d,rx:r*(.06+.07*R()),ry:r*(.05+.06*R()),a:c});}}
+  for(let k=0;k<N;k++)rad[k]*=1+(R()-.5)*.06;
+  return{form:{rad,drops,type,v:Math.floor(R()*2),rot:R()*6.28,ox:R()*192,oy:R()*192,dr:(R()<.5?-1:1)*(3+R()*4),sc:.85+R()*.4}};}
+// 主体：极坐标轮廓（平滑曲线）；pad 让轮廓整体外扩（画焦黑外沿用）
+function lavaBody(F,sc,pad,t){const N=F.rad.length,P=[];for(let k=0;k<N;k++){const a=k/N*6.283,w=1+.025*Math.sin(a*4+t*1.2);P.push([Math.cos(a)*(F.rad[k]*sc*w+pad),Math.sin(a)*(F.rad[k]*sc*w+pad)]);}
+  const m=(p,q)=>[(p[0]+q[0])/2,(p[1]+q[1])/2];let s0=m(P[N-1],P[0]);ctx.moveTo(s0[0],s0[1]);for(let k=0;k<N;k++){const q=m(P[k],P[(k+1)%N]);ctx.quadraticCurveTo(P[k][0],P[k][1],q[0],q[1]);}ctx.closePath();}
+function lavaPath(L,sc,pad,keep){if(!keep)ctx.beginPath();for(const o of L){ctx.moveTo(o.x+Math.cos(o.a)*(o.rx*sc+pad),o.y+Math.sin(o.a)*(o.rx*sc+pad));ctx.ellipse(o.x,o.y,o.rx*sc+pad,o.ry*sc+pad,o.a,0,6.2832);}}
+function drawLavas(){const now=fxClock;let bubbles=0;ctx.save();
+  for(const l of lavas){const F=l.form;if(!F)continue;const el=l.T-l.t,grow=Math.min(1,el/.16),sc=.3+.7*(1-Math.pow(1-grow,3)),cool=l.t<.8?1-l.t/.8:0,a=Math.min(1,l.t/.25),dsc=Math.min(1,el/.25);
+    const tex=SPS['lava'+F.v],glw=SPS['lavaglow'+F.v];
+    // 地面热光（压扁的椭圆）
+    const gl=ctx.createRadialGradient(l.x,l.y,l.r*.3,l.x,l.y,l.r*1.6);gl.addColorStop(0,`rgba(249,115,22,${.3*(1-cool)*a})`);gl.addColorStop(1,'rgba(249,115,22,0)');ctx.fillStyle=gl;ctx.save();ctx.translate(l.x,l.y);ctx.scale(1,.75);ctx.translate(-l.x,-l.y);ctx.fillRect(l.x-l.r*1.6,l.y-l.r*1.6,l.r*3.2,l.r*3.2);ctx.restore();
+    ctx.save();ctx.translate(l.x,l.y);ctx.scale(1,.74);ctx.rotate(F.rot);
+    // 外沿焦黑硬壳（比岩浆大一圈）
+    ctx.globalAlpha=a*.95;ctx.fillStyle='#1f0c06';ctx.beginPath();lavaBody(F,sc,2.2,now);ctx.fill();lavaPath(F.drops,dsc,1.2);ctx.fill();
+    // 岩浆本体：用裂纹熔岩贴图填满形状，贴图慢慢漂移（在流动）
+    ctx.save();ctx.beginPath();lavaBody(F,sc,0,now);lavaPath(F.drops,dsc,0,1);ctx.clip();
+    const ts=l.r*2.2*F.sc,ox=((F.ox+now*F.dr)%ts+ts)%ts,oy=(F.oy%ts+ts)%ts;
+    if(tex){ctx.globalAlpha=a;for(let ix=-2;ix<=1;ix++)for(let iy=-2;iy<=1;iy++)ctx.drawImage(tex,ix*ts+ox-ts*.5,iy*ts+oy-ts*.5,ts,ts);}
+    else{ctx.globalAlpha=a;ctx.fillStyle='#c2410c';ctx.fillRect(-l.r*2,-l.r*2,l.r*4,l.r*4);}
+    // 裂缝发光一呼一吸
+    if(glw&&cool<1){ctx.globalCompositeOperation='lighter';ctx.globalAlpha=a*(1-cool)*(.35+.25*Math.sin(now*3+l.seed));for(let ix=-2;ix<=1;ix++)for(let iy=-2;iy<=1;iy++)ctx.drawImage(glw,ix*ts+ox-ts*.5,iy*ts+oy-ts*.5,ts,ts);ctx.globalCompositeOperation='source-over';}
+    // 冷却：慢慢变暗结壳
+    if(cool>0){ctx.globalAlpha=cool*.8;ctx.fillStyle='#160805';ctx.fillRect(-l.r*2,-l.r*2,l.r*4,l.r*4);}
+    ctx.restore();ctx.restore();
+    // 冒泡（全场最多 4 个）
+    if(cool<.5&&bubbles<4){const ph=((now+l.seed)*1.3)%1;if(ph<.45){bubbles++;const ba=l.seed*3+Math.floor(now*1.3),br=F.rad[0]*.45,o={x:Math.cos(ba)*br,y:Math.sin(ba)*br},ca=Math.cos(F.rot),sa=Math.sin(F.rot),bx=l.x+(o.x*ca-o.y*sa),by=l.y+(o.x*sa+o.y*ca)*.74,k=ph/.45;
+      if(k<.75){ctx.globalAlpha=a;ctx.fillStyle='#fb923c';ctx.beginPath();ctx.arc(bx,by,1.2+k*2.8,0,7);ctx.fill();ctx.fillStyle='#fef3c7';ctx.beginPath();ctx.arc(bx-.8,by-.8,.5+k*1.1,0,7);ctx.fill();}
+      else{ctx.globalAlpha=a*(1-(k-.75)/.25);ctx.strokeStyle='#fdba74';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(bx,by,3.5+(k-.75)*12,(3.5+(k-.75)*12)*.6,0,0,7);ctx.stroke();
+        if(k>.76&&k<.8&&parts.length<160)for(let q=0;q<2;q++)P({k:'spark',x:bx,y:by,vx:rnd(-25,25),vy:rnd(-70,-40),g:160,t:.4,T:.4,c:'#fdba74',r:1.2});}}}
+  }
+  ctx.restore();ctx.globalAlpha=1;}
 function steamPuff(t,s,x,y){const now=fxClock;if((t._stm||0)>now)return;t._stm=now+1.4+((t.c*7+t.r*3)%10)*.08;
   if(parts.length>140||parts.filter(q=>q.stm).length>=6)return;const pv=towerPivot(t),a=t.type==='cannon'?(t.ang||0):0,X=pv.x+x*Math.cos(a)-y*Math.sin(a),Y=pv.y+x*Math.sin(a)+y*Math.cos(a);
   texP('puff','#e2e8f0',X,Y,{vy:-16,vx:rnd(-4,4),s0:s*.12,s1:s*.32,t:1.1,T:1.1,a0:.28,stm:1});}
@@ -2566,6 +2617,7 @@ function spriteFx(k,x,y,s,T){fx.push({k:'sprite',sp:k,x,y,s,t:T,T});}
 function spriteInit(){
   if(typeof Image==='undefined')return;
   for(const k of ['boom','zhit','ahit']){try{const im=new Image();im.onload=()=>{SPS[k]=im;};im.src=(window.RUNE_PNG?window.RUNE_PNG+'fx_':'fx/')+'sp_'+k+'.png';}catch(e){}}
+  for(const k of ['lava0','lava1','lavaglow0','lavaglow1']){try{const im=new Image();im.onload=()=>{SPS[k]=im;};im.src=(window.RUNE_PNG?window.RUNE_PNG+'fx_':'fx/')+k+'.png';}catch(e){}}
 }
 function drawSprite(f,alpha){const im=SPS[f.sp];if(!im)return;const a=f.t/f.T,n=Math.round(im.width/im.height),i=Math.min(n-1,Math.floor((1-a)*n)),fw=im.height;
   ctx.globalAlpha=alpha;ctx.drawImage(im,i*fw,0,fw,fw,f.x-f.s/2,f.y-f.s/2,f.s,f.s);ctx.globalAlpha=1;}
@@ -3290,6 +3342,7 @@ function draw(){
   // 敌人（序列帧特效的后半段——烟——先画，压在怪下面）
   for(const f of fx)if(f.k==='sprite'&&f.t/f.T<.6)drawSprite(f,Math.min(1,f.t/f.T/.6)*.85);
   for(const f of fx)if(f.k==='bossfall')drawBossFall(f);
+  if(FEAT.lava2&&lavas.length)drawLavas();
   for(const e of [...enemies].sort((a,b)=>a.y-b.y)){
     const sp=SPR[e.spr+'_'+BIOME]||SPR[e.spr],hidden=e.afx.stealth&&!e.revealed;
     if(e.elite){ctx.strokeStyle='rgba(251,191,36,.9)';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(e.x,e.y+e.r*.8,e.r*1.25,e.r*.48,0,0,7);ctx.stroke();}
@@ -3319,7 +3372,7 @@ function draw(){
     if(e.type==='boss2'){ctx.font='bold 11px sans-serif';ctx.fillStyle=TT[e.immune].color;ctx.fillText('免疫 '+TT[e.immune].name,e.x,top-15);}
   }
   drawHero();drawGuide();
-  for(const l of lavas){const a=Math.min(1,l.t/l.T*2);ctx.globalAlpha=a*(.35+.1*Math.sin(performance.now()/120));ctx.fillStyle='#f97316';ctx.beginPath();ctx.arc(l.x,l.y,l.r,0,7);ctx.fill();ctx.globalAlpha=a*.5;ctx.fillStyle='#fde047';ctx.beginPath();ctx.arc(l.x,l.y,l.r*.45,0,7);ctx.fill();ctx.globalAlpha=1;}
+  if(!FEAT.lava2)for(const l of lavas){const a=Math.min(1,l.t/l.T*2);ctx.globalAlpha=a*(.35+.1*Math.sin(performance.now()/120));ctx.fillStyle='#f97316';ctx.beginPath();ctx.arc(l.x,l.y,l.r,0,7);ctx.fill();ctx.globalAlpha=a*.5;ctx.fillStyle='#fde047';ctx.beginPath();ctx.arc(l.x,l.y,l.r*.45,0,7);ctx.fill();ctx.globalAlpha=1;}
   // 子弹
   for(const p of projs){
     if(p.k==='arrow'&&FEAT.arrow2)drawArrow2(p);
