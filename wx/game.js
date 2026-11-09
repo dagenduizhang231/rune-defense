@@ -1,4 +1,4 @@
-// 符文塔防 v0.6e · 微信小游戏版（由 tools/build_wx.py 生成，不要手改）
+// 符文塔防 v0.6f · 微信小游戏版（由 tools/build_wx.py 生成，不要手改）
 // 符文塔防 · 微信小游戏宿主：屏幕画布、触摸、存储、音频、图片。
 // 注意：微信里第一次 wx.createCanvas() 得到的是上屏画布，之后创建的都是离屏画布。
 var __HOST = (function () {
@@ -1127,7 +1127,7 @@ window.RUNE_MAPS=[{"type":"snake","paths":[[[-1,1],[1,1],[1,11],[4,11],[4,1],[7,
 var RuneMusic=window.RuneMusic;
 
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6e';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6f';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -1405,7 +1405,7 @@ const LIVE={
 
 // ======================= v0.3：大厅 / 英雄 / 诅咒 / 难度 =======================
 // 三个模块各有开关：网址加 ?off=meta,hero,curse 可以单独关闭（也方便出问题时直接关掉重发）
-const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true};
+const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true};
 try{const u=new URLSearchParams(location.search),q=u.get('off'),q2=u.get('on');if(q)q.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=false;});if(q2)q2.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=true;});}catch(e){}
 // 局外存档
 const META_DEF={shards:0,owned:{},hero:'wind',diff:0,unlockedDiff:0,runs:0,wins:0,auto:true};
@@ -1572,7 +1572,7 @@ function hit(e,dmg,src,o){
   const arm=Math.max(0,e.armor-(e.shredT>0?e.shredV:0));
   if(!o.pure&&!o.ap)dmg=Math.max(dmg*.25,dmg-arm);
   if(e.shield>0){const m=src==='tesla'?2:1,ab=Math.min(e.shield,dmg*m);e.shield-=ab;dmg-=ab/m;if(e.shield<=0)burst(e.x,e.y,'#93c5fd',10,90,0,.35,2);}
-  e.hp-=dmg;if(!o.pure){e.hitT=0;e.flT=.09;}
+  e.hp-=dmg;if(!o.pure){e.hitT=0;e.flT=.09;e.flA=0;}
   if(crit)txt(e.x,e.y-14,Math.round(dmg)+'!','#fde047');
   if(!o.pure)hitFx(e,src,crit);
   if(M.execute&&!e.boss&&e.hp>0&&e.hp<e.max*M.execute){e.hp=0;stats.exec++;txt(e.x,e.y-14,'处决','#f87171');slashFx(e);}
@@ -1601,7 +1601,7 @@ function inRange(t,R){const R2=R*R;return enemies.filter(e=>targetable(e)&&(e.x-
 function chainZap(first,n,dmg,decay,from,o){
   let cur=first,d=dmg;const hs=new Set(),pts=[from||[first.x,first.y-30]],tgs=[];
   for(let i=0;i<n&&cur;i++){
-    hs.add(cur);pts.push([cur.x,cur.y]);tgs.push(cur);if(!FEAT.fx2)burst(cur.x,cur.y,'#f5d0fe',4,90,0,.25,1.5);
+    hs.add(cur);pts.push([cur.x,cur.y]);tgs.push(cur);if(!FEAT.fx2&&!Z3())burst(cur.x,cur.y,'#f5d0fe',4,90,0,.25,1.5);
     let dd=d;if(M.overload&&Math.random()<M.overload){dd*=3;txt(cur.x,cur.y-14,'过载','#e9d5ff');fx.push({k:'boom',x:cur.x,y:cur.y,r:CS*.55,t:.2,T:.2,c:'#e9d5ff'});sparks(cur.x,cur.y,'#f5d0fe',8,200,.25);}
     if(M.staticF)cur.markT=4;
     hit(cur,dd,'tesla',o);d*=decay;
@@ -1609,7 +1609,7 @@ function chainZap(first,n,dmg,decay,from,o){
     for(const e of enemies){if(!targetable(e)||hs.has(e))continue;const q=(e.x-cur.x)**2+(e.y-cur.y)**2;if(q<bd){bd=q;best=e;}}
     cur=best;
   }
-  if(FEAT.fx2)fx2Zap(pts,from,tgs);else fx.push({k:'zap',pts,t:.15,T:.15});
+  if(FEAT.fx2)fx2Zap(pts,from,tgs);else if(Z3())zap3(pts,from,tgs);else fx.push({k:'zap',pts,t:.15,T:.15});
 }
 function teslaChainN(t){let n=M.chain;if(t.branch==='coil')n+=3;if(evolved(t))n+=2;if(has('C_harvest'))n+=Math.min(3,Math.floor(gold/100));return n;}
 function teslaDecay(t){return has('C_supercond')?1:t.branch==='coil'?.95:.85;}
@@ -1619,7 +1619,7 @@ function updTower(t,dt){
   if(t.stun>0){t.stun-=dt;return;}
   // 风暴分支：每 3 秒全图落雷
   if(t.branch==='storm'){t.stormCd=(t.stormCd??3)-dt;if(t.stormCd<=0){t.stormCd=3;const s=stat(t),pool=enemies.filter(targetable);
-    for(let k=0;k<3&&pool.length;k++){const e=pool.splice(Math.floor(Math.random()*pool.length),1)[0];fx.push({k:'zap',pts:[[e.x+(Math.random()-.5)*20,e.y-90],[e.x,e.y]],t:.2,T:.2});burst(e.x,e.y,'#f5d0fe',8,100,0,.3,1.8);hit(e,s.dmg*1.8,'tesla');}
+    for(let k=0;k<3&&pool.length;k++){const e=pool.splice(Math.floor(Math.random()*pool.length),1)[0];if(Z3())zap3([[e.x+(Math.random()-.5)*20,e.y-90],[e.x,e.y]],null,[e]);else{fx.push({k:'zap',pts:[[e.x+(Math.random()-.5)*20,e.y-90],[e.x,e.y]],t:.2,T:.2});burst(e.x,e.y,'#f5d0fe',8,100,0,.3,1.8);}hit(e,s.dmg*1.8,'tesla');}
     if(pool.length||enemies.length)sfx('zap');}}
   t.cd-=dt;if(t.cd>0)return;
   const s=stat(t),list=inRange(t,s.range);
@@ -1655,7 +1655,7 @@ function updTower(t,dt){
       if(FEAT.frost2&&!FEAT.fx2)snowHit(e);else if(FEAT.fx2)frostBloom(e);else burst(e.x,e.y,'#e0f2fe',3,40,0,.4,1.6);hit(e,s.dmg,'frost',{crit:fifth});
     }
   }else if(t.type==='tesla'){
-    sfx('zap');
+    sfx(Z3()&&'DEFG'.includes(zv())?'zcrack':'zap');
     chainZap(list[0],teslaChainN(t),s.dmg,teslaDecay(t),[t.x,t.y-CS*.75],{crit:fifth});
     if(evo){const other=list.find(e=>e!==list[0])||list[0];chainZap(other,teslaChainN(t),s.dmg*.6,teslaDecay(t),[t.x,t.y-CS*.75]);}
   }
@@ -1703,7 +1703,7 @@ function updProj(p,dt){
 }
 function updEnemy(e,dt){
   if(e.dead)return;
-  e.hitT+=dt;if(e.flT>0)e.flT-=dt;if(e.frzCd>0)e.frzCd-=dt;if(e.markT>0)e.markT-=dt;if(e.shredT>0)e.shredT-=dt;if(e.steamCd>0)e.steamCd-=dt;
+  e.hitT+=dt;if(e.flT>0)e.flT-=dt;if(e.zjT>0)e.zjT-=dt;if(e.elT>0)e.elT-=dt;if(e.numbT>0)e.numbT-=dt;if(e.kbx){const k=Math.exp(-dt*14);e.kbx*=k;e.kby*=k;if(Math.abs(e.kbx)<.2)e.kbx=e.kby=0;}if(e.frzCd>0)e.frzCd-=dt;if(e.markT>0)e.markT-=dt;if(e.shredT>0)e.shredT-=dt;if(e.steamCd>0)e.steamCd-=dt;
   if(e.burnT>0){e.burnT-=dt;hit(e,e.burnD*dt,'cannon',{noCrit:true,pure:true});if(e.dead)return;}
   if(has('C_steam')&&e.burnT>0&&(e.slowT>0||e.frzT>0)&&!(e.steamCd>0)){
     e.steamCd=3;const R=1.2*CS,dm=e.max*(e.boss?.03:.12);
@@ -1723,6 +1723,7 @@ function updEnemy(e,dt){
   else if(e.slowT>0){e.slowT-=dt;f=1-e.slowA;}
   {const tk=tiles[Math.floor(e.x/CS)+','+Math.floor(e.y/CS)];if(tk==='swamp')f*=.7;else if(tk==='ice')f*=1.3;}
   if(e.lead)f*=1.25;
+  if(e.hsT>0){e.hsT-=dt;f=0;}
   e.d+=e.spd*CS*f*dt;
   if(e.d>=PATHS[e.pi].tot){
     e.dead=true;let lost=e.boss?Math.max(1,Math.ceil(e.hp/e.max*24)):e.dmg;
@@ -1890,6 +1891,7 @@ function statusFx(dt){
 function drawDecals(){
   for(const d of decals){const a=Math.min(1,d.t/d.T*1.6);ctx.save();ctx.translate(d.x,d.y);ctx.rotate(d.rot);ctx.globalAlpha=a*.55;
     if(d.k==='snowdust'){ctx.globalAlpha=a*.55;ctx.fillStyle='#f8fafc';ctx.beginPath();ctx.ellipse(0,0,d.r,d.r*.5,0,0,7);ctx.fill();ctx.globalAlpha=a*.4;ctx.beginPath();ctx.ellipse(d.r*.6,d.r*.15,d.r*.5,d.r*.28,0,0,7);ctx.fill();}
+    else if(d.k==='zmark'){ctx.globalAlpha=a*.35;ctx.fillStyle='#3b0764';ctx.beginPath();ctx.ellipse(0,0,d.r,d.r*.45,0,0,7);ctx.fill();ctx.globalAlpha=a*.5;ctx.fillStyle='#e9d5ff';ctx.beginPath();ctx.ellipse(0,0,d.r*.35,d.r*.15,0,0,7);ctx.fill();}
     else if(d.k==='scorch'||d.k==='crater'){ctx.globalAlpha=a*.32;ctx.fillStyle=d.c||'#1c1917';ctx.beginPath();ctx.ellipse(0,0,d.r,d.r*.55,0,0,7);ctx.fill();ctx.globalAlpha=a*.35;ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(0,0,d.r*.55,d.r*.3,0,0,7);ctx.fill();
       if(d.k==='crater'){ctx.globalAlpha=a*.5*(.5+.5*Math.sin(performance.now()/150));ctx.fillStyle='#f97316';ctx.beginPath();ctx.ellipse(0,0,d.r*.25,d.r*.14,0,0,7);ctx.fill();}}
     else if(d.k==='goo'){ctx.fillStyle=d.c;ctx.beginPath();ctx.ellipse(0,0,d.r,d.r*.45,0,0,7);ctx.fill();ctx.beginPath();ctx.arc(d.r*.8,d.r*.2,d.r*.22,0,7);ctx.arc(-d.r*.9,-d.r*.1,d.r*.16,0,7);ctx.fill();ctx.globalAlpha=a*.35;ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(-d.r*.3,-d.r*.12,d.r*.25,d.r*.08,0,0,7);ctx.fill();}
@@ -1976,7 +1978,9 @@ function drawPart(q){
 function drawStatus(e,s,top){
   if(e.frzT>0){const w=e.r*2.3,h=e.r*2.1;ctx.fillStyle='rgba(186,230,253,.5)';ctx.strokeStyle='rgba(224,242,254,.95)';ctx.lineWidth=1.5;rrect(e.x-w/2,e.y-h*.75,w,h,4);ctx.fill();ctx.stroke();
     ctx.strokeStyle='rgba(255,255,255,.8)';ctx.beginPath();ctx.moveTo(e.x-w*.32,e.y-h*.6);ctx.lineTo(e.x-w*.12,e.y-h*.6);ctx.moveTo(e.x-w*.36,e.y-h*.45);ctx.lineTo(e.x-w*.3,e.y-h*.2);ctx.stroke();}
-  if(e.zapT>0){ctx.strokeStyle='#e9d5ff';ctx.lineWidth=1.3;ctx.beginPath();for(let i=0;i<3;i++){const a=Math.random()*6.283,r=e.r*1.1;ctx.moveTo(e.x+Math.cos(a)*r*.3,e.y-4+Math.sin(a)*r*.3);ctx.lineTo(e.x+Math.cos(a+.4)*r*.8+(Math.random()-.5)*4,e.y-4+Math.sin(a+.4)*r*.8);ctx.lineTo(e.x+Math.cos(a)*r*1.2,e.y-4+Math.sin(a)*r*1.2);}ctx.stroke();}
+  if(e.numbT>0&&Z3())drawNumb(e);
+  else if(e.zapT>0&&Z3()){const im=tinted('crackle','#e9d5ff');if(im&&Math.random()<.7){const ss=e.r*2.1;ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=Math.min(1,e.zapT*3)*.55;ctx.translate(e.x,e.y-e.r*.3);ctx.rotate(Math.floor(fxClock*15)*2.1);ctx.drawImage(im,-ss/2,-ss/2,ss,ss);ctx.restore();ctx.globalAlpha=1;}}
+  else if(e.zapT>0){ctx.strokeStyle='#e9d5ff';ctx.lineWidth=1.3;ctx.beginPath();for(let i=0;i<3;i++){const a=Math.random()*6.283,r=e.r*1.1;ctx.moveTo(e.x+Math.cos(a)*r*.3,e.y-4+Math.sin(a)*r*.3);ctx.lineTo(e.x+Math.cos(a+.4)*r*.8+(Math.random()-.5)*4,e.y-4+Math.sin(a+.4)*r*.8);ctx.lineTo(e.x+Math.cos(a)*r*1.2,e.y-4+Math.sin(a)*r*1.2);}ctx.stroke();}
   if(e.markT>0){const a=performance.now()/200;ctx.fillStyle='#d8b4fe';for(let i=0;i<3;i++){const an=a+i*2.09;ctx.beginPath();ctx.arc(e.x+Math.cos(an)*e.r*1.1,e.y-4+Math.sin(an)*e.r*.5,1.6,0,7);ctx.fill();}}
   if(e.shredT>0&&e.armor>0){const x=e.x+e.r*.9,y=top-2;ctx.fillStyle='#94a3b8';ctx.beginPath();ctx.moveTo(x,y-5);ctx.lineTo(x+4,y-3);ctx.lineTo(x+3,y+2);ctx.lineTo(x,y+4);ctx.lineTo(x-3,y+2);ctx.lineTo(x-4,y-3);ctx.closePath();ctx.fill();ctx.strokeStyle='#ef4444';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(x-1,y-4);ctx.lineTo(x+1,y);ctx.lineTo(x-1,y+3);ctx.stroke();}
 }
@@ -2043,6 +2047,74 @@ function fx2Zap(pts,from,tgs){const lite=!ZAPLV;
       if(e)e.zapT=.35;});
     later(T-.02+d*.3,()=>{texP('puff','#c4b5fd',x,y-3,{vy:-14,s0:8,s1:20,t:.5,T:.5,a0:.35});for(let j=0;j<4;j++){const a=Math.random()*6.28;P({k:'spark',x,y,vx:Math.cos(a)*100,vy:Math.sin(a)*100-20,g:200,t:.2,T:.2,c:'#e9d5ff',r:1.1});}});}
 }
+
+// 电塔闪电 v3（FEAT.zap3）：粗主干一跳一跳窜出去（白芯+紫边+外发光，每 0.05 秒重新抖一次形状），
+// 每跳命中一次：白色电击星芒（贴图）+ 怪闪白抖一下；第一下最重。不留残余电弧、不留烟，0.3 秒内干净收尾。
+function Z3(){return FEAT.zap3&&!FEAT.fx2&&window.__zap!=='O';}
+function zv(){return window.__zap||'G';}
+function jagPts(x1,y1,x2,y2,amp,seed,depth){let pts=[[x1,y1],[x2,y2]],s=seed;const r=()=>{s=(s*16807)%2147483647;return s/2147483647-.5;};
+  for(let d=0;d<depth;d++){const np=[pts[0]];for(let i=1;i<pts.length;i++){const[a,b]=pts[i-1],[c,q]=pts[i],len=Math.hypot(c-a,q-b)||1,o=r()*amp;np.push([(a+c)/2-(q-b)/len*o,(b+q)/2+(c-a)/len*o],[c,q]);}pts=np;amp*=.55;}return pts;}
+function zap3(pts,from,tgs){const v=zv(),hop=.035,n=pts.length-1,busy=fx.filter(f=>f.k==='bolt3').length>=4,T=.22+n*hop;
+  fx.push({k:'bolt3',pts,t:T,T,hop,seed:1+Math.floor(Math.random()*1e6),v,busy});
+  if(from)texP('glow','#c084fc',from[0],from[1],{s0:12,s1:26,t:.14,T:.14,a0:.9,add:true});
+  for(let i=1;i<=n;i++){const[x,y]=pts[i],[px,py]=pts[i-1],dir=Math.atan2(y-py,x-px),e=tgs&&tgs[i-1];later((i-1)*hop,()=>zhit3(e&&!e.dead?e.x:x,e&&!e.dead?e.y:y,e,i===1,i===n,dir,v));}
+}
+function zhit3(x,y,e,first,last,dir,v){
+  if(e){if(e._zh>fxClock-.12){e.flT=Math.max(e.flT||0,.1);return;}e._zh=fxClock;}
+  const r=e?e.r:10,big=first?(v==='C'?1.45:1.25):1,hy=y-r*.3,nsp=fx.filter(f=>f.k==='zsp').length;
+  if(nsp<8)fx.push({k:'zsp',sp:'zhit',x,y:hy,s:r*3.6*big*(nsp>=4?.7:1),t:.22,T:.22});
+  texP('glow','#a855f7',x,hy,{s0:r*3*big,s1:r,t:.15,T:.15,a0:.8,add:true});
+  if(e){e.flT=.14;e.zjT=v==='C'&&first?.16:.09;}
+  if(parts.length<170)for(let j=0;j<(first?5:3);j++){const a=dir+rnd(-1,1),sp=rnd(140,260);P({k:'spark',x,y:hy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-40,g:380,t:rnd(.12,.22),T:.22,c:j%2?'#f5d0fe':'#ffffff',r:1.3});}
+  if(v==='D'||v==='E'||v==='F'||v==='G'){zstrike(x,hy,e,r,first,dir,v);return;}
+  if(v==='C'&&first&&fx.filter(f=>f.k==='bolt3').length<4){texP('ring','#e9d5ff',x,hy,{s0:r*1.2,s1:r*4.4,t:.2,T:.2,a0:.9,add:true});if(e&&!e.boss)e.zjT=.18;}
+}
+
+// D/E 真·劈上去：命中瞬间白色核心闪 + 4 道向外炸开的短电弧 + 怪被电得黑白频闪、往后一顿；E 再加一下顿帧
+function zstrike(x,y,e,r,first,dir,v){const busy=fx.filter(f=>f.k==='bolt3').length>=4,big=first?1.3:1;
+  const F=v==='F'||v==='G';fx.push({k:'zcore',x,y,r:r*(F?.8:1.5)*big*(busy&&!first?.55:busy?.8:1),t:F?.09:.07,T:F?.09:.07,soft:F});
+  if(!busy||first)fx.push({k:'zrad',soft:F,x,y,r:r*(busy?1.6:2.3)*big,n:first?5:4,t:.11,T:.11,seed:1+Math.floor(Math.random()*1e6),dir});
+  if(e&&v==='G')e.numbT=e.boss?.5:.75;
+  if(e){e.elT=F?0:first?.24:.18;e.flT=F?.09:.14;e.flA=F?.45:0;e.kbx=Math.cos(dir)*(e.boss?2:6)*big;e.kby=Math.sin(dir)*(e.boss?1.5:4)*big;e.zjT=first?.2:.12;
+    if((v==='E'||F)&&first&&!e.boss)e.hsT=.07;}
+  if(first&&!busy)shake=Math.max(shake,v==='E'||F?2:1.4);
+  if(parts.length<170)for(let j=0;j<(first?7:4);j++){const a=dir+rnd(-1.2,1.2),sp=rnd(180,320);P({k:'spark',x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-50,g:420,t:rnd(.12,.24),T:.24,c:j%2?'#f5d0fe':'#ffffff',r:1.5});}
+  if(!busy)decal('zmark',x,y+r*.9,r*.9,.5);
+}
+function drawZcore(f){const a=f.t/f.T;if(f.soft){ctx.save();ctx.globalAlpha=a*.4;ctx.fillStyle='#7c3aed';ctx.beginPath();ctx.arc(f.x,f.y,f.r*(1.5-.3*a),0,7);ctx.fill();ctx.globalAlpha=a*.85;ctx.fillStyle='#e9d5ff';ctx.beginPath();ctx.arc(f.x,f.y,f.r*(.7-.2*a),0,7);ctx.fill();ctx.restore();return;}ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=a;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(f.x,f.y,f.r*(1.15-.4*a),0,7);ctx.fill();
+  ctx.globalAlpha=a*.6;ctx.fillStyle='#c084fc';ctx.beginPath();ctx.arc(f.x,f.y,f.r*(1.6-.4*a),0,7);ctx.fill();ctx.restore();}
+function drawZrad(f){const a=f.t/f.T,fr=Math.floor(fxClock/.033);let s=f.seed;const rr=()=>{s=(s*16807)%2147483647;return s/2147483647;};
+  ctx.lineCap='round';ctx.lineJoin='round';
+  for(let k=0;k<f.n;k++){const an=f.dir+Math.PI+(k/f.n)*6.283+rr()*.8,L=f.r*(.7+rr()*.5)*(1.25-a*.4);
+    const p=jagPts(f.x,f.y,f.x+Math.cos(an)*L,f.y+Math.sin(an)*L*.8,L*.35,1+((f.seed+k*31+fr*101)%2147483640),3);
+    ctx.globalAlpha=a;ctx.strokeStyle='#a855f7';ctx.lineWidth=3.6*a+1;strokePts(p);ctx.strokeStyle=f.soft?'#f3e8ff':'#fff';ctx.lineWidth=1.6*a+.5;strokePts(p);}
+  ctx.globalAlpha=1;ctx.lineCap='butt';ctx.lineJoin='miter';}
+
+// 被电后的余电：怪身上 1~2 道细小电流时有时无地爬动，偶尔抽搐一下（只是外观，不影响数值）
+function drawNumb(e){const k=Math.min(1,e.numbT/.3),fr=Math.floor(fxClock/.06),h=(fr*7919+Math.floor(e.d*13))%997;
+  if(h%10<4)return;  // 大约一半的时间什么都不画 → 若有若无
+  const r=e.r,cy=e.y-r*.35,n=h%10>8&&e.numbT>.35?2:1;let s=1+h*131;const rr=()=>{s=(s*16807)%2147483647;return s/2147483647;};
+  ctx.lineCap='round';ctx.lineJoin='round';
+  for(let i=0;i<n;i++){const a=rr()*6.283,b=a+.9+rr()*1.4,x1=e.x+Math.cos(a)*r*.85,y1=cy+Math.sin(a)*r*.7,x2=e.x+Math.cos(b)*r*.85,y2=cy+Math.sin(b)*r*.7;
+    const p=jagPts(x1,y1,x2,y2,r*.35,1+Math.floor(rr()*1e6),2);
+    ctx.globalAlpha=.55*k;ctx.strokeStyle='#a855f7';ctx.lineWidth=2.2;strokePts(p);ctx.globalAlpha=.85*k;ctx.strokeStyle='#f3e8ff';ctx.lineWidth=.9;strokePts(p);}
+  ctx.globalAlpha=1;ctx.lineCap='butt';ctx.lineJoin='miter';}
+function strokePts(p){ctx.beginPath();ctx.moveTo(p[0][0],p[0][1]);for(let i=1;i<p.length;i++)ctx.lineTo(p[i][0],p[i][1]);ctx.stroke();}
+function drawBolt3(f){const el=f.T-f.t,n=f.pts.length-1,tail=Math.min(1,f.t/.12),fr=Math.floor(fxClock/.05);
+  ctx.lineCap='round';ctx.lineJoin='round';
+  for(let i=1;i<=n;i++){const age=el-(i-1)*f.hop;if(age<0)break;
+    const[x1,y1]=f.pts[i-1],[x2,y2]=f.pts[i],len=Math.hypot(x2-x1,y2-y1),seed=1+((f.seed+i*977+fr*7919)%2147483640);
+    const strong=f.v==='D'||f.v==='E',F=f.v==='F'||f.v==='G';if(strong&&age>.05&&age<.08)continue;const p=jagPts(x1,y1,x2,y2,Math.min(28,len*.24),seed,4),pop=age<.05?(strong?1.8:F?1.6:1.45):1,w=pop*(.35+.65*tail)*(window.__zw||(f.busy?.65:.8));
+    ctx.globalAlpha=.32*tail;ctx.strokeStyle='#5b21b6';ctx.lineWidth=(f.busy?8:12)*w;strokePts(p);
+    ctx.globalAlpha=tail;ctx.strokeStyle='#a855f7';ctx.lineWidth=5.5*w;strokePts(p);
+    ctx.strokeStyle='#ffffff';ctx.lineWidth=(f.v==='D'||f.v==='E')&&age<.05?4.2*w:2.6*w;strokePts(p);
+    if(f.v==='B'&&!f.busy){let s=seed;const r=()=>{s=(s*16807)%2147483647;return s/2147483647;};
+      for(let k=0;k<2;k++){const q=p[2+Math.floor(r()*(p.length-4))],a=Math.atan2(y2-y1,x2-x1)+(r()<.5?1:-1)*(.5+r()*.6),L=10+r()*12;
+        const fp=jagPts(q[0],q[1],q[0]+Math.cos(a)*L,q[1]+Math.sin(a)*L,L*.35,1+Math.floor(r()*1e6),2);
+        ctx.globalAlpha=tail*.9;ctx.strokeStyle='#d8b4fe';ctx.lineWidth=2.2*w;strokePts(fp);ctx.strokeStyle='#fff';ctx.lineWidth=.9*w;strokePts(fp);}}
+  }
+  ctx.globalAlpha=1;ctx.lineCap='butt';ctx.lineJoin='miter';
+}
 // 冰塔：一阵旋转的风雪从塔身卷出去 —— 弯弯的风痕绕着塔转圈往外扫，雪花打着旋飘散，冷雾跟着卷开，
 // 地上留一层淡淡的霜，中心闪一下星光；被打中的怪身上再炸开一小团霜花
 function orbit(cx,cy,o){P(Object.assign({k:'orbit',cx,cy,x:cx,y:cy,vx:0,vy:0,g:0,a:Math.random()*6.28,r:4,w:5,vr:60,sq:.78},o));}
@@ -2102,7 +2174,7 @@ const SPS={};
 function spriteFx(k,x,y,s,T){fx.push({k:'sprite',sp:k,x,y,s,t:T,T});}
 function spriteInit(){
   if(typeof Image==='undefined')return;
-  for(const k of ['boom']){try{const im=new Image();im.onload=()=>{SPS[k]=im;};im.src=(window.RUNE_PNG?window.RUNE_PNG+'fx_':'fx/')+'sp_'+k+'.png';}catch(e){}}
+  for(const k of ['boom','zhit']){try{const im=new Image();im.onload=()=>{SPS[k]=im;};im.src=(window.RUNE_PNG?window.RUNE_PNG+'fx_':'fx/')+'sp_'+k+'.png';}catch(e){}}
 }
 function drawSprite(f,alpha){const im=SPS[f.sp];if(!im)return;const a=f.t/f.T,n=Math.round(im.width/im.height),i=Math.min(n-1,Math.floor((1-a)*n)),fw=im.height;
   ctx.globalAlpha=alpha;ctx.drawImage(im,i*fw,0,fw,fw,f.x-f.s/2,f.y-f.s/2,f.s,f.s);ctx.globalAlpha=1;}
@@ -2166,6 +2238,7 @@ const SFX={
   boom:[.08,()=>{noise(.32,.16,'lowpass',700);tone('sine',90,35,.3,.14);}],
   frost:[.12,()=>{tone('sine',1500,1300,.22,.035);tone('sine',2100,1900,.18,.025,.03);}],
   zap:[.09,()=>{tone('sawtooth',180+Math.random()*120,900,.09,.04);noise(.1,.05,'highpass',2500);}],
+  zcrack:[.08,()=>{noise(.05,.13,'highpass',1800);noise(.16,.06,'bandpass',900);tone('square',140,45,.12,.07);tone('sawtooth',900+Math.random()*300,200,.08,.03);}],
   pop:[.05,()=>tone('sine',700,180,.08,.05)],
   leak:[.3,()=>{tone('square',120,80,.32,.07);}],
   wave:[.5,()=>{tone('triangle',392,392,.18,.09);tone('triangle',523,523,.32,.09,.16);}],
@@ -2782,10 +2855,10 @@ function draw(){
     if(hidden)ctx.globalAlpha=.3;
     if(sp){
       const s=e.r*2.9;top=e.y-s*.62;
-      const hop=e.frzT>0?0:Math.abs(Math.sin(e.d*(e.boss?.06:.16))),fk=Math.max(0,(e.flT||0)/.09);
+      const hop=e.frzT>0?0:Math.abs(Math.sin(e.d*(e.boss?.06:.16))),fk=e.elT>0?(Math.floor(fxClock*30)%2?1:.15):Math.max(0,(e.flT||0)/.09);
       const sx=(1+.06*hop*(e.boss?.5:1))*(1+.12*fk),sy=(1-.07*hop*(e.boss?.5:1))*(1-.1*fk);
-      ctx.save();ctx.translate(e.x,e.y-hop*s*(e.boss?.02:.05));if(e.dir<0)ctx.scale(-1,1);ctx.scale(sx,sy);ctx.drawImage(sp,-s/2,-s*.62,s,s);
-      if(fk>0&&SPRW[e.spr]){ctx.globalAlpha*=.8*fk;ctx.drawImage(SPRW[e.spr],-s/2,-s*.62,s,s);}
+      ctx.save();ctx.translate((e.kbx||0)+(e.numbT>0&&Math.floor(fxClock*9+e.d)%3===0?(Math.floor(fxClock*9)%2?1:-1)*(e.boss?.6:1.2):0)+e.x+(e.zjT>0?(Math.random()-.5)*(e.boss?2:5)*Math.min(1,e.zjT/.08):0),(e.kby||0)+e.y-hop*s*(e.boss?.02:.05));if(e.dir<0)ctx.scale(-1,1);ctx.scale(sx,sy);ctx.drawImage(sp,-s/2,-s*.62,s,s);
+      if(fk>0&&SPRW[e.spr]){ctx.globalAlpha*=(e.elT>0?1:e.flA&&e.flT>0?e.flA:.8)*fk;ctx.drawImage(SPRW[e.spr],-s/2,-s*.62,s,s);}
       ctx.restore();
     }else{ctx.fillStyle=e.col;ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,7);ctx.fill();}
     ctx.globalAlpha=1;
@@ -2829,6 +2902,10 @@ function draw(){
     else if(f.k==='sprite'){if(f.t/f.T>=.6)drawSprite(f,1);}
     else if(f.k==='dome'){const k=1-a;ctx.globalAlpha=a*.95;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(f.x,f.y,f.r*(.55+.45*k),0,7);ctx.fill();ctx.globalAlpha=a;ctx.strokeStyle='#fde68a';ctx.lineWidth=2.5;ctx.stroke();}
     else if(f.k==='bolt')drawBolt(f);
+    else if(f.k==='bolt3')drawBolt3(f);
+    else if(f.k==='zcore')drawZcore(f);
+    else if(f.k==='zrad')drawZrad(f);
+    else if(f.k==='zsp'){ctx.globalCompositeOperation='lighter';drawSprite(f,Math.min(1,f.t/f.T*2.5));ctx.globalCompositeOperation='source-over';}
     else if(f.k==='frostwave')drawFrostWave(f);
     else if(f.k==='frostfloor'){const k=1-a,rr=f.r*(.3+.75*(1-(1-k)*(1-k)));ctx.globalAlpha=a*.32;const im=tinted('ring','#e0f2fe');if(im){ctx.save();ctx.translate(f.x,f.y);ctx.scale(1,.78);ctx.drawImage(im,-rr,-rr,rr*2,rr*2);ctx.restore();}
       ctx.globalAlpha=a*.14;ctx.fillStyle='#e0f2fe';ctx.beginPath();ctx.ellipse(f.x,f.y,rr*.85,rr*.66,0,0,7);ctx.fill();}
