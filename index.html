@@ -106,7 +106,7 @@ button{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}
 <script src="maps.js"></script>
 <script>
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6i';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6j';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -221,6 +221,7 @@ async function loadArt(){
 }
 function buildBG(){
   if(typeof document.createElement!=='function'||!MAP)return;
+  if(FEAT.map2){try{buildBG2();return;}catch(e){console.error(e);}}
   const b=document.createElement('canvas');if(!b.getContext)return;b.width=W*DPR;b.height=H*DPR;const bx=b.getContext('2d');bx.scale(DPR,DPR);
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
     const k=c+','+r,onPath=pathSet.has(k),t=tiles[k];
@@ -234,6 +235,196 @@ function buildBG(){
   }
   BG=b;
 }
+
+// 地图 2.0（FEAT.map2）：一次性烘焙成背景图，运行时零开销。
+// 地面：底色 + 大块深浅斑驳 + 草叶/小花/石子（雪原：雪堆/冰晶闪点/小松苗；火山：玄武岩裂纹带暗橙光/火山灰/碎石）
+// 路：沿路径中心线画成一条连续的弯路（圆角），外沿深色压边 + 路面 + 中间磨亮的车辙 + 碎石斑点，路边长出草叶压住路沿
+// 建塔格：保留极淡的棋盘格，方便看清格子；四周加一圈暗角。
+const MAPPAL={
+  grass:{base:'#4f8a3c',lite:'#6aa84f',dark:'#3a6a2c',blade:['#2f5e25','#5d9a45','#7cbc5c'],flower:['#fef3c7','#fde047','#f9a8d4','#e0e7ff'],stone:'#8f8a80',
+    rim:'#6b5232',road:'#b39568',track:'#c9ad80',speck:['#8a7150','#d6bf94','#9c8462'],edge:'#3f6f30',vig:'rgba(10,25,10,'},
+  snow:{base:'#dce6ef',lite:'#f4f8fb',dark:'#b9c9d8',blade:['#94a3b8','#cbd5e1','#ffffff'],flower:['#ffffff','#e0f2fe'],stone:'#7d8a99',
+    rim:'#7489a0',road:'#b4c3d3',track:'#cdd8e3',speck:['#a3b4c6','#eef3f8','#9fb0c2'],edge:'#f8fafc',vig:'rgba(30,45,70,'},
+  volcano:{base:'#3d3236',lite:'#53454a',dark:'#2a2225',blade:['#1f1a1c','#4a3f43','#5e5156'],flower:['#fb923c','#f97316'],stone:'#5b5054',
+    rim:'#221b1d',road:'#6e605c',track:'#857470',speck:['#4a3e3c','#9a8984','#3a302f'],edge:'#2b2326',vig:'rgba(0,0,0,'}};
+function buildBG2(){
+  const b=document.createElement('canvas');b.width=W*DPR;b.height=H*DPR;const x=b.getContext('2d');x.scale(DPR,DPR);
+  const P=MAPPAL[BIOME]||MAPPAL.grass,R=seededRand('bg'+(MAP.id||'tut')+BIOME),rn=(a,c)=>a+R()*(c-a),pk=a=>a[Math.floor(R()*a.length)];
+  // 1 底色 + 斑驳
+  x.fillStyle=P.base;x.fillRect(0,0,W,H);
+  for(let i=0;i<34;i++){const cx=rn(-20,W+20),cy=rn(-20,H+20),r=rn(28,80),g=x.createRadialGradient(cx,cy,0,cx,cy,r),c=R()<.5?P.lite:P.dark;g.addColorStop(0,c);g.addColorStop(1,c+'00');x.globalAlpha=rn(.25,.5);x.fillStyle=g;x.fillRect(cx-r,cy-r,r*2,r*2);}
+  x.globalAlpha=1;
+  // 2 极淡棋盘格（建塔格提示）
+  // 细碎斑驳（小尺度的深浅变化，让地面不再是一块块一样的格子）
+  for(let i=0;i<260;i++){const cx=rn(0,W),cy=rn(0,H),r=rn(3,9),c=R()<.5?P.lite:P.dark;x.globalAlpha=rn(.08,.2);x.fillStyle=c;x.beginPath();x.ellipse(cx,cy,r,r*rn(.5,.9),rn(0,3),0,7);x.fill();}x.globalAlpha=1;
+  // 3 地面细节
+  if(BIOME==='volcano'){// 玄武岩裂纹，少数带暗橙光
+    for(let i=0;i<26;i++){let px=rn(0,W),py=rn(0,H),a=rn(0,6.28);const hot=R()<.3;x.beginPath();x.moveTo(px,py);for(let j=0;j<5;j++){a+=rn(-.9,.9);px+=Math.cos(a)*rn(5,12);py+=Math.sin(a)*rn(5,12);x.lineTo(px,py);}
+      if(hot){x.strokeStyle='rgba(251,146,60,.35)';x.lineWidth=3;x.stroke();x.strokeStyle='#fb923c';x.lineWidth=1;x.stroke();}else{x.strokeStyle='rgba(15,10,12,.6)';x.lineWidth=1.2;x.stroke();}}}
+  if(BIOME==='snow'){for(let i=0;i<22;i++){const cx=rn(0,W),cy=rn(0,H),w=rn(8,18);x.fillStyle='rgba(255,255,255,.75)';x.beginPath();x.ellipse(cx,cy,w,w*.4,0,0,7);x.fill();x.fillStyle='rgba(148,163,184,.25)';x.beginPath();x.ellipse(cx+1,cy+w*.25,w*.9,w*.18,0,0,7);x.fill();}}
+  x.lineCap='round';
+  const blades=BIOME==='grass'?520:BIOME==='snow'?140:160;
+  for(let i=0;i<blades;i++){const bx=rn(0,W),by=rn(0,H),n=BIOME==='grass'?Math.floor(rn(2,4)):2;for(let j=0;j<n;j++){const h=rn(3,6),a=rn(-.5,.5);x.strokeStyle=pk(P.blade);x.lineWidth=1.1;x.beginPath();x.moveTo(bx+j*1.6,by);x.lineTo(bx+j*1.6+Math.sin(a)*h,by-Math.cos(a)*h);x.stroke();}}
+  for(let i=0;i<(BIOME==='grass'?26:BIOME==='snow'?30:18);i++){const fx_=rn(4,W-4),fy=rn(4,H-4),c=pk(P.flower);
+    if(BIOME==='grass'){x.fillStyle=c;for(let k=0;k<5;k++){const a=k*1.257;x.beginPath();x.arc(fx_+Math.cos(a)*1.6,fy+Math.sin(a)*1.6,1.3,0,7);x.fill();}x.fillStyle='#f59e0b';x.beginPath();x.arc(fx_,fy,.9,0,7);x.fill();}
+    else if(BIOME==='snow'){x.fillStyle='#ffffff';x.globalAlpha=.9;x.beginPath();x.moveTo(fx_,fy-2.5);x.lineTo(fx_+.8,fy);x.lineTo(fx_,fy+2.5);x.lineTo(fx_-.8,fy);x.closePath();x.fill();x.fillRect(fx_-2.5,fy-.4,5,.8);x.globalAlpha=1;}
+    else{x.fillStyle=c;x.globalAlpha=.7;x.beginPath();x.arc(fx_,fy,1.2,0,7);x.fill();x.globalAlpha=.25;x.beginPath();x.arc(fx_,fy,3.5,0,7);x.fill();x.globalAlpha=1;}}
+  for(let i=0;i<18;i++){const sx=rn(0,W),sy=rn(0,H),w=rn(2,4.5);x.fillStyle='rgba(0,0,0,.18)';x.beginPath();x.ellipse(sx+.8,sy+1.2,w,w*.6,0,0,7);x.fill();x.fillStyle=P.stone;x.beginPath();x.ellipse(sx,sy,w,w*.65,0,0,7);x.fill();x.fillStyle='rgba(255,255,255,.3)';x.beginPath();x.ellipse(sx-w*.3,sy-w*.25,w*.4,w*.22,0,0,7);x.fill();}
+  groundDetail(x,P,R,rn,pk);
+  // 4 路：先在单独的画布上画路面，再在路面上撒碎石（只落在路上），最后贴回来
+  const pc=document.createElement('canvas');pc.width=W*DPR;pc.height=H*DPR;const q=pc.getContext('2d');q.scale(DPR,DPR);q.lineCap='round';q.lineJoin='round';
+  const polys=MAP.paths.map(wp=>wp.map(([c,r])=>[(c+.5)*CS,(r+.5)*CS]));
+  const road=(ctx2,w,c)=>{ctx2.strokeStyle=c;ctx2.lineWidth=w;for(const pl of polys){ctx2.beginPath();pl.forEach(([px,py],i)=>i?ctx2.lineTo(px,py):ctx2.moveTo(px,py));ctx2.stroke();}};
+  road(q,CS*.86,P.road);
+  q.globalCompositeOperation='source-atop';
+  for(let i=0;i<46;i++){const cx=rn(0,W),cy=rn(0,H),r=rn(10,26),g=q.createRadialGradient(cx,cy,0,cx,cy,r),c=R()<.5?P.track:P.rim;g.addColorStop(0,c);g.addColorStop(1,c+'00');q.globalAlpha=rn(.15,.3);q.fillStyle=g;q.fillRect(cx-r,cy-r,r*2,r*2);}
+  q.globalAlpha=.55;road(q,CS*.42,P.track);q.globalAlpha=1;
+  for(const k in tiles)if(pathSet.has(k)){const t=tiles[k],[c,r]=k.split(',').map(Number);if(SPR[t]){q.globalAlpha=.92;q.drawImage(SPR[t],c*CS-2,r*CS-2,CS+4,CS+4);q.globalAlpha=1;}}
+  for(let i=0;i<900;i++){const cx=rn(0,W),cy=rn(0,H),w=rn(.6,1.8);q.fillStyle=pk(P.speck);q.globalAlpha=rn(.4,.9);q.beginPath();q.ellipse(cx,cy,w,w*.7,0,0,7);q.fill();}
+  for(let i=0;i<70;i++){const cx=rn(0,W),cy=rn(0,H),w=rn(1.5,3);q.globalAlpha=.5;q.fillStyle='rgba(0,0,0,.35)';q.beginPath();q.ellipse(cx+.6,cy+.8,w,w*.6,0,0,7);q.fill();q.globalAlpha=.9;q.fillStyle=pk(P.speck);q.beginPath();q.ellipse(cx,cy,w,w*.6,0,0,7);q.fill();}
+  q.globalAlpha=1;q.globalCompositeOperation='source-over';
+  x.save();x.translate(0,2.5);x.globalAlpha=.35;road(x,CS*.98,'#000');x.restore();x.globalAlpha=1;
+  x.lineCap='round';x.lineJoin='round';road(x,CS*.94,P.rim);
+  x.drawImage(pc,0,0,W,H);
+  roadDetail(x,polys,P,R,rn,pk);
+  // 路沿：内侧一道暗边，再沿路两侧长草/雪沿/碎岩压住边
+  x.globalAlpha=.25;x.strokeStyle='#000';x.lineWidth=1.2;for(const pl of polys){for(const side of [-1,1]){}}x.globalAlpha=1;
+  for(const pl of polys)for(let k=0;k<pl.length-1;k++){const[x1,y1]=pl[k],[x2,y2]=pl[k+1],L=Math.hypot(x2-x1,y2-y1),ux=(x2-x1)/L,uy=(y2-y1)/L;
+    for(let d=0;d<L;d+=rn(5,9)){for(const sd of [-1,1]){if(R()<(BIOME==='snow'?.75:.35))continue;const ex=x1+ux*d-uy*sd*CS*.45+rn(-1.5,1.5),ey=y1+uy*d+ux*sd*CS*.45+rn(-1.5,1.5);
+      if(BIOME==='grass'){for(let j=0;j<3;j++){const h=rn(3,6.5),a=rn(-.6,.6);x.strokeStyle=pk(P.blade);x.lineWidth=1.2;x.beginPath();x.moveTo(ex+j*1.5,ey+2);x.lineTo(ex+j*1.5+Math.sin(a)*h,ey+2-Math.cos(a)*h);x.stroke();}}
+      else if(BIOME==='snow'){x.fillStyle='rgba(255,255,255,.9)';x.beginPath();x.ellipse(ex,ey,rn(2.5,5),rn(1.5,2.5),0,0,7);x.fill();}
+      else{x.fillStyle=pk(['#2a2225','#4a3f43','#1c1719']);x.beginPath();x.moveTo(ex-2,ey+1.5);x.lineTo(ex,ey-2.2);x.lineTo(ex+2.2,ey+1.2);x.closePath();x.fill();}}}}
+  // 5 特殊地块（高地/符文井/沼泽/冰面/岩浆）沿用原贴图
+  for(const k in tiles){if(pathSet.has(k))continue;const t=tiles[k],[c,r]=k.split(',').map(Number),tk=(t==='highland'||t==='runewell')&&BIOME!=='grass'?t+'_'+BIOME:t;if(!SPR[tk])continue;
+    if(t==='lava'){// 岩浆池：圆角池子 + 一圈焦黑岩石边 + 外圈暗橙光
+      const X=c*CS,Y=r*CS,rr=(px,py,w,h,rad)=>{x.beginPath();x.moveTo(px+rad,py);x.arcTo(px+w,py,px+w,py+h,rad);x.arcTo(px+w,py+h,px,py+h,rad);x.arcTo(px,py+h,px,py,rad);x.arcTo(px,py,px+w,py,rad);x.closePath();};
+      const g=x.createRadialGradient(X+CS/2,Y+CS/2,CS*.3,X+CS/2,Y+CS/2,CS*.75);g.addColorStop(0,'rgba(249,115,22,.35)');g.addColorStop(1,'rgba(249,115,22,0)');x.fillStyle=g;x.fillRect(X-CS*.3,Y-CS*.3,CS*1.6,CS*1.6);
+      x.save();rr(X+3,Y+3,CS-6,CS-6,12);x.clip();x.drawImage(SPR[tk],X,Y,CS,CS);x.restore();rr(X+3,Y+3,CS-6,CS-6,12);x.strokeStyle='#1c1517';x.lineWidth=3;x.stroke();x.strokeStyle='rgba(120,100,95,.6)';x.lineWidth=1;x.stroke();}
+    else x.drawImage(SPR[tk],c*CS,r*CS,CS,CS);}
+  // 6 暗角
+  const vg=x.createRadialGradient(W/2,H/2,Math.min(W,H)*.45,W/2,H/2,Math.max(W,H)*.75);vg.addColorStop(0,P.vig+'0)');vg.addColorStop(1,P.vig+(BIOME==='snow'?'.22)':'.35)'));x.fillStyle=vg;x.fillRect(0,0,W,H);
+  BG=b;buildWorld(R,rn);
+}
+
+// 地面加细节：光斑/树影、苔藓石、蘑菇、落叶、三叶草（草原）；雪浪起伏、雪盖石、小松苗（雪原）；火山口、黑曜石、灰堆（火山）
+function groundDetail(x,P,R,rn,pk){
+  const rock=(sx,sy,w,top)=>{x.fillStyle='rgba(0,0,0,.22)';x.beginPath();x.ellipse(sx+1.5,sy+w*.45,w*1.05,w*.38,0,0,7);x.fill();
+    x.fillStyle=P.stone;x.beginPath();x.moveTo(sx-w,sy+w*.3);x.lineTo(sx-w*.7,sy-w*.4);x.lineTo(sx-w*.1,sy-w*.65);x.lineTo(sx+w*.7,sy-w*.35);x.lineTo(sx+w,sy+w*.3);x.closePath();x.fill();
+    x.fillStyle='rgba(255,255,255,.22)';x.beginPath();x.moveTo(sx-w*.7,sy-w*.4);x.lineTo(sx-w*.1,sy-w*.65);x.lineTo(sx+w*.2,sy-w*.2);x.lineTo(sx-w*.5,sy-w*.05);x.closePath();x.fill();
+    if(top){x.fillStyle=top;x.beginPath();x.ellipse(sx-w*.1,sy-w*.45,w*.75,w*.28,0,0,7);x.fill();}};
+  if(BIOME==='grass'){
+    for(let i=0;i<10;i++){const cx=rn(0,W),cy=rn(0,H),r=rn(25,55),g=x.createRadialGradient(cx,cy,0,cx,cy,r);g.addColorStop(0,'rgba(254,249,195,.16)');g.addColorStop(1,'rgba(254,249,195,0)');x.fillStyle=g;x.fillRect(cx-r,cy-r,r*2,r*2);}
+    for(let i=0;i<14;i++){const side=Math.floor(R()*4),cx=side===0?rn(-10,10):side===1?W+rn(-10,10):rn(0,W),cy=side===2?rn(-10,10):side===3?H+rn(-10,10):rn(0,H),r=rn(25,45),g=x.createRadialGradient(cx,cy,0,cx,cy,r);g.addColorStop(0,'rgba(15,40,15,.35)');g.addColorStop(1,'rgba(15,40,15,0)');x.fillStyle=g;x.fillRect(cx-r,cy-r,r*2,r*2);}
+    for(let i=0;i<15;i++){const cx=rn(0,W),cy=rn(0,H);for(let j=0;j<7;j++){const a=rn(-.9,.9),h=rn(5,9),ox=rn(-4,4);x.strokeStyle=j%3?'#2f5e25':'#86c46a';x.lineWidth=1.3;x.beginPath();x.moveTo(cx+ox,cy+2);x.quadraticCurveTo(cx+ox+Math.sin(a)*h*.4,cy-h*.5,cx+ox+Math.sin(a)*h,cy+2-Math.cos(a)*h);x.stroke();}}
+    for(let i=0;i<12;i++){const cx=rn(0,W),cy=rn(0,H);for(let j=0;j<4;j++){const ox=rn(-5,5),oy=rn(-3,3);x.fillStyle=j%2?'#5fa046':'#4c8a38';for(let k=0;k<3;k++){const a=k*2.09;x.beginPath();x.arc(cx+ox+Math.cos(a)*1.4,cy+oy+Math.sin(a)*1.4,1.4,0,7);x.fill();}}}
+    for(let i=0;i<7;i++){const cx=rn(5,W-5),cy=rn(5,H-5);x.fillStyle='#f5f5f4';x.fillRect(cx-.7,cy-2,1.4,3);x.fillStyle=R()<.5?'#dc2626':'#c2410c';x.beginPath();x.ellipse(cx,cy-2.2,2.6,1.6,0,Math.PI,0);x.fill();x.fillStyle='#fff';x.beginPath();x.arc(cx-1,cy-3,.5,0,7);x.arc(cx+.9,cy-2.7,.4,0,7);x.fill();}
+    for(let i=0;i<16;i++){const cx=rn(0,W),cy=rn(0,H),a=rn(0,6.28);x.save();x.translate(cx,cy);x.rotate(a);x.fillStyle=pk(['#ca8a04','#a16207','#d97706','#65a30d']);x.globalAlpha=.85;x.beginPath();x.ellipse(0,0,3,1.5,0,0,7);x.fill();x.strokeStyle='rgba(0,0,0,.25)';x.lineWidth=.5;x.beginPath();x.moveTo(-3,0);x.lineTo(3,0);x.stroke();x.restore();}
+    for(let i=0;i<6;i++)rock(rn(8,W-8),rn(8,H-8),rn(4,7),'rgba(101,163,13,.55)');
+  }else if(BIOME==='snow'){
+    for(let i=0;i<18;i++){const cx=rn(-10,W+10),cy=rn(0,H),w=rn(30,70);x.fillStyle='rgba(148,173,200,.18)';x.beginPath();x.ellipse(cx,cy+w*.08,w,w*.16,0,0,Math.PI);x.fill();x.fillStyle='rgba(255,255,255,.55)';x.beginPath();x.ellipse(cx,cy,w,w*.12,0,Math.PI,0);x.fill();}
+    for(let i=0;i<7;i++)rock(rn(8,W-8),rn(8,H-8),rn(4,7),'#f8fafc');
+    for(let i=0;i<9;i++){const cx=rn(6,W-6),cy=rn(10,H-4),h=rn(8,12);x.fillStyle='rgba(30,50,70,.18)';x.beginPath();x.ellipse(cx+1,cy,h*.45,h*.15,0,0,7);x.fill();
+      for(let k=0;k<3;k++){const yy=cy-k*h*.28,ww=h*(.42-k*.1);x.fillStyle='#2f5d50';x.beginPath();x.moveTo(cx-ww,yy);x.lineTo(cx,yy-h*.45);x.lineTo(cx+ww,yy);x.closePath();x.fill();x.fillStyle='#f8fafc';x.beginPath();x.moveTo(cx-ww*.7,yy-h*.12);x.lineTo(cx,yy-h*.45);x.lineTo(cx+ww*.5,yy-h*.18);x.closePath();x.fill();}}
+    for(let i=0;i<60;i++){const cx=rn(0,W),cy=rn(0,H);x.fillStyle='rgba(255,255,255,.95)';x.fillRect(cx,cy,1,1);x.fillStyle='rgba(186,230,253,.8)';x.fillRect(cx+.5,cy-1.5,.5,1);}
+  }else{
+    for(let i=0;i<5;i++){const cx=rn(10,W-10),cy=rn(10,H-10),r=rn(5,8),g=x.createRadialGradient(cx,cy,0,cx,cy,r*2.5);g.addColorStop(0,'rgba(249,115,22,.4)');g.addColorStop(1,'rgba(249,115,22,0)');x.fillStyle=g;x.fillRect(cx-r*2.5,cy-r*2.5,r*5,r*5);
+      x.fillStyle='#1a1416';x.beginPath();x.ellipse(cx,cy,r,r*.55,0,0,7);x.fill();x.fillStyle='#7c2d12';x.beginPath();x.ellipse(cx,cy+r*.1,r*.6,r*.3,0,0,7);x.fill();x.fillStyle='#fb923c';x.beginPath();x.ellipse(cx,cy+r*.12,r*.3,r*.13,0,0,7);x.fill();}
+    for(let i=0;i<14;i++){const cx=rn(0,W),cy=rn(0,H),w=rn(2.5,5);x.fillStyle='#0f0a0d';x.beginPath();x.moveTo(cx-w,cy+w*.3);x.lineTo(cx-w*.2,cy-w);x.lineTo(cx+w*.8,cy+w*.2);x.closePath();x.fill();x.strokeStyle='rgba(165,180,252,.45)';x.lineWidth=.8;x.beginPath();x.moveTo(cx-w*.6,cy);x.lineTo(cx-w*.2,cy-w*.8);x.stroke();}
+    for(let i=0;i<16;i++){const cx=rn(0,W),cy=rn(0,H),w=rn(10,22);x.fillStyle='rgba(120,113,108,.18)';x.beginPath();x.ellipse(cx,cy,w,w*.3,0,0,7);x.fill();}
+    for(let i=0;i<6;i++)rock(rn(8,W-8),rn(8,H-8),rn(4,7),null);
+  }
+}
+// 路面细节：两道车辙、脚印/蹄印、路边一串半埋的石块
+function roadDetail(x,polys,P,R,rn,pk){
+  x.lineCap='round';x.lineJoin='round';
+  for(const off of [-.17,.17]){x.strokeStyle=BIOME==='snow'?'rgba(100,125,150,.35)':'rgba(60,40,20,.28)';if(BIOME==='volcano')x.strokeStyle='rgba(20,14,16,.45)';x.lineWidth=2;
+    for(const pl of polys){x.beginPath();pl.forEach(([px,py],i)=>{const n=pl[Math.min(i+1,pl.length-1)],pv=pl[Math.max(i-1,0)],dx=n[0]-pv[0],dy=n[1]-pv[1],L=Math.hypot(dx,dy)||1,ox=-dy/L*CS*off,oy=dx/L*CS*off;i?x.lineTo(px+ox,py+oy):x.moveTo(px+ox,py+oy);});x.stroke();}}
+  for(const pl of polys)for(let k=0;k<pl.length-1;k++){const[x1,y1]=pl[k],[x2,y2]=pl[k+1],L=Math.hypot(x2-x1,y2-y1),ux=(x2-x1)/L,uy=(y2-y1)/L;
+    for(let d=rn(4,14);d<L;d+=rn(14,26)){for(const sd of [-1,1]){if(R()<.45)continue;const ex=x1+ux*d-uy*sd*CS*.41,ey=y1+uy*d+ux*sd*CS*.41,w=rn(2.2,3.6);
+      x.fillStyle='rgba(0,0,0,.25)';x.beginPath();x.ellipse(ex+.6,ey+1,w,w*.6,0,0,7);x.fill();x.fillStyle=BIOME==='volcano'?'#3a3134':BIOME==='snow'?'#93a5b8':'#8c8478';x.beginPath();x.ellipse(ex,ey,w,w*.62,0,0,7);x.fill();
+      x.fillStyle=BIOME==='snow'?'#ffffff':'rgba(255,255,255,.28)';x.beginPath();x.ellipse(ex-w*.2,ey-w*.25,w*.55,w*.25,0,0,7);x.fill();}}
+    if(BIOME==='snow')for(let d=rn(6,20);d<L;d+=rn(10,16)){const sd=R()<.5?-1:1,ex=x1+ux*d-uy*sd*CS*.06,ey=y1+uy*d+ux*sd*CS*.06;x.fillStyle='rgba(100,125,150,.3)';x.beginPath();x.ellipse(ex,ey,1.4,2.2,Math.atan2(uy,ux)+1.57,0,7);x.fill();}}
+}
+// 环境动效（FEAT.amb）：草原 = 几只蝴蝶 + 飘落的叶子；雪原 = 轻轻的小雪；火山 = 往上飘的火星 + 岩浆池冒泡。数量都很少。
+let AMB=[],ambBio='';
+function updAmb(dt){if(ambBio!==BIOME){AMB=[];ambBio=BIOME;}
+  const n=k=>AMB.filter(a=>a.k===k).length;
+  if(BIOME==='grass'){
+    if(n('fly')<3&&Math.random()<dt*.5){const c=['#fde047','#f9fafb','#f9a8d4','#93c5fd'][Math.floor(Math.random()*4)];AMB.push({k:'fly',x:Math.random()*W,y:Math.random()*H,vx:0,vy:0,a:Math.random()*6.28,t:0,c,life:rnd(10,18)});}
+    if(n('leaf')<4&&Math.random()<dt*.6)AMB.push({k:'leaf',x:rnd(-20,W*.8),y:-10,vx:rnd(12,22),vy:rnd(14,22),r:Math.random()*6.28,vr:rnd(-2,2),t:0,c:['#ca8a04','#65a30d','#d97706','#84cc16'][Math.floor(Math.random()*4)],life:40});
+  }else if(BIOME==='snow'){
+    if(n('snow')<28&&Math.random()<dt*9)AMB.push({k:'snow',x:rnd(-20,W),y:-5,vx:rnd(4,10),vy:rnd(14,26),r:rnd(.8,1.8),t:Math.random()*9,life:60});
+  }else if(BIOME==='volcano'){
+    if(n('emb')<14&&Math.random()<dt*5)AMB.push({k:'emb',x:rnd(0,W),y:H+4,vx:rnd(-6,6),vy:rnd(-30,-16),t:0,life:rnd(5,9),r:rnd(.8,1.6)});
+    if(n('bub')<3&&Math.random()<dt*1.2){const L=Object.keys(tiles).filter(k=>tiles[k]==='lava');if(L.length){const[c,r]=L[Math.floor(Math.random()*L.length)].split(',').map(Number);AMB.push({k:'bub',x:(c+rnd(.3,.7))*CS,y:(r+rnd(.3,.7))*CS,t:0,life:.9});}}
+  }
+  for(const a of AMB){a.t+=dt;
+    if(a.k==='fly'){a.a+=rnd(-2.5,2.5)*dt;const sp=18;a.vx+=(Math.cos(a.a)*sp-a.vx)*dt*2;a.vy+=(Math.sin(a.a)*sp*.6-a.vy)*dt*2;a.x+=a.vx*dt;a.y+=a.vy*dt+Math.sin(a.t*9)*.15;if(a.x<5||a.x>W-5||a.y<5||a.y>H-5)a.a+=Math.PI*dt*3;}
+    else if(a.k==='leaf'){a.x+=(a.vx+Math.sin(a.t*1.7)*14)*dt;a.y+=a.vy*dt;a.r+=a.vr*dt;}
+    else if(a.k==='snow'){a.x+=(a.vx+Math.sin(a.t*1.3+a.r*5)*6)*dt;a.y+=a.vy*dt;}
+    else if(a.k==='emb'){a.x+=(a.vx+Math.sin(a.t*2+a.r*7)*8)*dt;a.y+=a.vy*dt;}}
+  AMB=AMB.filter(a=>a.t<a.life&&a.y<H+15&&a.y>-20&&a.x>-25&&a.x<W+25);}
+function drawAmb(){ctx.save();
+  for(const a of AMB){const fade=Math.min(1,a.t/.6,(a.life-a.t)/.8);
+    if(a.k==='fly'){const w=Math.abs(Math.sin(a.t*16)),dir=a.vx<0?-1:1;ctx.globalAlpha=.9*fade;ctx.fillStyle='rgba(0,0,0,.15)';ctx.beginPath();ctx.ellipse(a.x,a.y+10,2.5,1,0,0,7);ctx.fill();
+      ctx.fillStyle=a.c;for(const sd of [-1,1]){ctx.beginPath();ctx.ellipse(a.x+sd*2.2*w,a.y-.8,2.4*w+.4,2,sd*.4,0,7);ctx.fill();ctx.beginPath();ctx.ellipse(a.x+sd*1.6*w,a.y+1.5,1.6*w+.3,1.4,sd*.3,0,7);ctx.fill();}
+      ctx.fillStyle='#292524';ctx.fillRect(a.x-.5,a.y-2,1,4);}
+    else if(a.k==='leaf'){ctx.globalAlpha=.85*fade;ctx.save();ctx.translate(a.x,a.y);ctx.rotate(a.r);ctx.scale(1,.5+.5*Math.abs(Math.cos(a.t*3)));ctx.fillStyle=a.c;ctx.beginPath();ctx.ellipse(0,0,3.2,1.6,0,0,7);ctx.fill();ctx.restore();}
+    else if(a.k==='snow'){ctx.globalAlpha=.8*fade;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(a.x,a.y,a.r,0,7);ctx.fill();}
+    else if(a.k==='emb'){const f=.6+.4*Math.sin(a.t*12+a.r*9);ctx.globalAlpha=fade*f*.9;ctx.fillStyle='#fdba74';ctx.beginPath();ctx.arc(a.x,a.y,a.r,0,7);ctx.fill();ctx.globalAlpha=fade*f*.3;ctx.fillStyle='#f97316';ctx.beginPath();ctx.arc(a.x,a.y,a.r*3,0,7);ctx.fill();}
+    else if(a.k==='bub'){const k=a.t/a.life;ctx.globalAlpha=(1-k)*.9;if(k<.6){ctx.fillStyle='#fdba74';ctx.beginPath();ctx.arc(a.x,a.y,1+k*5,0,7);ctx.fill();ctx.fillStyle='#fef3c7';ctx.beginPath();ctx.arc(a.x-1,a.y-1,.8+k*1.5,0,7);ctx.fill();}else{ctx.strokeStyle='#fb923c';ctx.lineWidth=1;ctx.beginPath();ctx.arc(a.x,a.y,4+(k-.6)*12,0,7);ctx.stroke();}}}
+  ctx.restore();}
+// 地图上的活物件（每帧画，但数量少）：会随风摆的草丛 + 大地标（树、树桩、栅栏、雪人、松树、冰柱、黑曜石尖塔、枯树、冒烟火山口…）
+// 地标放在离路至少 2 格的地方（多半在边角），那一格如果建了塔，地标就不画（让给塔）。
+let WORLD=null;
+function buildWorld(R,rn){
+  const dist=(c,r)=>{let m=99;for(const k of pathSet){const[pc,pr]=k.split(',').map(Number);m=Math.min(m,Math.abs(pc-c)+Math.abs(pr-r));}return m;};
+  const tufts=[];if(BIOME==='grass'){let g=0;while(tufts.length<80&&g++<600){const x=rn(4,W-4),y=rn(6,H-2),c=Math.floor(x/CS),r=Math.floor(y/CS);if(pathSet.has(c+','+r)||tiles[c+','+r])continue;
+    tufts.push({x,y,n:3+Math.floor(R()*3),h:rn(6,11),c:R()<.5?'#3f7a30':'#5c9c44',hi:R()<.4,ph:rn(0,6)});}}
+  else if(BIOME==='snow'){let g=0;while(tufts.length<26&&g++<400){const x=rn(4,W-4),y=rn(6,H-2),c=Math.floor(x/CS),r=Math.floor(y/CS);if(pathSet.has(c+','+r)||tiles[c+','+r])continue;tufts.push({x,y,n:3,h:rn(5,8),c:'#8a9a7a',hi:false,ph:rn(0,6),dry:1});}}
+  const cand=[];for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const k=c+','+r;if(pathSet.has(k)||tiles[k])continue;const d=dist(c,r);if(d<2)continue;const edge=(c===0||c===COLS-1||r===0||r===ROWS-1)?2:0;cand.push([c,r,d+edge+R()*2]);}
+  cand.sort((a,b)=>b[2]-a[2]);const picks=[];for(const[c,r]of cand){if(picks.length>=7)break;if(picks.some(([pc,pr])=>Math.abs(pc-c)+Math.abs(pr-r)<3))continue;picks.push([c,r]);}
+  const KIND={grass:['tree','tree','stump','fence','bush','rocks','tree'],snow:['pine','snowman','pine','icespike','log','pine','icespike'],volcano:['spire','deadtree','vent','spire','rift','deadtree','vent']}[BIOME]||[];
+  const marks=picks.map(([c,r],i)=>({k:KIND[i%KIND.length],c,r,x:(c+.5)*CS+rn(-5,5),y:(r+.5)*CS+rn(2,8),s:rn(1.4,1.65),ph:rn(0,6),flip:R()<.5?-1:1}));
+  marks.sort((a,b)=>a.y-b.y);WORLD={tufts,marks};}
+function drawWorld(){const now=fxClock,wind=t=>Math.sin(now*1.6+t)*.5+Math.sin(now*.7+t*.5)*.3;ctx.save();ctx.lineCap='round';
+  for(const t of WORLD.tufts){if(grid[Math.floor(t.x/CS)+','+Math.floor(t.y/CS)])continue;const w=wind(t.x*.04+t.y*.01);
+    for(let j=0;j<t.n;j++){const ox=(j-(t.n-1)/2)*1.8,lean=(j-(t.n-1)/2)*.25+w*.55,h=t.h*(.75+.25*((j*7)%3)/2);
+      ctx.strokeStyle=t.dry?(j%2?'#7c8a6a':'#a3a98a'):(j%2?t.c:'#2f5e25');ctx.lineWidth=t.dry?1:1.4;ctx.beginPath();ctx.moveTo(t.x+ox,t.y);ctx.quadraticCurveTo(t.x+ox+lean*h*.3,t.y-h*.55,t.x+ox+Math.sin(lean)*h,t.y-Math.cos(lean)*h);ctx.stroke();}
+    if(t.hi){ctx.strokeStyle='rgba(190,242,100,.6)';ctx.lineWidth=.8;ctx.beginPath();ctx.moveTo(t.x,t.y-1);ctx.quadraticCurveTo(t.x+w*2,t.y-t.h*.5,t.x+Math.sin(w*.55)*t.h*.9,t.y-t.h*.85);ctx.stroke();}}
+  for(const m of WORLD.marks){if(grid[m.c+','+m.r])continue;ctx.save();ctx.translate(m.x,m.y);ctx.scale(m.s*m.flip,m.s);drawMark(m,now);ctx.restore();}
+  ctx.restore();}
+function shadowE(w,h){ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(0,0,w,h,0,0,7);ctx.fill();}
+function drawMark(m,now){const sw=Math.sin(now*1.3+m.ph);
+  switch(m.k){
+  case 'tree':{shadowE(17,6);ctx.fillStyle='#6b4423';ctx.fillRect(-3,-14,6,15);ctx.fillStyle='#4a2e17';ctx.fillRect(1,-14,2,15);
+    ctx.save();ctx.translate(0,-16);ctx.rotate(sw*.025);for(const[ox,oy,r,c]of[[-8,-2,10,'#2f6b2a'],[8,-1,10,'#2f6b2a'],[0,-10,12,'#3b7d33'],[-5,-6,9,'#4a9440'],[6,-8,8,'#4a9440'],[-2,-14,7,'#5fae4f']]){ctx.fillStyle=c;ctx.beginPath();ctx.arc(ox,oy,r,0,7);ctx.fill();}
+    ctx.fillStyle='rgba(255,255,255,.12)';ctx.beginPath();ctx.arc(-4,-15,5,0,7);ctx.fill();for(const[ox,oy]of[[-6,-4],[7,-9],[2,-2]]){ctx.fillStyle='#dc2626';ctx.beginPath();ctx.arc(ox,oy,1.4,0,7);ctx.fill();}ctx.restore();break;}
+  case 'stump':{shadowE(10,4);ctx.fillStyle='#7c5230';ctx.fillRect(-8,-7,16,8);ctx.fillStyle='#a8784a';ctx.beginPath();ctx.ellipse(0,-7,8,3.2,0,0,7);ctx.fill();ctx.strokeStyle='#7c5230';ctx.lineWidth=.7;for(const r of [5.5,3.5,1.6]){ctx.beginPath();ctx.ellipse(0,-7,r,r*.4,0,0,7);ctx.stroke();}
+    ctx.fillStyle='#5c9c44';ctx.beginPath();ctx.ellipse(-7,0,3,1.5,0,0,7);ctx.fill();ctx.fillStyle='#f5f5f4';ctx.fillRect(5,-4,1.2,3);ctx.fillStyle='#dc2626';ctx.beginPath();ctx.ellipse(5.6,-4,2.4,1.5,0,Math.PI,0);ctx.fill();break;}
+  case 'fence':{for(let i=-1;i<=1;i++){ctx.fillStyle='rgba(0,0,0,.2)';ctx.fillRect(i*9-1.5,0,4,2);ctx.fillStyle='#8b5e34';ctx.fillRect(i*9-2,-12,4,13);ctx.fillStyle='#a8784a';ctx.beginPath();ctx.moveTo(i*9-2,-12);ctx.lineTo(i*9,-14.5);ctx.lineTo(i*9+2,-12);ctx.fill();}
+    ctx.fillStyle='#9a6b3e';ctx.fillRect(-11,-9,22,2.5);ctx.fillRect(-11,-4,22,2.5);ctx.fillStyle='#5c9c44';ctx.beginPath();ctx.ellipse(6,0,4,1.6,0,0,7);ctx.fill();break;}
+  case 'bush':{shadowE(13,4);ctx.save();ctx.rotate(sw*.02);for(const[ox,oy,r,c]of[[-6,-5,7,'#2f6b2a'],[6,-5,7,'#2f6b2a'],[0,-9,8,'#3b7d33'],[-3,-11,5,'#4a9440']]){ctx.fillStyle=c;ctx.beginPath();ctx.arc(ox,oy,r,0,7);ctx.fill();}
+    for(const[ox,oy,c]of[[-5,-8,'#f9a8d4'],[4,-11,'#fde047'],[6,-5,'#f9a8d4'],[-1,-4,'#ffffff']]){ctx.fillStyle=c;ctx.beginPath();ctx.arc(ox,oy,1.6,0,7);ctx.fill();}ctx.restore();break;}
+  case 'rocks':{shadowE(14,4);for(const[ox,oy,w]of[[-5,-3,7],[5,-2,5],[1,-8,5]]){ctx.fillStyle='#8f8a80';ctx.beginPath();ctx.ellipse(ox,oy,w,w*.75,0,0,7);ctx.fill();ctx.fillStyle='rgba(255,255,255,.25)';ctx.beginPath();ctx.ellipse(ox-w*.3,oy-w*.3,w*.4,w*.25,0,0,7);ctx.fill();ctx.fillStyle='rgba(101,163,13,.6)';ctx.beginPath();ctx.ellipse(ox,oy-w*.55,w*.6,w*.22,0,0,7);ctx.fill();}break;}
+  case 'pine':{shadowE(13,5);ctx.fillStyle='#5b3a1e';ctx.fillRect(-2,-6,4,7);for(let k=0;k<4;k++){const y=-6-k*7,w=13-k*2.8;ctx.fillStyle=k%2?'#24524a':'#2f5d50';ctx.beginPath();ctx.moveTo(-w,y);ctx.lineTo(0,y-11);ctx.lineTo(w,y);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#f8fafc';ctx.beginPath();ctx.moveTo(-w*.85,y-1.5);ctx.quadraticCurveTo(-w*.3,y-4,0,y-11);ctx.quadraticCurveTo(w*.2,y-5,w*.7,y-2.5);ctx.quadraticCurveTo(0,y-3.5,-w*.85,y-1.5);ctx.fill();}break;}
+  case 'snowman':{shadowE(10,4);for(const[y,r]of[[-6,8],[-17,6],[-26,4.5]]){ctx.fillStyle='#f8fafc';ctx.beginPath();ctx.arc(0,y,r,0,7);ctx.fill();ctx.fillStyle='rgba(148,163,184,.35)';ctx.beginPath();ctx.arc(1.5,y+1.5,r*.8,0,Math.PI*.9);ctx.fill();}
+    ctx.fillStyle='#1f2937';for(const y of [-15,-18.5])ctx.fillRect(-.8,y,1.6,1.6);ctx.fillRect(-2,-28,1.3,1.3);ctx.fillRect(1,-28,1.3,1.3);ctx.fillStyle='#f97316';ctx.beginPath();ctx.moveTo(0,-26);ctx.lineTo(5,-25.3);ctx.lineTo(0,-24.6);ctx.fill();
+    ctx.fillStyle='#dc2626';ctx.fillRect(-4.5,-22.5,9,2.2);ctx.fillRect(2,-22.5,2.2,6);ctx.strokeStyle='#6b4423';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(-5,-18);ctx.lineTo(-11,-22+sw);ctx.moveTo(5,-18);ctx.lineTo(11,-21);ctx.stroke();break;}
+  case 'icespike':{shadowE(12,4);for(const[ox,h,w]of[[-5,16,4],[3,24,5],[8,12,3],[-1,10,3]]){ctx.fillStyle='#7dd3fc';ctx.beginPath();ctx.moveTo(ox-w,0);ctx.lineTo(ox,-h);ctx.lineTo(ox+w,0);ctx.closePath();ctx.fill();ctx.fillStyle='#e0f2fe';ctx.beginPath();ctx.moveTo(ox-w*.5,0);ctx.lineTo(ox,-h);ctx.lineTo(ox,0);ctx.closePath();ctx.fill();}
+    const g=.5+.5*Math.sin(now*2+m.ph);ctx.globalAlpha=g;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(3,-18,1.4,0,7);ctx.fill();ctx.globalAlpha=1;break;}
+  case 'log':{shadowE(15,4);ctx.fillStyle='#6b4423';ctx.fillRect(-13,-6,26,7);ctx.fillStyle='#a8784a';ctx.beginPath();ctx.ellipse(13,-2.5,2.5,3.5,0,0,7);ctx.fill();ctx.fillStyle='#f8fafc';ctx.beginPath();ctx.ellipse(0,-6,13,2.5,0,Math.PI,0);ctx.fill();break;}
+  case 'spire':{shadowE(11,4);for(const[ox,h,w]of[[-4,22,5],[4,15,4],[0,8,6]]){ctx.fillStyle='#120c10';ctx.beginPath();ctx.moveTo(ox-w,0);ctx.lineTo(ox-w*.2,-h);ctx.lineTo(ox+w,0);ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(165,180,252,.5)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(ox-w*.6,-2);ctx.lineTo(ox-w*.2,-h+2);ctx.stroke();}
+    const g=.4+.3*Math.sin(now*1.8+m.ph);ctx.fillStyle=`rgba(249,115,22,${g})`;ctx.fillRect(-1,-12,1.5,8);break;}
+  case 'deadtree':{shadowE(12,4);ctx.strokeStyle='#1c1517';ctx.lineCap='round';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(1,-18);ctx.stroke();ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(1,-12);ctx.lineTo(-8,-20);ctx.moveTo(1,-16);ctx.lineTo(8,-24);ctx.moveTo(-5,-17);ctx.lineTo(-6,-24);ctx.moveTo(5,-21);ctx.lineTo(10,-21);ctx.stroke();
+    const g=.5+.5*Math.sin(now*3+m.ph);ctx.fillStyle=`rgba(251,146,60,${.5*g})`;ctx.beginPath();ctx.arc(-8,-20,1.3,0,7);ctx.arc(8,-24,1.2,0,7);ctx.fill();break;}
+  case 'vent':{const g=.6+.4*Math.sin(now*2.2+m.ph);const gr=ctx.createRadialGradient(0,-2,0,0,-2,16);gr.addColorStop(0,`rgba(249,115,22,${.45*g})`);gr.addColorStop(1,'rgba(249,115,22,0)');ctx.fillStyle=gr;ctx.fillRect(-16,-18,32,32);
+    ctx.fillStyle='#2a2225';ctx.beginPath();ctx.moveTo(-12,1);ctx.lineTo(-6,-7);ctx.lineTo(6,-7);ctx.lineTo(12,1);ctx.closePath();ctx.fill();ctx.fillStyle='#7c2d12';ctx.beginPath();ctx.ellipse(0,-7,6,2.2,0,0,7);ctx.fill();ctx.fillStyle='#fb923c';ctx.globalAlpha=g;ctx.beginPath();ctx.ellipse(0,-7,3.5,1.2,0,0,7);ctx.fill();ctx.globalAlpha=1;
+    if(!m._sm||m._sm<fxClock){m._sm=fxClock+rnd(.7,1.3);if(parts.length<150)texP('puff','#57534e',m.x,m.y-9,{vy:-14,vx:rnd(-3,3),s0:5,s1:16,t:1.6,T:1.6,a0:.35});}break;}
+  case 'rift':{const g=.6+.4*Math.sin(now*1.5+m.ph);ctx.strokeStyle=`rgba(249,115,22,${.35*g})`;ctx.lineWidth=7;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(-14,2);ctx.lineTo(-6,-3);ctx.lineTo(2,1);ctx.lineTo(9,-4);ctx.lineTo(15,-1);ctx.stroke();
+    ctx.strokeStyle='#120c10';ctx.lineWidth=3.5;ctx.stroke();ctx.strokeStyle=`rgba(253,186,116,${g})`;ctx.lineWidth=1.3;ctx.stroke();break;}
+  }}
 const ARTURL={};
 function artURL(k){if(window.RUNE_PNG)return window.RUNE_PNG+k+'.png';if(!window.RuneArt)return'';if(ARTURL[k])return ARTURL[k];const A=window.RuneArt,f=A[k];if(!f)return'';return ARTURL[k]='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(f());}
 
@@ -384,7 +575,7 @@ const LIVE={
 
 // ======================= v0.3：大厅 / 英雄 / 诅咒 / 难度 =======================
 // 三个模块各有开关：网址加 ?off=meta,hero,curse 可以单独关闭（也方便出问题时直接关掉重发）
-const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true};
+const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true,map2:true,amb:true,ambsnd:true};
 try{const u=new URLSearchParams(location.search),q=u.get('off'),q2=u.get('on');if(q)q.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=false;});if(q2)q2.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=true;});}catch(e){}
 // 局外存档
 const META_DEF={shards:0,owned:{},hero:'wind',diff:0,unlockedDiff:0,runs:0,wins:0,auto:true};
@@ -814,7 +1005,7 @@ function chooseNode(k){step++;curNode=k;phase='build';renderPanel();snapRun('bui
 
 // ======================= 特效 =======================
 function updFx(dt){
-  fxClock+=dt;
+  fxClock+=dt;if(FEAT.amb)updAmb(dt);
   for(const f of fx){f.t-=dt;if(f.k==='bossfall')updBossFall(f,dt);}fx=fx.filter(f=>f.t>0);
   for(const q of parts){if(q.k==='snow2'){const sp=Math.hypot(q.vx,q.vy);q.vy+=Math.max(0,q.fall-q.vy)*Math.min(1,dt*(sp<40?2.5:.6));}if(q.k==='orbit'){q.t-=dt;q.a+=q.w*dt;q.r+=q.vr*dt;q.vr*=Math.exp(-1.2*dt);q.w*=Math.exp(-.8*dt);q.x=q.cx+Math.cos(q.a)*q.r;q.y=q.cy+Math.sin(q.a)*q.r*q.sq+(q.drop?q.drop*(1-q.t/q.T):0);continue;}q.t-=dt;if(q.drag){const d=Math.exp(-q.drag*dt);q.vx*=d;q.vy*=d;}q.x+=q.vx*dt;q.y+=q.vy*dt;q.vy+=q.g*dt;}
   if(sched.length){for(const s of sched)s.t-=dt;const due=sched.filter(s=>s.t<=0);sched=sched.filter(s=>s.t>0);for(const s of due)s.f();}parts=parts.filter(q=>q.t>0);if(parts.length>420)parts.splice(0,parts.length-420);
@@ -1411,6 +1602,43 @@ muted=sndMode==='1';
 function audioInit(){if(AC||(typeof AudioContext==='undefined'&&typeof webkitAudioContext==='undefined'))return;try{AC=new (window.AudioContext||window.webkitAudioContext)();MG=AC.createGain();MG.gain.value=muted?0:.55;MG.connect(AC.destination);if(window.RuneMusic){RuneMusic.init(AC);RuneMusic.setEnabled(sndMode==='0');}}catch(e){AC=null;}}
 function tone(type,f1,f2,dur,vol,delay){const t0=AC.currentTime+(delay||0),o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.setValueAtTime(f1,t0);o.frequency.exponentialRampToValueAtTime(Math.max(20,f2),t0+dur);g.gain.setValueAtTime(vol,t0);g.gain.exponentialRampToValueAtTime(.0005,t0+dur);o.connect(g);g.connect(MG);o.start(t0);o.stop(t0+dur+.02);}
 function noise(dur,vol,ftype,freq,delay){const t0=AC.currentTime+(delay||0),n=Math.floor(AC.sampleRate*dur),b=AC.createBuffer(1,n,AC.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;const s=AC.createBufferSource();s.buffer=b;const f=AC.createBiquadFilter();f.type=ftype;f.frequency.value=freq;const g=AC.createGain();g.gain.setValueAtTime(vol,t0);g.gain.exponentialRampToValueAtTime(.0005,t0+dur);s.connect(f);f.connect(g);g.connect(MG);s.start(t0);}
+
+// ======================= 环境音（FEAT.ambsnd）=======================
+// 全部用噪声 + 滤波现场合成，不占包体。休战（建造阶段）时偶尔来一阵，开战时更少更轻（被炮声盖住也没关系）。
+// 草原：一阵风吹过 + 草叶沙沙；雪原：呼啸的寒风（带一点哨音）；火山：低沉的热浪轰鸣 + 岩浆啪啪的爆泡和噼啪声。
+let NB=null,ambT=6,ambLastBio='';
+function noiseBuf(){if(NB)return NB;const n=AC.sampleRate*2;NB=AC.createBuffer(1,n,AC.sampleRate);const d=NB.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;return NB;}
+// 一段长噪声：滤波频率按 fr=[[时间比例,频率]...] 变化，音量先慢慢起来再慢慢落下
+function swell(dur,vol,type,fr,Q,delay){const t0=AC.currentTime+(delay||0),s=AC.createBufferSource();s.buffer=noiseBuf();s.loop=true;s.loopStart=Math.random();
+  const f=AC.createBiquadFilter();f.type=type;f.Q.value=Q||.7;f.frequency.setValueAtTime(fr[0][1],t0);for(const[k,v]of fr.slice(1))f.frequency.linearRampToValueAtTime(v,t0+dur*k);
+  const g=AC.createGain();g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(vol,t0+dur*.4);g.gain.linearRampToValueAtTime(vol*.8,t0+dur*.65);g.gain.linearRampToValueAtTime(0,t0+dur);
+  s.connect(f);f.connect(g);g.connect(MG);s.start(t0,Math.random()*1.5);s.stop(t0+dur+.05);}
+// 很短的一粒噪声（沙沙声、噼啪声都靠它）
+function grain(t,dur,vol,type,freq){const t0=AC.currentTime+t,s=AC.createBufferSource();s.buffer=noiseBuf();const f=AC.createBiquadFilter();f.type=type;f.frequency.value=freq;f.Q.value=1.2;const g=AC.createGain();
+  g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(vol,t0+dur*.25);g.gain.exponentialRampToValueAtTime(.0005,t0+dur);s.connect(f);f.connect(g);g.connect(MG);s.start(t0,Math.random()*1.8);s.stop(t0+dur+.02);}
+function ambGrass(v){const D=rnd(3,4.5);swell(D,.09*v,'bandpass',[[0,500],[.45,1300],[1,650]],.6);
+  const n=Math.floor(rnd(22,34));for(let i=0;i<n;i++){const k=Math.pow(Math.random(),.8),t=D*(.15+.65*k);grain(t,rnd(.04,.12),rnd(.02,.05)*v*Math.sin(Math.PI*(.15+.7*k)),'highpass',rnd(2500,5500));}}
+function ambSnow(v){const D=rnd(4,5.5);swell(D,.11*v,'lowpass',[[0,350],[.5,800],[1,400]],.5);swell(D,.07*v,'bandpass',[[0,480],[.35,880],[.6,700],[1,520]],7);
+  if(Math.random()<.5)swell(D*.6,.035*v,'bandpass',[[0,1050],[.5,1350],[1,1100]],10,D*.3);}
+function sweepGrain(t,dur,vol,f0,f1,Q){const t0=AC.currentTime+t,s=AC.createBufferSource();s.buffer=noiseBuf();const f=AC.createBiquadFilter();f.type='bandpass';f.Q.value=Q;f.frequency.setValueAtTime(f0,t0);f.frequency.exponentialRampToValueAtTime(f1,t0+dur);
+  const g=AC.createGain();g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(vol,t0+dur*.3);g.gain.exponentialRampToValueAtTime(.0005,t0+dur);s.connect(f);f.connect(g);g.connect(MG);s.start(t0,Math.random()*1.8);s.stop(t0+dur+.02);}
+function ambLava(v){// 岩浆：热气的“嘶——”+ 像柴火一样的“啪、啪啪”爆响（主角）+ 偶尔一两个黏稠的小气泡
+  const D=rnd(3.5,4.5);
+  swell(D,.035*v,'highpass',[[0,3500],[.5,4500],[1,3800]],.5);
+  let t=rnd(.05,.3);while(t<D-.1){const big=Math.random()<.25;
+    if(big){grain(t,rnd(.012,.025),rnd(.12,.18)*v,'bandpass',rnd(1400,2600));grain(t+.004,.05,.04*v,'lowpass',700);}
+    else grain(t,rnd(.003,.008),rnd(.04,.09)*v,'highpass',rnd(2000,5000));
+    t+=Math.random()<.4?rnd(.02,.07):rnd(.12,.45);}
+  for(let k=0;k<2;k++){const tb=rnd(.4,D-.4);sweepGrain(tb,rnd(.07,.11),.09*v,rnd(250,380),rnd(800,1100),9);}}
+function ambSndTick(dt){if(!AC||muted||!MAP||['map','win','over'].includes(phase))return;
+  if(ambLastBio!==BIOME){ambLastBio=BIOME;ambT=rnd(2,4);}
+  ambT-=dt;if(ambT>0)return;const calm=phase!=='wave';ambT=calm?rnd(7,12):rnd(16,26);if(!calm&&Math.random()<.4)return;
+  const v=calm?1:.55;if(BIOME==='snow')ambSnow(v);else if(BIOME==='volcano')ambLava(v);else ambGrass(v);}
+// 建造音效：木桩“咚”地落地 + 两下锤子敲击 + 一声上扬的小“叮”（建好了）
+function buildSnd(){tone('sine',150,60,.18,.16);grain(0,.09,.07,'lowpass',900);
+  tone('square',1250,1100,.05,.03,.09);grain(.09,.035,.05,'bandpass',3200);
+  tone('square',1350,1150,.05,.03,.19);grain(.19,.035,.05,'bandpass',3400);
+  tone('triangle',880,1320,.16,.045,.29);tone('sine',1760,1760,.22,.02,.33);}
 const SFX={
   arrow:[.07,()=>{tone('triangle',1100,520,.07,.05);noise(.04,.03,'highpass',3000);}],
   cannon:[.1,()=>{tone('sine',140,45,.18,.18);noise(.08,.06,'lowpass',900);}],
@@ -1425,7 +1653,7 @@ const SFX={
   voidclose:[.3,()=>{tone('sine',220,40,.35,.16);noise(.3,.08,'lowpass',400);}],
   bossdie:[.5,()=>{noise(.8,.2,'lowpass',500);tone('sine',110,30,.8,.18);}],
   card:[.3,()=>{tone('sine',523,523,.15,.06);tone('sine',659,659,.15,.06,.08);tone('sine',784,784,.25,.06,.16);}],
-  build:[.1,()=>{tone('sine',220,110,.12,.12);noise(.06,.05,'lowpass',1200);}],
+  build:[.1,()=>{if(FEAT.ambsnd){buildSnd();return;}tone('sine',220,110,.12,.12);noise(.06,.05,'lowpass',1200);}],
   up:[.1,()=>{tone('triangle',440,880,.18,.07);tone('triangle',660,1320,.18,.05,.08);}],
   crit:[.09,()=>{tone('square',1320,1760,.06,.035);tone('sine',2640,2640,.08,.03,.03);}],
   slash:[.12,()=>{noise(.14,.09,'bandpass',3200);tone('sawtooth',900,200,.12,.04);}],
@@ -1974,6 +2202,7 @@ function draw(){
   ctx.save();if(shake>0)ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
   if(BG)ctx.drawImage(BG,0,0,W,H);
   else for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ctx.fillStyle=pathSet.has(c+','+r)?'#a08866':'#3f6b34';ctx.fillRect(c*CS,r*CS,CS,CS);}
+  if(FEAT.map2&&WORLD)drawWorld();
   drawDecals();
   // 入口
   ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 13px sans-serif';
@@ -2106,6 +2335,7 @@ function draw(){
   }
   for(const q of parts)if(q.k==='puff')puffOutline(q);
   for(const q of parts)drawPart(q);
+  if(FEAT.amb)drawAmb();
   ctx.globalAlpha=1;for(const e of enemies)if(!e.dead&&e._bar){const[x,y,w,p]=e._bar;ctx.fillStyle='#000a';ctx.fillRect(x,y,w,3);ctx.fillStyle=p>.5?'#4ade80':p>.25?'#facc15':'#ef4444';ctx.fillRect(x,y,w*p,3);}
   ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.font='bold 13px sans-serif';
   for(const t of texts){ctx.globalAlpha=Math.min(1,t.t/t.T*1.5);ctx.fillStyle=t.c;ctx.fillText(t.s,t.x,t.y);}
@@ -2132,6 +2362,7 @@ function loop(now){
   }catch(err){console.error(err);}
   if(banner){banner.t-=dt;if(banner.t<=0)banner=null;}
   try{musicTick(dt);}catch(e){}
+  try{if(FEAT.ambsnd)ambSndTick(dt);}catch(e){}
   try{draw();}catch(err){console.error(err);}
   uiT-=dt;
   if(uiT<=0){uiT=.15;hW.textContent=`第${actOf(step)}幕 ${step}/${MAXS}`;hG.textContent=`💰 ${Math.floor(gold||0)}`;hL.textContent=`❤️ ${lives??20}`;syncButtons();syncHero();
