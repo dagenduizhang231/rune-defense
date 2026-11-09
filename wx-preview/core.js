@@ -1074,7 +1074,7 @@ window.RUNE_MAPS=[{"type":"snake","paths":[[[-1,1],[1,1],[1,11],[4,11],[4,1],[7,
 var RuneMusic=window.RuneMusic;
 
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6k';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6l';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -1543,7 +1543,7 @@ const LIVE={
 
 // ======================= v0.3：大厅 / 英雄 / 诅咒 / 难度 =======================
 // 三个模块各有开关：网址加 ?off=meta,hero,curse 可以单独关闭（也方便出问题时直接关掉重发）
-const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true,map2:true,amb:true,ambsnd:true,lava2:true};
+const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true,map2:true,amb:true,ambsnd:true,lava2:true,death2:true};
 try{const u=new URLSearchParams(location.search),q=u.get('off'),q2=u.get('on');if(q)q.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=false;});if(q2)q2.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=true;});}catch(e){}
 // 局外存档
 const META_DEF={shards:0,owned:{},hero:'wind',diff:0,unlockedDiff:0,runs:0,wins:0,auto:true};
@@ -1729,6 +1729,7 @@ function kill(e){
     for(const o of enemies)if(o!==e&&!o.dead&&(o.x-e.x)**2+(o.y-e.y)**2<=R*R){burnOn(o,Math.max(4,e.burnD),2);hit(o,e.max*(e.boss?.03:.15),'cannon',{pure:true,noCrit:true});}}
   if(e.type==='split'){spawn('mini',Math.max(0,e.d-4),e.pi);spawn('mini',Math.max(0,e.d-16),e.pi);}
   if(e.boss&&FEAT.bossfall&&!FEAT.fx2){bossFall(e);return;}
+  if(!e.boss&&FEAT.death2&&!FEAT.fx2){dieFx(e);return;}
   fx.push({k:'boom',x:e.x,y:e.y,r:e.r*1.5,t:.22,T:.22,c:'#fffbeb'});fx.push({k:'ring',x:e.x,y:e.y,r:e.r*1.9,t:.22,T:.22,c:'#ffffff'});
   deathFx(e);burst(e.x,e.y,'#ffffff',e.boss?10:4,e.boss?120:70,0,.25,1.6);
   if(e.boss)stopT=Math.max(stopT,.18);else if(e.elite)stopT=Math.max(stopT,.05);
@@ -2484,6 +2485,46 @@ function drawLavas(){const now=fxClock;let bubbles=0;ctx.save();
       else{ctx.globalAlpha=a*(1-(k-.75)/.25);ctx.strokeStyle='#fdba74';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(bx,by,3.5+(k-.75)*12,(3.5+(k-.75)*12)*.6,0,0,7);ctx.stroke();
         if(k>.76&&k<.8&&parts.length<160)for(let q=0;q<2;q++)P({k:'spark',x:bx,y:by,vx:rnd(-25,25),vy:rnd(-70,-40),g:160,t:.4,T:.4,c:'#fdba74',r:1.2});}}}
   }
+  ctx.restore();ctx.globalAlpha=1;}
+
+// 小怪死亡 2.0（FEAT.death2）：不再出白闪白环。每种怪自己的死法，用怪自己的贴图做动画，0.6 秒内干净收尾。
+//  史莱姆/双生/小史莱姆：先被压扁一下（像被拍了一巴掌），然后“噗”地鼓起散成几个半透明果冻泡泡往上飘、各自破掉
+//  风灵：身体拉长旋开，化成几道打着旋散开的风痕 + 两片叶子
+//  石甲兽：身体沿裂纹碎成 5 块（就是它自己的贴图切开），带着旋转飞出去、落地弹一下再淡掉，脚下扬起一小团灰尘
+//  精英：多一圈金色碎光 + 金币（原来就有）
+//  同一时间死得多（比如炮塔一炮炸死一片）时自动简化：泡泡/碎块数量减半。
+function dieFx(e){const sp=SPR[e.spr+'_'+BIOME]||SPR[e.spr],s=e.r*2.9,busy=fx.filter(f=>f.k==='die').length>=6,ty=e.type==='split'||e.type==='mini'?'norm':e.type;
+  const f={k:'die',ty,sp,spw:SPRW[e.spr],x:e.x,y:e.y,s,r:e.r,dir:e.dir||1,t:.65,T:.65,col:(ET[e.type]||{}).col||'#f87171',elite:e.elite,busy,seed:Math.random()*1000};
+  if(ty==='tank'){const n=busy?3:5,pc=[],cx=(Math.random()-.5)*s*.15,cy=-s*.15+(Math.random()-.5)*s*.1;const ang=[];for(let i=0;i<n;i++)ang.push(i/n*6.283+Math.random()*.5);
+    for(let i=0;i<n;i++){const a0=ang[i],a1=ang[(i+1)%n]+(i===n-1?6.283:0),am=(a0+a1)/2,v=rnd(70,130);pc.push({a0,a1,cx,cy,vx:Math.cos(am)*v*f.dir,vy:Math.sin(am)*v*.6-rnd(60,110),vr:rnd(-6,6)});}f.pc=pc;
+    smoke(e.x,e.y+e.r*.6,busy?2:4,e.r*.8,BIOME==='snow'?'#cbd5e1':'#8b7d6b',-10);sfx('crumble');}
+  else if(ty==='fast'){f.t=f.T=.5;sfx('pop');}
+  else{const n=busy?3:6,b=[];for(let i=0;i<n;i++){const a=-Math.PI/2+(Math.random()-.5)*2.2;b.push({vx:Math.cos(a)*rnd(25,60),vy:Math.sin(a)*rnd(45,90),r:rnd(2.2,4.2)*(e.r/9),life:rnd(.35,.55),ox:(Math.random()-.5)*e.r});}f.b=b;sfx('squish');}
+  if(e.elite)for(let i=0;i<6;i++){const a=Math.random()*6.283,v=rnd(60,110);P({k:'spark',x:e.x,y:e.y-e.r*.3,vx:Math.cos(a)*v,vy:Math.sin(a)*v-30,g:120,t:.4,T:.4,c:i%2?'#fde68a':'#f59e0b',r:1.6});}
+  if(e.elite){coins(e.x,e.y,5);sfx('coin');stopT=Math.max(stopT,.05);}
+  fx.push(f);}
+function lighten(c,k){const n=parseInt(c.slice(1),16),r=n>>16,g=(n>>8)&255,b=n&255,m=v=>Math.round(v+(255-v)*k);return'rgb('+m(r)+','+m(g)+','+m(b)+')';}
+function drawDie(f){const el=f.T-f.t,s=f.s;ctx.save();
+  if(f.ty==='tank'){// 碎成几块
+    const floor=f.y+f.r*.55;for(const p of f.pc){let x=p.vx*el,y=p.vy*el+260*el*el,yy=f.y+y;if(yy>floor){const over=yy-floor;yy=floor-over*.35;}const a=Math.max(0,Math.min(1,(f.T-el)/.25));
+      ctx.save();ctx.globalAlpha=a;ctx.translate(f.x+x,yy);ctx.rotate(p.vr*el);ctx.beginPath();ctx.moveTo(p.cx,p.cy);const R=s;ctx.lineTo(p.cx+Math.cos(p.a0)*R,p.cy+Math.sin(p.a0)*R);ctx.lineTo(p.cx+Math.cos((p.a0+p.a1)/2)*R*1.2,p.cy+Math.sin((p.a0+p.a1)/2)*R*1.2);ctx.lineTo(p.cx+Math.cos(p.a1)*R,p.cy+Math.sin(p.a1)*R);ctx.closePath();ctx.clip();
+      if(f.dir<0)ctx.scale(-1,1);if(f.sp)ctx.drawImage(f.sp,-s/2,-s*.62,s,s);if(el<.06&&f.spw){ctx.globalAlpha=a*.4;ctx.drawImage(f.spw,-s/2,-s*.62,s,s);}ctx.restore();
+      // 碎块裂口的暗边
+    }}
+  else if(f.ty==='fast'){// 拉长旋开，化成风痕
+    const k=el/f.T;if(k<.25&&f.sp){const u=k/.25;ctx.save();ctx.globalAlpha=1-u;ctx.translate(f.x,f.y);ctx.rotate(u*1.2*f.dir);ctx.scale(1+u*.8,1-u*.5);if(f.dir<0)ctx.scale(-1,1);ctx.drawImage(f.sp,-s/2,-s*.62,s,s);ctx.restore();}
+    ctx.lineCap='round';for(let i=0;i<4;i++){const a0=f.seed+i*1.57+k*5*f.dir,rr=f.r*(.6+k*2.2),len=1.4;ctx.globalAlpha=(1-k)*.85;ctx.strokeStyle=i%2?'#fef3c7':lighten(f.col,.3);ctx.lineWidth=2.4*(1-k)+.5;
+      ctx.beginPath();for(let j=0;j<=8;j++){const a=a0+len*j/8,r2=rr*(1-j*.04);const x=f.x+Math.cos(a)*r2,y=f.y-f.r*.3+Math.sin(a)*r2*.6;j?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();}
+    for(let i=0;i<2;i++){const lx=f.x+(i?1:-1)*f.r*(.5+k*2),ly=f.y-f.r*.3-k*20+Math.sin(k*9+i)*3;ctx.globalAlpha=1-k;ctx.save();ctx.translate(lx,ly);ctx.rotate(k*8+i);ctx.fillStyle=i?'#a3e635':'#facc15';ctx.beginPath();ctx.ellipse(0,0,3,1.5,0,0,7);ctx.fill();ctx.restore();}}
+  else{// 史莱姆：压扁 → 噗地散成果冻泡泡
+    if(el<.12&&f.sp){const u=el/.12,sx=1+.45*u,sy=1-.5*u;ctx.save();ctx.translate(f.x,f.y+f.r*.3);ctx.scale(sx,sy);ctx.translate(0,-f.r*.3);if(f.dir<0)ctx.scale(-1,1);ctx.drawImage(f.sp,-s/2,-s*.62,s,s);
+      if(f.spw){ctx.globalAlpha=.35*(1-u);ctx.drawImage(f.spw,-s/2,-s*.62,s,s);}ctx.restore();}
+    else{const t=el-.12,c=lighten(f.col,.35),ch=lighten(f.col,.75);
+      // 地上一圈淡淡的湿印，很快干掉
+      ctx.globalAlpha=Math.max(0,.3*(1-t/.4));ctx.fillStyle=c;ctx.beginPath();ctx.ellipse(f.x,f.y+f.r*.45,f.r*1.2,f.r*.35,0,0,7);ctx.fill();
+      for(const b of f.b){if(t>b.life+.12)continue;const x=f.x+b.ox+b.vx*t,y=f.y-f.r*.2+b.vy*t+20*t*t;
+        if(t<b.life){const rr=b.r*(.6+.4*Math.min(1,t/.08))*(1+.08*Math.sin(t*30));ctx.globalAlpha=.75;ctx.fillStyle=c;ctx.beginPath();ctx.arc(x,y,rr,0,7);ctx.fill();ctx.globalAlpha=.9;ctx.fillStyle=ch;ctx.beginPath();ctx.arc(x-rr*.35,y-rr*.35,rr*.32,0,7);ctx.fill();}
+        else{const u=(t-b.life)/.12;ctx.globalAlpha=1-u;ctx.strokeStyle=ch;ctx.lineWidth=1;ctx.beginPath();ctx.arc(x,y,b.r*(1+u*1.2),0,7);ctx.stroke();}}}}
   ctx.restore();ctx.globalAlpha=1;}
 function steamPuff(t,s,x,y){const now=fxClock;if((t._stm||0)>now)return;t._stm=now+1.4+((t.c*7+t.r*3)%10)*.08;
   if(parts.length>140||parts.filter(q=>q.stm).length>=6)return;const pv=towerPivot(t),a=t.type==='cannon'?(t.ang||0):0,X=pv.x+x*Math.cos(a)-y*Math.sin(a),Y=pv.y+x*Math.sin(a)+y*Math.cos(a);
@@ -3351,6 +3392,7 @@ function draw(){
     else if(f.k==='dome'){const k=1-a;ctx.globalAlpha=a*.95;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(f.x,f.y,f.r*(.55+.45*k),0,7);ctx.fill();ctx.globalAlpha=a;ctx.strokeStyle='#fde68a';ctx.lineWidth=2.5;ctx.stroke();}
     else if(f.k==='bolt')drawBolt(f);
     else if(f.k==='bolt3')drawBolt3(f);
+    else if(f.k==='die')drawDie(f);
     else if(f.k==='zcore')drawZcore(f);
     else if(f.k==='zrad')drawZrad(f);
     else if(f.k==='astk'){if(!f.e.dead){ctx.save();ctx.globalAlpha=Math.min(1,f.t/f.T*2);drawArrow2({x:f.e.x+(f.e.kbx||0)+f.ox,y:f.e.y+(f.e.kby||0)+f.oy,vx:f.ux,vy:f.uy,evo:f.evo,zc:f.zc,el:f.el},true);ctx.restore();}}
