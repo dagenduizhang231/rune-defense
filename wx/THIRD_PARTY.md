@@ -2,7 +2,11 @@
 
 ## pixelfx（MIT）
 特效 2.0（炮塔爆炸、电塔闪电、冰塔冰霜、Boss 倒下）的编排参考了 pixelfx：https://github.com/patch-gg/pixelfx
-画法为本游戏重新实现，未直接使用其代码与像素图。
+
+另外直接使用了 pixelfx 的两个效果烘焙成的贴图（按 MIT 许可使用，保留下方版权声明）：
+- `fx/pf_whirl.png`：由 pixelfx `nature/tornado` 改编（换成绿白配色、去掉顶部闪电），风行者「疾风号令」的龙卷风。
+- `fx/pf_arrow.png`：pixelfx `projectiles/arrow`（尾羽改成绿白配色），风行者「箭雨」的箭。
+以上几项的画法为本游戏重新实现。
 
 MIT License
 

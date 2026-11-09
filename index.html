@@ -106,7 +106,7 @@ button{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}
 <script src="maps.js"></script>
 <script>
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6m';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6n';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -742,9 +742,9 @@ function hit(e,dmg,src,o){
   const arm=Math.max(0,e.armor-(e.shredT>0?e.shredV:0));
   if(!o.pure&&!o.ap)dmg=Math.max(dmg*.25,dmg-arm);
   if(e.shield>0){const m=src==='tesla'?2:1,ab=Math.min(e.shield,dmg*m);e.shield-=ab;dmg-=ab/m;if(e.shield<=0)burst(e.x,e.y,'#93c5fd',10,90,0,.35,2);}
-  e.hp-=dmg;if(!o.pure){e.hitT=0;e.flT=.09;e.flA=0;}
+  e.hp-=dmg;if(!o.pure){e.hitT=0;if(!o.quiet){e.flT=.09;e.flA=0;}}
   if(crit)txt(e.x,e.y-14,Math.round(dmg)+'!','#fde047');
-  if(!o.pure)hitFx(e,src,crit);
+  if(!o.pure&&!o.quiet)hitFx(e,src,crit);
   if(M.execute&&!e.boss&&e.hp>0&&e.hp<e.max*M.execute){e.hp=0;stats.exec++;txt(e.x,e.y-14,'处决','#f87171');slashFx(e);}
   if(e.type==='boss1')while(e.hp>0&&e.hp<=e.max*e.nextSplit&&e.nextSplit>0){e.nextSplit-=.25;for(let k=0;k<5;k++)spawn('mini',Math.max(0,e.d-6-k*9),e.pi);txt(e.x,e.y-26,'分裂！','#f5d0fe',1.2);}
   if(e.hp<=0)kill(e);
@@ -949,7 +949,7 @@ function waveDone(){
   projs=[];
   const elite=curNode==='elite',boss=curNode==='boss';
   let bonus=stepBonus();if(elite){bonus=Math.round(bonus*1.5);stats.eliteWins++;}if(boss)stats.bossWins++;
-  zones=[];meteors=[];craters=[];if(HERO){HERO.hasteT=0;HERO.wallT=0;}
+  zones=[];meteors=[];craters=[];stuckArrows=[];if(HERO){HERO.hasteT=0;HERO.wallT=0;}
   const it=interestNow();gold+=bonus+it;
   if(step>=MAXS){endGame(true);return;}
   projs=[];lavas=[];
@@ -1062,7 +1062,7 @@ function statusFx(dt){
     if(e.slowT>0&&!(e.frzT>0)&&Math.random()<.35)P({k:'snow',x:e.x+(Math.random()-.5)*e.r*2,y:e.y-e.r,vx:0,vy:22,g:0,t:.6,T:.6,c:'#e0f2fe',r:1.5});
     if(e.zapT>0)e.zapT-=.06;
   }
-  if(HERO&&HERO.hasteT>0)for(const t of towers)if(Math.random()<.3){const a=Math.random()*6.283;P({k:'spark',x:t.x+Math.cos(a)*CS*.5,y:t.y+Math.sin(a)*CS*.3,vx:-Math.sin(a)*70,vy:Math.cos(a)*40-20,g:0,t:.35,T:.35,c:'#86efac',r:1.4});}
+  if(HERO&&HERO.hasteT>0&&!FEAT.hero2)for(const t of towers)if(Math.random()<.3){const a=Math.random()*6.283;P({k:'spark',x:t.x+Math.cos(a)*CS*.5,y:t.y+Math.sin(a)*CS*.3,vx:-Math.sin(a)*70,vy:Math.cos(a)*40-20,g:0,t:.35,T:.35,c:'#86efac',r:1.4});}
 }
 function drawDecals(){
   for(const d of decals){const a=Math.min(1,d.t/d.T*1.6);ctx.save();ctx.translate(d.x,d.y);ctx.rotate(d.rot);ctx.globalAlpha=a*.55;
@@ -1622,6 +1622,57 @@ function drawCraters(){const now=fxClock;ctx.save();
     if(hot>0){const gl=ctx.createRadialGradient(c.x,c.y,c.r*.2,c.x,c.y,c.r*1.4);gl.addColorStop(0,`rgba(249,115,22,${.35*hot*fade})`);gl.addColorStop(1,'rgba(249,115,22,0)');ctx.globalAlpha=1;ctx.fillStyle=gl;ctx.fillRect(c.x-c.r*1.4,c.y-c.r*1.4,c.r*2.8,c.r*2.8);}
   }
   ctx.restore();ctx.globalAlpha=1;}
+
+// ======================= 风行者技能 2.0 =======================
+// 箭雨：落点地上一圈淡绿的风圈（两道风痕在转）；真正的箭一阵一阵从左上方斜射下来（每秒约 20 支），
+//   射中怪：怪身上一个小星芒 + 往后顿一下；没射中：箭插在地上（带一点尘土），3 秒里插满一片，技能结束后 1.5 秒慢慢淡掉。
+// 疾风号令：从英雄脚下吹出一阵绿色的风（几道打着旋的风痕扫过全图），风吹到哪座塔，那座塔“呼”地被一圈风包住，
+//   之后 5 秒塔脚下一直有两道小风圈在快速转（表示攻速提升），结束前 1 秒慢慢淡掉。
+// 箭雨（高级版）：4 轮齐射——每轮十几支箭几乎同时落下（“咻——嗒嗒嗒嗒”的节奏），最后一轮更密。
+// 每支箭：地上先出现一个越来越清楚的小影子（告诉你它要落在这），箭本身是一道从高空斜扎下来的细长光痕（越来越快）；
+// 扎中怪：淡绿星芒 + 怪被往下钉了一下；扎到地上：插着的箭 + 一圈小尘环；一轮落地多时画面轻微一震。
+// 地上不再画绿色大圈，只在施放时用一圈很淡的风痕标出范围、0.6 秒后消失。
+function rainUpd(z,dt){z.air=z.air||[];z.el=(z.el||0)+dt;z.vi=z.vi||0;const VT=[.05,.37,.69,1.01,1.33,1.65,1.97,2.29,2.61];
+  while(z.vi<VT.length&&z.el>=VT[z.vi]){const big=z.vi===VT.length-1,n=big?20:14;for(let i=0;i<n;i++){const a=Math.random()*6.283,rr=Math.sqrt(Math.random())*z.r*.95,tx=z.x+Math.cos(a)*rr,ty=z.y+Math.sin(a)*rr*.62;z.air.push({tx,ty,t:-Math.random()*.14,T:.2});}
+    z.vi++;sfx('volley');}
+  let landed=0;
+  for(const ar of z.air){ar.t+=dt;if(ar.t>=ar.T&&!ar.done){ar.done=true;landed++;let hitE=null;for(const e of enemies)if(!e.dead&&(e.x-ar.tx)**2+(e.y-ar.ty)**2<(e.r+3)**2){hitE=e;break;}
+    if(hitE){if(fx.filter(f=>f.k==='asp').length<12)fx.push({k:'asp',x:ar.tx,y:ar.ty-hitE.r*.3,s:hitE.r*1.7,rot:1.35,c:'#dcfce7',t:.13,T:.13});hitE.kbx=(hitE.kbx||0)+1;hitE.kby=(hitE.kby||0)+3;hitE.zjT=Math.max(hitE.zjT||0,.06);}
+    else{if(stuckArrows.length>=64)stuckArrows.shift();stuckArrows.push({x:ar.tx,y:ar.ty,ang:1.37+rnd(-.08,.08),t:Math.max(0,(z.T-z.el))+1.4,T:1.4,dust:.3});
+      if(parts.length<150)for(let q=0;q<2;q++){const a=-Math.PI*rnd(.15,.85),v=rnd(50,100);P({k:'chunk',x:ar.tx,y:ar.ty,vx:Math.cos(a)*v,vy:Math.sin(a)*v,g:520,t:.35,T:.35,c:BIOME==='snow'?'#e2e8f0':BIOME==='volcano'?'#3f3f46':'#8a7150',r:1.6});}}}}
+  if(landed>=6){shake=Math.max(shake,2.2);sfx('thud');}
+  z.air=z.air.filter(ar=>!ar.done);}
+// 箭用 pixelfx（MIT）的 Arrow（钢箭头 + 木杆 + 会抖的绿白尾羽），6 帧（fx/pf_arrow.png，2×3 格，每帧 79×13，箭尖在 (78,6)）
+function pfArrow(x,y,ang,sc,fr){const im=SPS.pf_arrow;if(!im)return;const w=79,h=13;ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.scale(sc,sc);ctx.drawImage(im,(fr%2)*w,Math.floor(fr/2)*h,w,h,-78,-6,w,h);ctx.restore();}
+function drawStuck(){ctx.save();ctx.lineCap='round';
+  for(const s of stuckArrows){const a=Math.min(1,s.t/s.T),ux=Math.cos(s.ang),uy=Math.sin(s.ang),L=10*(.6+.4*a);
+    if(s.dust>0){const k=1-s.dust/.3;ctx.globalAlpha=(1-k)*.6;ctx.fillStyle='#d6c7a8';ctx.beginPath();ctx.ellipse(s.x,s.y-1,2+k*7,(2+k*7)*.45,0,0,7);ctx.fill();ctx.globalAlpha=(1-k)*.7;ctx.strokeStyle='#e7dcc4';ctx.lineWidth=1.4;ctx.beginPath();ctx.ellipse(s.x,s.y,3+k*11,(3+k*11)*.4,0,0,7);ctx.stroke();}
+    ctx.globalAlpha=a*.28;ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(s.x+3.5,s.y+.5,4.5,1,0,0,7);ctx.fill();
+    ctx.globalAlpha=a;if(SPS.pf_arrow){ctx.save();ctx.beginPath();ctx.rect(s.x-30,s.y-40,60,40);ctx.clip();pfArrow(s.x+ux*6,s.y+uy*6,s.ang,.55,0);ctx.restore();}
+    else{ctx.strokeStyle='#6b3f19';ctx.lineWidth=1.7;ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.lineTo(s.x-ux*L,s.y-uy*L);ctx.stroke();}}
+  ctx.restore();ctx.globalAlpha=1;}
+function rainDraw(z){const el=z.el||0;ctx.save();ctx.lineCap='round';
+  if(el<.6){const k=el/.6;ctx.globalAlpha=(1-k)*.5;ctx.strokeStyle='#dcfce7';ctx.lineWidth=1.5;for(let i=0;i<6;i++){const a0=i*1.047+k*1.5;ctx.beginPath();ctx.ellipse(z.x,z.y,z.r*(.9+.1*k),z.r*(.9+.1*k)*.62,0,a0,a0+.6);ctx.stroke();}}
+  for(const ar of z.air||[]){if(ar.t<0)continue;const k=Math.min(1,ar.t/ar.T),e=k*k,dx=-60,dy=-300,x=ar.tx+dx*(1-e),y=ar.ty+dy*(1-e);
+    ctx.globalAlpha=.1+.3*k;ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(ar.tx+4*(1-k),ar.ty+.5,2+4*(1-k),1+1.2*(1-k),0,0,7);ctx.fill();
+    const L=Math.hypot(dx,dy),ux=-dx/L,uy=-dy/L,tl=10+26*k,g=ctx.createLinearGradient(x,y,x-ux*tl,y-uy*tl);g.addColorStop(0,'rgba(220,252,231,.7)');g.addColorStop(1,'rgba(220,252,231,0)');
+    ctx.globalAlpha=1;ctx.strokeStyle=g;ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(x-ux*8,y-uy*8);ctx.lineTo(x-ux*(8+tl),y-uy*(8+tl));ctx.stroke();
+    pfArrow(x,y,Math.atan2(uy,ux),.7,Math.floor((fxClock*20+ar.tx)%6));}
+  ctx.restore();ctx.globalAlpha=1;}
+// 疾风号令：每座塔脚下“嗡”地旋起一阵龙卷风——下面小、上面大，从塔底往上旋，旋到顶就散掉（约 0.8 秒），塔与塔之间错开一点点时间。
+// 风是一圈圈叠起来的椭圆风带（越往上越大），风带上的亮条纹打着旋往上爬；卷起几片叶子和尘土一起旋上去。之后不留常驻特效。
+function windCall(){let i=0;const L=[...towers].sort((a,b)=>a.y-b.y);for(const t of L){const d=i++*.04;later(d,()=>fx.push({k:'tornado',x:t.x,y:t.y+CS*.42,t:5-d,T:5-d,seed:Math.random()*9,s:CS}));}}
+// 龙卷风用 pixelfx（MIT）的 Tornado 改的：换成绿白风色、去掉顶上的闪电，烘成 20 帧贴图（fx/pf_whirl.png，5×4 格）。
+// 播放方式：从塔脚“嗡”地往上长出来（0.3 秒，从下往上露出），转一会儿，然后整阵风往上一抬散掉（共 0.85 秒）。
+// 龙卷风用 pixelfx（MIT）的 Tornado 改的：底口和塔底座一样宽（约 30 像素）、往上张开到两倍宽，风带只留 16 道（稀疏），
+// 主体几乎透明、去掉顶上的云团和闪电，换成绿白风色，烘成 20 帧（fx/pf_whirl.png，5×4 格，每格 112×82，底中心在 (56,78)）。
+// 播放：从塔底往上卷起（0.25 秒从下往上露出）→ 转一会儿 → 整阵风往上一抬散掉，共 0.7 秒。
+const PFW={w:112,h:82,cols:5,n:20,px:56,py:78};
+function drawTornado(f){const im=SPS.pf_whirl,el=f.T-f.t;if(!im)return;const i=Math.floor(el*20+f.seed*3)%PFW.n,sx=(i%PFW.cols)*PFW.w,sy=Math.floor(i/PFW.cols)*PFW.h;
+  const sc=f.s/40,grow=Math.min(1,el/.25),lift=Math.max(0,1-f.t/.8),a=1-lift;
+  ctx.save();ctx.globalAlpha=a;ctx.translate(f.x,f.y-lift*f.s*.35);ctx.scale(sc,sc);
+  ctx.beginPath();ctx.rect(-PFW.px,-PFW.py*grow-2,PFW.w,PFW.py*grow+PFW.h-PFW.py+2);ctx.clip();
+  ctx.drawImage(im,sx,sy,PFW.w,PFW.h,-PFW.px,-PFW.py,PFW.w,PFW.h);ctx.restore();ctx.globalAlpha=1;}
 function busyN(){return fx.filter(f=>f.k==='sprite').length;}
 function scorchWave(u){const hs=heroSpot||{c:COLS/2,r:ROWS/2},hx=(hs.c+.5)*CS,hy=(hs.r+.5)*CS,maxR=Math.hypot(Math.max(hx,W-hx),Math.max(hy,H-hy)*1.43)+30,T=.9;
   fx.push({k:'swave',x:hx,y:hy,r0:10,r1:maxR,t:T,T,c:'#f97316',fire:1});fx.push({k:'swave',x:0,y:0,r0:0,r1:0,t:.9,T:.9,tint:1});
@@ -1721,7 +1772,7 @@ function spriteFx(k,x,y,s,T){fx.push({k:'sprite',sp:k,x,y,s,t:T,T});}
 function spriteInit(){
   if(typeof Image==='undefined')return;
   for(const k of ['boom','zhit','ahit']){try{const im=new Image();im.onload=()=>{SPS[k]=im;};im.src=(window.RUNE_PNG?window.RUNE_PNG+'fx_':'fx/')+'sp_'+k+'.png';}catch(e){}}
-  for(const k of ['lava0','lava1','lavaglow0','lavaglow1']){try{const im=new Image();im.onload=()=>{SPS[k]=im;};im.src=(window.RUNE_PNG?window.RUNE_PNG+'fx_':'fx/')+k+'.png';}catch(e){}}
+  for(const k of ['lava0','lava1','lavaglow0','lavaglow1','pf_whirl','pf_arrow']){try{const im=new Image();im.onload=()=>{SPS[k]=im;};im.src=(window.RUNE_PNG?window.RUNE_PNG+'fx_':'fx/')+k+'.png';}catch(e){}}
 }
 function drawSprite(f,alpha){const im=SPS[f.sp];if(!im)return;const a=f.t/f.T,n=Math.round(im.width/im.height),i=Math.min(n-1,Math.floor((1-a)*n)),fw=im.height;
   ctx.globalAlpha=alpha;ctx.drawImage(im,i*fw,0,fw,fw,f.x-f.s/2,f.y-f.s/2,f.s,f.s);ctx.globalAlpha=1;}
@@ -1838,6 +1889,9 @@ const SFX={
   squish:[.06,()=>{tone('sine',520,980,.09,.05);tone('sine',1200,1600,.06,.025,.05);}],
   crumble:[.1,()=>{noise(.3,.12,'lowpass',500);tone('sine',120,50,.2,.08);}],
   rain:[.5,()=>{for(let i=0;i<6;i++)noise(.05,.05,'highpass',4000,i*.07);tone('triangle',800,500,.3,.03);}],
+  thud:[.25,()=>{tone('sine',140,55,.12,.12);noise(.08,.07,'lowpass',700);for(let i=0;i<4;i++)noise(.025,.05,'bandpass',1800,i*.025+Math.random()*.015);}],
+  volley:[.3,()=>{noise(.18,.05,'bandpass',2500);for(let i=0;i<5;i++)noise(.03,.035,'highpass',3500,.28+i*.035+Math.random()*.02);}],
+  whirl:[.3,()=>{noise(.7,.07,'bandpass',600);tone('sine',180,520,.6,.035);tone('triangle',120,360,.6,.025);}],
   gust:[.5,()=>{noise(.6,.08,'bandpass',900);tone('sine',300,700,.4,.04);}],
   meteor:[.5,()=>{tone('sine',1400,300,.95,.05);noise(.9,.04,'bandpass',1200);}],
   roar:[.5,()=>{noise(.7,.14,'lowpass',700);tone('sawtooth',90,60,.6,.06);}],
@@ -1973,7 +2027,7 @@ function pickCard(i){const c=pendingCards[i];if(!c)return;takeCard(c);ov.style.d
 function buildSummary(){return Object.keys(taken).map(id=>{const c=findCard(id);return c.name+(taken[id]>1?'×'+taken[id]:'');}).join('、');}
 
 // ======================= v0.3：英雄 =======================
-let HERO=null,zones=[],meteors=[],curses={},craters=[];
+let HERO=null,zones=[],meteors=[],curses={},craters=[],stuckArrows=[];
 function unitHP(){return ET.norm.hp*hpScale(Math.max(1,step))*(MAP.hpMul||1)*diffHpMul();}
 function diffHpMul(){return (D(1)?1.1:1)*(D(8)?1.15:1);}
 function heroInit(){
@@ -1989,11 +2043,12 @@ function cluster(R){let best=null,bn=0;const R2=R*R,pt=e=>e.d/PATHS[e.pi].tot;
   for(const e of enemies){if(e.dead)continue;let n=0;for(const o of enemies)if(!o.dead&&(o.x-e.x)**2+(o.y-e.y)**2<=R2)n+=o.boss?3:1;
     if(n>bn||(n===bn&&best&&pt(e)>pt(best))){bn=n;best=e;}}
   return best?{x:best.x,y:best.y,n:bn}:null;}
-function heroHit(e,d){hit(e,e.boss?d*.35:d,undefined,{noCrit:true,ap:true});}
+function heroHit(e,d,quiet){hit(e,e.boss?d*.35:d,undefined,{noCrit:true,ap:true,quiet});}
 function heroCast(i){
   if(!HERO||phase!=='wave'||HERO.cd[i]>0)return false;
   const H=HEROES[HERO.id],u=unitHP();let ok=true;
   if(HERO.id==='wind'&&i===0){const c=cluster(1.5*CS);if(!c)return false;zones.push({k:'rain',x:c.x,y:c.y,r:1.5*CS,t:3,T:3,dps:u*.25});sfx('rain');}
+  else if(HERO.id==='wind'&&i===1&&FEAT.hero2){HERO.hasteT=5;windCall();sfx('whirl');}
   else if(HERO.id==='wind'&&i===1){HERO.hasteT=5;for(const t of towers){burst(t.x,t.y,'#86efac',6,70,-40,.5,1.8);fx.push({k:'ring',x:t.x,y:t.y,r:CS*.8,t:.4,T:.4,c:'#86efac'});}sfx('gust');}
   else if(HERO.id==='fire'&&i===0){const c=cluster(1.6*CS);if(!c)return false;meteors.push({x:c.x,y:c.y,t:1,T:1,r:1.6*CS,dmg:u*.7,rot:Math.random()*6,seed:Math.random()*99});sfx('meteor');}
   else if(HERO.id==='fire'&&i===1&&FEAT.hero2){if(!enemies.some(e=>!e.dead))return false;scorchWave(u);sfx('roar');}
@@ -2020,16 +2075,19 @@ function updHero(dt){
   for(let i=0;i<2;i++)if(HERO.cd[i]>0)HERO.cd[i]=Math.max(0,HERO.cd[i]-dt);
   if(HERO.hasteT>0)HERO.hasteT-=dt;if(HERO.wallT>0)HERO.wallT-=dt;
   if(HERO.auto)for(let i=0;i<2;i++)if(HERO.cd[i]<=0&&heroAutoWant(i))heroCast(i);
-  for(const z of zones){z.t-=dt;for(const e of enemies)if(!e.dead&&(e.x-z.x)**2+(e.y-z.y)**2<=z.r*z.r)heroHit(e,z.dps*dt);
-    if(Math.random()<dt*45){const tx=z.x+(Math.random()-.5)*z.r*1.6,ty=z.y+(Math.random()-.5)*z.r;P({k:'arrowfall',x:tx+24,y:ty-70,vx:-120,vy:340,g:0,t:.2,T:.2,c:'#e7e2d6',r:1});if(Math.random()<.4)smoke(tx,ty,1,2.5,'#d6d3d1',-10);}}
+  for(const z of zones){z.t-=dt;for(const e of enemies)if(!e.dead&&(e.x-z.x)**2+(e.y-z.y)**2<=z.r*z.r)heroHit(e,z.dps*dt,FEAT.hero2);
+    if(FEAT.hero2&&z.k==='rain')rainUpd(z,dt);
+    else if(Math.random()<dt*45){const tx=z.x+(Math.random()-.5)*z.r*1.6,ty=z.y+(Math.random()-.5)*z.r;P({k:'arrowfall',x:tx+24,y:ty-70,vx:-120,vy:340,g:0,t:.2,T:.2,c:'#e7e2d6',r:1});if(Math.random()<.4)smoke(tx,ty,1,2.5,'#d6d3d1',-10);}}
   zones=zones.filter(z=>z.t>0);
   for(const m of meteors){m.t-=dt;if(m.t>0&&FEAT.hero2)meteorTrail(m);else if(m.t>0){const k=1-m.t/m.T;flame(m.x+40*(1-k)+6,m.y-160*(1-k)-8,1.6);}if(m.t<=0&&FEAT.hero2){meteorImpact(m);for(const e of enemies)if(!e.dead&&(e.x-m.x)**2+(e.y-m.y)**2<=m.r*m.r){heroHit(e,m.dmg);if(!e.dead)burnOn(e,m.dmg*.06,3);}}else if(m.t<=0){fx.push({k:'core',x:m.x,y:m.y,r:m.r*.6,t:.12,T:.12});chunks(m.x,m.y,BIOME==='snow'?'#cbd5e1':'#44403c',12,200,3.6);smoke(m.x,m.y,4,6,'#78716c');decal('crater',m.x,m.y+4,m.r*.55,3);fx.push({k:'boom',x:m.x,y:m.y,r:m.r,t:.45,T:.45,c:'#f97316'});fx.push({k:'ring',x:m.x,y:m.y,r:m.r*1.2,t:.4,T:.4,c:'#fde68a'});burst(m.x,m.y,'#fb923c',26,170,220,.6,2.6);shake=Math.max(shake,6);sfx('boom');
     for(const e of enemies)if(!e.dead&&(e.x-m.x)**2+(e.y-m.y)**2<=m.r*m.r){heroHit(e,m.dmg);if(!e.dead)burnOn(e,m.dmg*.06,3);}}}
   meteors=meteors.filter(m=>m.t>0);
+  for(const sa of stuckArrows){sa.t-=dt;if(sa.dust>0)sa.dust-=dt;}stuckArrows=stuckArrows.filter(sa=>sa.t>0);
   for(const c of craters){c.t-=dt;if(c.t>1.5&&Math.random()<dt*3&&parts.length<150)P({k:'smoke',x:c.x+rnd(-c.r*.3,c.r*.3),y:c.y-2,vx:rnd(-6,6),vy:rnd(-30,-18),g:0,t:1,T:1,c:'#57534e',r:rnd(3,5)});}craters=craters.filter(c=>c.t>0);
 }
 function drawHero(){
-  for(const z of zones){const a=Math.min(1,z.t/.4);ctx.globalAlpha=.18*a;ctx.fillStyle='#e2e8f0';ctx.beginPath();ctx.arc(z.x,z.y,z.r,0,7);ctx.fill();ctx.globalAlpha=.5*a;ctx.strokeStyle='#f1f5f9';ctx.lineWidth=1.5;ctx.setLineDash([4,5]);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;}
+  if(FEAT.hero2){for(const z of zones)if(z.k==='rain')rainDraw(z);}
+  else for(const z of zones){const a=Math.min(1,z.t/.4);ctx.globalAlpha=.18*a;ctx.fillStyle='#e2e8f0';ctx.beginPath();ctx.arc(z.x,z.y,z.r,0,7);ctx.fill();ctx.globalAlpha=.5*a;ctx.strokeStyle='#f1f5f9';ctx.lineWidth=1.5;ctx.setLineDash([4,5]);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;}
   if(FEAT.hero2)for(const m of meteors)drawMeteor(m);
   else for(const m of meteors){const k=1-m.t/m.T;ctx.globalAlpha=.25+.35*k;ctx.strokeStyle='#f97316';ctx.lineWidth=2;ctx.beginPath();ctx.arc(m.x,m.y,m.r*(1.2-.2*k),0,7);ctx.stroke();ctx.globalAlpha=1;
     const y=m.y-160*(1-k);ctx.fillStyle='#fdba74';ctx.beginPath();ctx.arc(m.x+40*(1-k),y,7+5*k,0,7);ctx.fill();ctx.fillStyle='rgba(251,146,60,.5)';ctx.beginPath();ctx.arc(m.x+40*(1-k)+8,y-12,5,0,7);ctx.fill();}
@@ -2451,6 +2509,7 @@ function draw(){
   for(const f of fx)if(f.k==='bossfall')drawBossFall(f);
   if(FEAT.lava2&&lavas.length)drawLavas();
   if(craters.length)drawCraters();
+  if(stuckArrows.length)drawStuck();
   for(const e of [...enemies].sort((a,b)=>a.y-b.y)){
     const sp=SPR[e.spr+'_'+BIOME]||SPR[e.spr],hidden=e.afx.stealth&&!e.revealed;
     if(e.elite){ctx.strokeStyle='rgba(251,191,36,.9)';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(e.x,e.y+e.r*.8,e.r*1.25,e.r*.48,0,0,7);ctx.stroke();}
@@ -2514,6 +2573,7 @@ function draw(){
     else if(f.k==='bolt3')drawBolt3(f);
     else if(f.k==='die')drawDie(f);
     else if(f.k==='swave')drawSWave(f);
+    else if(f.k==='tornado')drawTornado(f);
     else if(f.k==='zcore')drawZcore(f);
     else if(f.k==='zrad')drawZrad(f);
     else if(f.k==='astk'){if(!f.e.dead){ctx.save();ctx.globalAlpha=Math.min(1,f.t/f.T*2);drawArrow2({x:f.e.x+(f.e.kbx||0)+f.ox,y:f.e.y+(f.e.kby||0)+f.oy,vx:f.ux,vy:f.uy,evo:f.evo,zc:f.zc,el:f.el},true);ctx.restore();}}
