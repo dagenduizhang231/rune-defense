@@ -1,4 +1,4 @@
-// 符文塔防 v0.6j.1 · 微信小游戏版（由 tools/build_wx.py 生成，不要手改）
+// 符文塔防 v0.6j.2 · 微信小游戏版（由 tools/build_wx.py 生成，不要手改）
 // 符文塔防 · 微信小游戏宿主：屏幕画布、触摸、存储、音频、图片。
 // 注意：微信里第一次 wx.createCanvas() 得到的是上屏画布，之后创建的都是离屏画布。
 var __HOST = (function () {
@@ -1127,7 +1127,7 @@ window.RUNE_MAPS=[{"type":"snake","paths":[[[-1,1],[1,1],[1,11],[4,11],[4,1],[7,
 var RuneMusic=window.RuneMusic;
 
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6j.1';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6j.2';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -2698,6 +2698,11 @@ function audioUnlock(){audioInit();if(!AC)return;try{if(AC.state!=='running')AC.
   try{const bf=AC.createBuffer(1,1,22050),src=AC.createBufferSource();src.buffer=bf;src.connect(AC.destination);src.start(0);}catch(e){}
   try{if(typeof Audio!=='undefined'&&/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent||'')&&!window.wx){silentEl=new Audio(silentWav());silentEl.loop=true;silentEl.setAttribute&&silentEl.setAttribute('playsinline','');const pr=silentEl.play();if(pr&&pr.catch)pr.catch(()=>{});}}catch(e){}}
 for(const ev of ['pointerdown','touchstart','touchend','click','keydown'])document.addEventListener(ev,audioUnlock,{capture:true});
+// 防止 iPhone 浏览器“双击放大 / 双指缩放”把整个游戏页面放大后回不去（iOS 会忽略 user-scalable=no）：
+// 连点两下时拦掉第二下的系统放大，但仍然把这一下当成正常点击发给按钮，所以快速连点升级之类不受影响。
+try{let lastTE=0;document.addEventListener('touchend',e=>{const now=Date.now();if(now-lastTE<350&&e.cancelable){const tg=e.target;if(!(tg&&/INPUT|TEXTAREA|SELECT/.test(tg.tagName||''))){e.preventDefault();if(tg&&tg.click&&tg.id!=='cv')tg.click();}}lastTE=now;},{passive:false});
+  for(const ev of ['gesturestart','gesturechange'])document.addEventListener(ev,e=>{e.preventDefault&&e.preventDefault();},{passive:false});
+  document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1&&e.cancelable)e.preventDefault();},{passive:false});}catch(e){}
 try{document.addEventListener('visibilitychange',()=>{if(!document.hidden&&AC&&AC.state!=='running'){try{AC.resume();}catch(e){}}});}catch(e){}
 const sndBtn=$('snd');const SNDICON={'0':'🔊','m':'🔉','1':'🔇'};sndBtn.textContent=SNDICON[sndMode]||'🔊';
 sndBtn.onclick=()=>{sndMode=sndMode==='0'?'m':sndMode==='m'?'1':'0';muted=sndMode==='1';sndBtn.textContent=SNDICON[sndMode];if(MG)MG.gain.value=muted?0:.55;
