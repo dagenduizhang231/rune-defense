@@ -1,4 +1,4 @@
-// 符文塔防 v0.6h · 微信小游戏版（由 tools/build_wx.py 生成，不要手改）
+// 符文塔防 v0.6i · 微信小游戏版（由 tools/build_wx.py 生成，不要手改）
 // 符文塔防 · 微信小游戏宿主：屏幕画布、触摸、存储、音频、图片。
 // 注意：微信里第一次 wx.createCanvas() 得到的是上屏画布，之后创建的都是离屏画布。
 var __HOST = (function () {
@@ -1127,7 +1127,7 @@ window.RUNE_MAPS=[{"type":"snake","paths":[[[-1,1],[1,1],[1,11],[4,11],[4,1],[7,
 var RuneMusic=window.RuneMusic;
 
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6h';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6i';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -1405,7 +1405,7 @@ const LIVE={
 
 // ======================= v0.3：大厅 / 英雄 / 诅咒 / 难度 =======================
 // 三个模块各有开关：网址加 ?off=meta,hero,curse 可以单独关闭（也方便出问题时直接关掉重发）
-const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true};
+const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true};
 try{const u=new URLSearchParams(location.search),q=u.get('off'),q2=u.get('on');if(q)q.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=false;});if(q2)q2.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=true;});}catch(e){}
 // 局外存档
 const META_DEF={shards:0,owned:{},hero:'wind',diff:0,unlockedDiff:0,runs:0,wins:0,auto:true};
@@ -1590,6 +1590,7 @@ function kill(e){
   if(e.burnT>0&&M.ember){const R=CS*1.1;fx.push({k:'boom',x:e.x,y:e.y,r:R,t:.3,T:.3,c:'#f97316'});
     for(const o of enemies)if(o!==e&&!o.dead&&(o.x-e.x)**2+(o.y-e.y)**2<=R*R){burnOn(o,Math.max(4,e.burnD),2);hit(o,e.max*(e.boss?.03:.15),'cannon',{pure:true,noCrit:true});}}
   if(e.type==='split'){spawn('mini',Math.max(0,e.d-4),e.pi);spawn('mini',Math.max(0,e.d-16),e.pi);}
+  if(e.boss&&FEAT.bossfall&&!FEAT.fx2){bossFall(e);return;}
   fx.push({k:'boom',x:e.x,y:e.y,r:e.r*1.5,t:.22,T:.22,c:'#fffbeb'});fx.push({k:'ring',x:e.x,y:e.y,r:e.r*1.9,t:.22,T:.22,c:'#ffffff'});
   deathFx(e);burst(e.x,e.y,'#ffffff',e.boss?10:4,e.boss?120:70,0,.25,1.6);
   if(e.boss)stopT=Math.max(stopT,.18);else if(e.elite)stopT=Math.max(stopT,.05);
@@ -1770,7 +1771,7 @@ function step_(dt){
   enemies=enemies.filter(e=>!e.dead);
   updFx(dt);
   if(introQ.length){showIntro();return;}
-  if(!queue.length&&!enemies.length)waveDone();
+  if(!queue.length&&!enemies.length&&!fx.some(f=>f.k==='bossfall'))waveDone();
 }
 function interestNow(){return M.interest?Math.min(60,Math.floor(gold*M.interest)):0;}
 function waveDone(){
@@ -1835,7 +1836,7 @@ function chooseNode(k){step++;curNode=k;phase='build';renderPanel();snapRun('bui
 // ======================= 特效 =======================
 function updFx(dt){
   fxClock+=dt;
-  for(const f of fx)f.t-=dt;fx=fx.filter(f=>f.t>0);
+  for(const f of fx){f.t-=dt;if(f.k==='bossfall')updBossFall(f,dt);}fx=fx.filter(f=>f.t>0);
   for(const q of parts){if(q.k==='snow2'){const sp=Math.hypot(q.vx,q.vy);q.vy+=Math.max(0,q.fall-q.vy)*Math.min(1,dt*(sp<40?2.5:.6));}if(q.k==='orbit'){q.t-=dt;q.a+=q.w*dt;q.r+=q.vr*dt;q.vr*=Math.exp(-1.2*dt);q.w*=Math.exp(-.8*dt);q.x=q.cx+Math.cos(q.a)*q.r;q.y=q.cy+Math.sin(q.a)*q.r*q.sq+(q.drop?q.drop*(1-q.t/q.T):0);continue;}q.t-=dt;if(q.drag){const d=Math.exp(-q.drag*dt);q.vx*=d;q.vy*=d;}q.x+=q.vx*dt;q.y+=q.vy*dt;q.vy+=q.g*dt;}
   if(sched.length){for(const s of sched)s.t-=dt;const due=sched.filter(s=>s.t<=0);sched=sched.filter(s=>s.t>0);for(const s of due)s.f();}parts=parts.filter(q=>q.t>0);if(parts.length>420)parts.splice(0,parts.length-420);
   for(const d of decals)d.t-=dt;decals=decals.filter(d=>d.t>0);
@@ -1895,6 +1896,7 @@ function statusFx(dt){
 function drawDecals(){
   for(const d of decals){const a=Math.min(1,d.t/d.T*1.6);ctx.save();ctx.translate(d.x,d.y);ctx.rotate(d.rot);ctx.globalAlpha=a*.55;
     if(d.k==='snowdust'){ctx.globalAlpha=a*.55;ctx.fillStyle='#f8fafc';ctx.beginPath();ctx.ellipse(0,0,d.r,d.r*.5,0,0,7);ctx.fill();ctx.globalAlpha=a*.4;ctx.beginPath();ctx.ellipse(d.r*.6,d.r*.15,d.r*.5,d.r*.28,0,0,7);ctx.fill();}
+    else if(d.k==='voidscar'){ctx.rotate(-d.rot);ctx.globalAlpha=a*.32;ctx.fillStyle='#1e1033';ctx.beginPath();ctx.ellipse(0,0,d.r,d.r*.34,0,0,7);ctx.fill();ctx.globalAlpha=a*.35;ctx.strokeStyle='#6d28d9';ctx.lineWidth=1.5;ctx.stroke();}
     else if(d.k==='zmark'){ctx.globalAlpha=a*.35;ctx.fillStyle='#3b0764';ctx.beginPath();ctx.ellipse(0,0,d.r,d.r*.45,0,0,7);ctx.fill();ctx.globalAlpha=a*.5;ctx.fillStyle='#e9d5ff';ctx.beginPath();ctx.ellipse(0,0,d.r*.35,d.r*.15,0,0,7);ctx.fill();}
     else if(d.k==='scorch'||d.k==='crater'){ctx.globalAlpha=a*.32;ctx.fillStyle=d.c||'#1c1917';ctx.beginPath();ctx.ellipse(0,0,d.r,d.r*.55,0,0,7);ctx.fill();ctx.globalAlpha=a*.35;ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(0,0,d.r*.55,d.r*.3,0,0,7);ctx.fill();
       if(d.k==='crater'){ctx.globalAlpha=a*.5*(.5+.5*Math.sin(performance.now()/150));ctx.fillStyle='#f97316';ctx.beginPath();ctx.ellipse(0,0,d.r*.25,d.r*.14,0,0,7);ctx.fill();}}
@@ -2251,6 +2253,49 @@ function comboRings(t,s,now,pass){const o=cskOf(t);if(!o||t.type==='tesla')retur
       ctx.globalAlpha=pass?.95:.5;ctx.strokeStyle='#f3e8ff';ctx.lineWidth=s*.015;ctx.beginPath();let op=false;for(const[x,y,d]of pts){if((d>=0)===!!pass){if(op)ctx.lineTo(x,y);else{ctx.moveTo(x,y);op=true;}}else op=false;}ctx.stroke();}
   }
   ctx.restore();}
+
+// Boss 倒下（FEAT.bossfall）：灾厄坠落 ——
+// 致命一击：顿帧 + 重震，Boss 闪一下后迅速褪成灰烬色；脚下张开一个紫黑色的洞（洞里有向内卷的紫色漩涡），
+// Boss 一边掉灰一边被吞进洞里（越沉越快），洞口在它沉没后猛地合上（再震一下 + 一圈紫色余波），金币从合上的地方弹出来。
+// 整个过程约 1.9 秒；期间这一站不会结束（奖励界面等它演完再弹）。
+const SPRG=new Map();
+function greySpr(im){if(!im||!im.width)return null;let g=SPRG.get(im);if(g)return g;g=document.createElement('canvas');g.width=im.width;g.height=im.height;const x=g.getContext('2d');x.drawImage(im,0,0);x.globalCompositeOperation='source-atop';x.globalAlpha=.8;x.fillStyle='#8b8580';x.fillRect(0,0,g.width,g.height);x.globalAlpha=.25;x.fillStyle='#e7e5e4';x.fillRect(0,0,g.width,g.height*.4);SPRG.set(im,g);return g;}
+function bossFall(e){const sp=SPR[e.spr+'_'+BIOME]||SPR[e.spr],s=e.r*2.9;
+  fx.push({k:'bossfall',e,sp,spw:SPRW[e.spr],x:e.x,y:e.y,s,r:e.r,dir:e.dir||1,t:1.9,T:1.9,ash:0,closed:false,seed:Math.random()*100});
+  stopT=Math.max(stopT,.16);shake=Math.max(shake,7);sfx('bossdie');}
+function updBossFall(f,dt){const el=f.T-f.t,hy=f.y+f.s*.3;
+  if(el>.4&&el<1.35&&parts.length<190){// 掉灰：灰烬从身体上剥落往上飘
+    f.ash+=dt*30;while(f.ash>=1){f.ash--;const sink=Math.min(1,(el-.4)/.95),top=f.y-f.s*.6+sink*sink*f.s,yy=rnd(top,hy-2);if(yy<hy)P({k:'spark',x:f.x+rnd(-f.s*.32,f.s*.32),y:yy,vx:rnd(-25,25),vy:rnd(-55,-25),g:-10,t:rnd(.5,.9),T:.9,c:Math.random()<.5?'#a8a29e':'#d6d3d1',r:rnd(1.2,2.2)});}}
+  if(el>1.32&&!f.closed){f.closed=true;shake=Math.max(shake,4);sfx('voidclose');
+    texP('ring','#7c3aed',f.x,hy,{s0:f.r*1.5,s1:f.r*5,t:.45,T:.45,a0:.7});
+    for(let i=0;i<10;i++){const a=rnd(-3.1,0),v=rnd(40,110);P({k:'spark',x:f.x+Math.cos(a)*f.r,y:hy,vx:Math.cos(a)*v,vy:Math.sin(a)*v*.6-20,g:-30,t:rnd(.4,.7),T:.7,c:i%2?'#a855f7':'#4c1d95',r:1.8});}}
+  if(el>1.5&&!f.coined){f.coined=true;coins(f.x,hy-4,14);sfx('coin');decals.push({k:'voidscar',x:f.x,y:hy,r:f.r*1.9,t:2.2,T:2.2,rot:0});}
+}
+function drawBossFall(f){const el=f.T-f.t,hy=f.y+f.s*.3,R=f.r*2.1;
+  // 洞的大小：0.08 秒后弹开（带一点回弹），1.32 秒后猛地合上
+  let k=0;if(el>.08){const u=Math.min(1,(el-.08)/.28);k=1+2.2*Math.pow(u-1,3)+1.2*Math.pow(u-1,2);k=Math.min(1.08,Math.max(0,u<1?k:1));}
+  if(el>1.32)k*=Math.max(0,1-(el-1.32)/.16);
+  const rx=R*k,ry=R*.36*k;
+  if(k>.01){ctx.save();
+    ctx.globalAlpha=.35;ctx.fillStyle='#6d28d9';ctx.beginPath();ctx.ellipse(f.x,hy,rx*1.18,ry*1.25,0,0,7);ctx.fill();
+    const g=ctx.createRadialGradient(f.x,hy,1,f.x,hy,rx);g.addColorStop(0,'#000000');g.addColorStop(.55,'#0b0414');g.addColorStop(1,'#3b0764');
+    ctx.globalAlpha=1;ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(f.x,hy,rx,ry,0,0,7);ctx.fill();
+    // 洞里的漩涡：三道向内卷的紫色弧
+    ctx.lineCap='round';for(let i=0;i<3;i++){const a0=el*5+i*2.094,rr=.45+.35*((el*.8+i/3)%1);ctx.globalAlpha=.75*(1-((el*.8+i/3)%1)*.6);ctx.strokeStyle=i%2?'#a855f7':'#7c3aed';ctx.lineWidth=1.8;
+      ctx.beginPath();for(let j=0;j<=10;j++){const a=a0+j*.18,q=rr*(1-j*.03);const x=f.x+Math.cos(a)*rx*q,y=hy+Math.sin(a)*ry*q;j?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();}
+    ctx.globalAlpha=.9;ctx.strokeStyle='#a855f7';ctx.lineWidth=2.2;ctx.beginPath();ctx.ellipse(f.x,hy,rx,ry,0,Math.PI,Math.PI*2);ctx.stroke();
+    ctx.restore();}
+  // Boss 本体：闪一下 → 褪成灰 → 沉进洞里（洞中线以下看不见）
+  if(el<1.38&&f.sp){const sink=el<.4?0:Math.pow(Math.min(1,(el-.4)/.95),1.7),dy=sink*f.s*.95,jit=el>.4?(Math.random()-.5)*2*(1-sink):0,grey=Math.min(1,Math.max(0,(el-.04)/.26));
+    ctx.save();ctx.beginPath();ctx.rect(f.x-f.s,hy-f.s*2,f.s*2,f.s*2);ctx.clip();
+    ctx.translate(f.x+jit,f.y+dy);if(f.dir<0)ctx.scale(-1,1);const s=f.s,sq=1+.06*sink;ctx.scale(1/sq,sq);
+    ctx.globalAlpha=1-grey;ctx.drawImage(f.sp,-s/2,-s*.62,s,s);
+    const gs=greySpr(f.sp);if(gs){ctx.globalAlpha=grey;ctx.drawImage(gs,-s/2,-s*.62,s,s);}
+    if(el<.07&&f.spw){ctx.globalAlpha=.6*(1-el/.07);ctx.drawImage(f.spw,-s/2,-s*.62,s,s);}
+    ctx.restore();
+    // 洞口前沿压在 Boss 身上，看起来是掉"进"洞里
+    if(k>.01){ctx.save();ctx.globalAlpha=.95;ctx.strokeStyle='#c084fc';ctx.lineWidth=2.4;ctx.beginPath();ctx.ellipse(f.x,hy,rx,ry,0,0,Math.PI);ctx.stroke();ctx.globalAlpha=.5;ctx.strokeStyle='#4c1d95';ctx.lineWidth=5;ctx.beginPath();ctx.ellipse(f.x,hy+1.5,rx,ry,0,.15,Math.PI-.15);ctx.stroke();ctx.restore();}}
+}
 function steamPuff(t,s,x,y){const now=fxClock;if((t._stm||0)>now)return;t._stm=now+1.4+((t.c*7+t.r*3)%10)*.08;
   if(parts.length>140||parts.filter(q=>q.stm).length>=6)return;const pv=towerPivot(t),a=t.type==='cannon'?(t.ang||0):0,X=pv.x+x*Math.cos(a)-y*Math.sin(a),Y=pv.y+x*Math.sin(a)+y*Math.cos(a);
   texP('puff','#e2e8f0',X,Y,{vy:-16,vx:rnd(-4,4),s0:s*.12,s1:s*.32,t:1.1,T:1.1,a0:.28,stm:1});}
@@ -2398,6 +2443,7 @@ const SFX={
   leak:[.3,()=>{tone('square',120,80,.32,.07);}],
   wave:[.5,()=>{tone('triangle',392,392,.18,.09);tone('triangle',523,523,.32,.09,.16);}],
   boss:[.5,()=>{tone('sawtooth',196,190,.35,.06);tone('sawtooth',147,140,.6,.07,.3);noise(.5,.05,'lowpass',300,.3);}],
+  voidclose:[.3,()=>{tone('sine',220,40,.35,.16);noise(.3,.08,'lowpass',400);}],
   bossdie:[.5,()=>{noise(.8,.2,'lowpass',500);tone('sine',110,30,.8,.18);}],
   card:[.3,()=>{tone('sine',523,523,.15,.06);tone('sine',659,659,.15,.06,.08);tone('sine',784,784,.25,.06,.16);}],
   build:[.1,()=>{tone('sine',220,110,.12,.12);noise(.06,.05,'lowpass',1200);}],
@@ -3000,6 +3046,7 @@ function draw(){
   }
   // 敌人（序列帧特效的后半段——烟——先画，压在怪下面）
   for(const f of fx)if(f.k==='sprite'&&f.t/f.T<.6)drawSprite(f,Math.min(1,f.t/f.T/.6)*.85);
+  for(const f of fx)if(f.k==='bossfall')drawBossFall(f);
   for(const e of [...enemies].sort((a,b)=>a.y-b.y)){
     const sp=SPR[e.spr+'_'+BIOME]||SPR[e.spr],hidden=e.afx.stealth&&!e.revealed;
     if(e.elite){ctx.strokeStyle='rgba(251,191,36,.9)';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(e.x,e.y+e.r*.8,e.r*1.25,e.r*.48,0,0,7);ctx.stroke();}
