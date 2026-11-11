@@ -1,4 +1,4 @@
-// 符文塔防 v0.6o · 微信小游戏版（由 tools/build_wx.py 生成，不要手改）
+// 符文塔防 v0.6p · 微信小游戏版（由 tools/build_wx.py 生成，不要手改）
 // 符文塔防 · 微信小游戏宿主：屏幕画布、触摸、存储、音频、图片。
 // 注意：微信里第一次 wx.createCanvas() 得到的是上屏画布，之后创建的都是离屏画布。
 var __HOST = (function () {
@@ -1127,7 +1127,7 @@ window.RUNE_MAPS=[{"type":"snake","paths":[[[-1,1],[1,1],[1,11],[4,11],[4,1],[7,
 var RuneMusic=window.RuneMusic;
 
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6o';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6p';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -1596,7 +1596,7 @@ const LIVE={
 
 // ======================= v0.3：大厅 / 英雄 / 诅咒 / 难度 =======================
 // 三个模块各有开关：网址加 ?off=meta,hero,curse 可以单独关闭（也方便出问题时直接关掉重发）
-const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true,map2:true,amb:true,ambsnd:true,lava2:true,death2:true,hero2:true};
+const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true,map2:true,amb:true,ambsnd:true,lava2:true,death2:true,hero2:true,status2:true};
 try{const u=new URLSearchParams(location.search),q=u.get('off'),q2=u.get('on');if(q)q.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=false;});if(q2)q2.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=true;});}catch(e){}
 // 局外存档
 const META_DEF={shards:0,owned:{},hero:'wind',diff:0,unlockedDiff:0,runs:0,wins:0,auto:true};
@@ -1900,7 +1900,7 @@ function updProj(p,dt){
 function updEnemy(e,dt){
   if(e.dead)return;
   e.hitT+=dt;if(e.flT>0)e.flT-=dt;if(e.zjT>0)e.zjT-=dt;if(e.elT>0)e.elT-=dt;if(e.numbT>0)e.numbT-=dt;if(e.kbx){const k=Math.exp(-dt*14);e.kbx*=k;e.kby*=k;if(Math.abs(e.kbx)<.2)e.kbx=e.kby=0;}if(e.frzCd>0)e.frzCd-=dt;if(e.markT>0)e.markT-=dt;if(e.shredT>0)e.shredT-=dt;if(e.steamCd>0)e.steamCd-=dt;
-  if(e.burnT>0){e.burnT-=dt;hit(e,e.burnD*dt,'cannon',{noCrit:true,pure:true});if(e.dead)return;}
+  if(e.burnT>0){e.burnT-=dt;e._burnAge=(e._burnAge||0)+dt;hit(e,e.burnD*dt,'cannon',{noCrit:true,pure:true});if(e.dead)return;}else{e._burnAge=0;e._fl=null;}
   if(has('C_steam')&&e.burnT>0&&(e.slowT>0||e.frzT>0)&&!(e.steamCd>0)){
     e.steamCd=3;const R=1.2*CS,dm=e.max*(e.boss?.03:.12);
     fx.push({k:'boom',x:e.x,y:e.y,r:R,t:.35,T:.35,c:'#e2e8f0'});burst(e.x,e.y,'#f1f5f9',14,120,-40,.6,2.4);smoke(e.x,e.y,6,8,'#f1f5f9',-30);txt(e.x,e.y-18,'蒸汽爆炸','#e2e8f0',.8);sfx('boom');
@@ -1915,7 +1915,7 @@ function updEnemy(e,dt){
       if(best){best.stun=3;fx.push({k:'ring',x:best.x,y:best.y,r:CS*.8,t:.5,T:.5,c:'#f87171'});txt(best.x,best.y-30,'震慑','#f87171',1.2);sfx('leak');}}}
   }
   let f=1;
-  if(e.frzT>0){e.frzT-=dt;f=0;if(e.icB){e.icB.t+=dt;if(e.frzT<=0){iceBurst(e);e.icB=null;}}}
+  if(e.frzT>0){if(FEAT.status2&&!e.icB)e.icB={t:0,seed:Math.random()*99};e.frzT-=dt;f=0;if(e.icB){e.icB.t+=dt;if(e.frzT<=0){iceBurst(e);e.icB=null;}}}
   else if(e.slowT>0){e.slowT-=dt;f=1-e.slowA;}
   {const tk=tiles[Math.floor(e.x/CS)+','+Math.floor(e.y/CS)];if(tk==='swamp')f*=.7;else if(tk==='ice')f*=1.3;}
   if(e.lead)f*=1.25;
@@ -2079,8 +2079,9 @@ let stFxT=0;
 function statusFx(dt){
   stFxT-=dt;if(stFxT>0)return;stFxT=.06;
   for(const e of enemies){if(e.dead)continue;
-    if(e.burnT>0)flame(e.x,e.y-e.r*.4,e.boss?1.6:1);
-    if(e.slowT>0&&!(e.frzT>0)&&Math.random()<.35)P({k:'snow',x:e.x+(Math.random()-.5)*e.r*2,y:e.y-e.r,vx:0,vy:22,g:0,t:.6,T:.6,c:'#e0f2fe',r:1.5});
+    if(e.burnT>0&&FEAT.status2){if(false)P({k:'spark',x:e.x+(Math.random()-.5)*e.r,y:e.y-e.r*1.1,vx:(Math.random()-.5)*16,vy:-rnd(30,55),g:-10,t:.5,T:.5,c:'#fdba74',r:1.1});}
+    else if(e.burnT>0)flame(e.x,e.y-e.r*.4,e.boss?1.6:1);
+    if(!FEAT.status2&&e.slowT>0&&!(e.frzT>0)&&Math.random()<.35)P({k:'snow',x:e.x+(Math.random()-.5)*e.r*2,y:e.y-e.r,vx:0,vy:22,g:0,t:.6,T:.6,c:'#e0f2fe',r:1.5});
     if(e.zapT>0)e.zapT-=.06;
   }
   if(HERO&&HERO.hasteT>0&&!FEAT.hero2)for(const t of towers)if(Math.random()<.3){const a=Math.random()*6.283;P({k:'spark',x:t.x+Math.cos(a)*CS*.5,y:t.y+Math.sin(a)*CS*.3,vx:-Math.sin(a)*70,vy:Math.cos(a)*40-20,g:0,t:.35,T:.35,c:'#86efac',r:1.4});}
@@ -2142,6 +2143,7 @@ function drawFlake(x,y,r,rot,a){ctx.save();ctx.translate(x,y);ctx.rotate(rot);ct
 function drawPart(q){
   const a=Math.max(0,Math.min(1,q.t/q.T*1.4));ctx.globalAlpha=a;
   switch(q.k){
+    case 'ember':{const f=.55+.45*Math.sin(q.t*40+q.x);ctx.globalAlpha=a*f;ctx.fillStyle=q.c;ctx.fillRect(q.x-q.r/2,q.y-q.r/2,q.r,q.r);ctx.globalAlpha=a*f*.3;ctx.beginPath();ctx.arc(q.x,q.y,q.r*1.6,0,7);ctx.fill();break;}
     case 'spark':{const L=Math.hypot(q.vx,q.vy)||1;ctx.strokeStyle=q.c;ctx.lineWidth=q.r;ctx.beginPath();ctx.moveTo(q.x,q.y);ctx.lineTo(q.x-q.vx/L*7,q.y-q.vy/L*7);ctx.stroke();break;}
     case 'smoke':{const k=1-q.t/q.T;ctx.globalAlpha=a*.28;ctx.fillStyle=q.c;ctx.beginPath();ctx.arc(q.x,q.y,q.r*(1+k*.9),0,7);ctx.fill();break;}
     case 'chunk':{q.rot+=q.vr*.016;ctx.save();ctx.translate(q.x,q.y);ctx.rotate(q.rot);ctx.fillStyle=q.c;ctx.fillRect(-q.r/2,-q.r/2,q.r,q.r);ctx.strokeStyle='rgba(0,0,0,.4)';ctx.lineWidth=.8;ctx.strokeRect(-q.r/2,-q.r/2,q.r,q.r);ctx.restore();break;}
@@ -2180,9 +2182,75 @@ function drawStatus(e,s,top){
   if(e.numbT>0&&Z3())drawNumb(e);
   else if(e.zapT>0&&Z3()){const im=tinted('crackle','#e9d5ff');if(im&&Math.random()<.7){const ss=e.r*2.1;ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=Math.min(1,e.zapT*3)*.55;ctx.translate(e.x,e.y-e.r*.3);ctx.rotate(Math.floor(fxClock*15)*2.1);ctx.drawImage(im,-ss/2,-ss/2,ss,ss);ctx.restore();ctx.globalAlpha=1;}}
   else if(e.zapT>0){ctx.strokeStyle='#e9d5ff';ctx.lineWidth=1.3;ctx.beginPath();for(let i=0;i<3;i++){const a=Math.random()*6.283,r=e.r*1.1;ctx.moveTo(e.x+Math.cos(a)*r*.3,e.y-4+Math.sin(a)*r*.3);ctx.lineTo(e.x+Math.cos(a+.4)*r*.8+(Math.random()-.5)*4,e.y-4+Math.sin(a+.4)*r*.8);ctx.lineTo(e.x+Math.cos(a)*r*1.2,e.y-4+Math.sin(a)*r*1.2);}ctx.stroke();}
+  if(FEAT.status2){statusOver(e,top);return;}
   if(e.markT>0){const a=performance.now()/200;ctx.fillStyle='#d8b4fe';for(let i=0;i<3;i++){const an=a+i*2.09;ctx.beginPath();ctx.arc(e.x+Math.cos(an)*e.r*1.1,e.y-4+Math.sin(an)*e.r*.5,1.6,0,7);ctx.fill();}}
   if(e.shredT>0&&e.armor>0){const x=e.x+e.r*.9,y=top-2;ctx.fillStyle='#94a3b8';ctx.beginPath();ctx.moveTo(x,y-5);ctx.lineTo(x+4,y-3);ctx.lineTo(x+3,y+2);ctx.lineTo(x,y+4);ctx.lineTo(x-3,y+2);ctx.lineTo(x-4,y-3);ctx.closePath();ctx.fill();ctx.strokeStyle='#ef4444';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(x-1,y-4);ctx.lineTo(x+1,y);ctx.lineTo(x-1,y+3);ctx.stroke();}
 }
+
+// ======================= 怪身上的状态 2.0（FEAT.status2）=======================
+// 全部直接画出来、跟着怪走，不用粒子（燃烧只偶尔飘一颗火星），所以一屏怪都带状态也不会乱。
+//  燃烧：身上着了三簇跳动的火苗（外橙、中黄、芯白黄），身体泛一层橙色，脚下一圈暖光
+//  减速：身体泛一层冰蓝，脚下结一圈白霜和几根小冰刺，头顶偶尔飘下一片小雪花
+//  冰冻：冰塔冻住的怪也用多面冰晶（和霜语者冰封同款，会裂、会碎）
+//  标记：脚下一圈慢慢转的紫色准星环
+//  破甲：身上两道裂纹 + 头顶一个裂成两半的小盾
+
+// ======================= 燃烧（参考版）=======================
+// 融合了几款游戏的做法：
+//  王国保卫战 / 死亡细胞：火是一段“手绘逐帧火焰动画”贴在怪身上循环播放（这里用 pixelfx 的火焰改出来的 3 种火团，MIT），不是程序拼的形状；
+//  英雄联盟（点燃）：火要把身体“包住”——身后一大团火（画在怪后面）+ 身前一两小团火（画在怪前面），这样怪是在火里面；
+//  暗黑 4 / 杀戮尖塔：血条左边一个小火焰图标，一眼看出谁在烧；身体一圈暖光；
+//  每次掉血（0.6 秒）火“轰”地旺一下、身体闪一下橙光；烧久了身体变焦。
+// 每只怪：火团用哪一种、大小（小/中/大）、位置、从第几帧开始播都随机；走动时火团整体往身后斜（像被风吹）。
+const PFB={w:41,h:62,n:22,ox:17,oy:58};
+function burnInit(e){const R=Math.random,n=e.boss?3:R()<.45?1:2,L=[];
+  // 第 0 团是身后的大火（包住身体），其余是身前的小火团（侧面 / 下半身，避开脸）
+  const nb=e.boss?3:R()<.5?2:3,cx0=(R()-.5)*.3;for(let i=0;i<nb;i++){const u=nb===1?0:i/(nb-1)-.5;L.push({back:1,v:Math.floor(R()*3),tz:(Math.abs(u)<.1?1.2:.85)*(.85+R()*.35),sx:cx0+u*1.15+(R()-.5)*.2,sy:.1+R()*.15,ph:Math.floor(R()*22),flip:R()<.5});}
+  for(let i=1;i<=n;i++){const side=(i%2?1:-1)*(R()<.5?1:-1);L.push({back:0,v:Math.floor(R()*3),tz:[.45,.6,.78][Math.floor(R()*3)],sx:side*(.5+R()*.35),sy:-.05-R()*.4,ph:Math.floor(R()*22),flip:R()<.5});}
+  e._fl=L;e._fTick=fxClock;}
+function burnPatch(e,f,al,flare,bx){const im=SPS.pf_burn;if(!im)return;const r=e.r,sc=r*.075*f.tz*(e.boss?1.15:1)*(1+.15*flare),fi=(Math.floor(fxClock*15)+f.ph)%PFB.n;
+  const x=e.x+f.sx*r+(e.kbx||0),y=e.y+r*.55-f.sy*r+(e.kby||0);ctx.save();ctx.globalAlpha=al*(f.back?.95:1);ctx.translate(x,y);
+  ctx.transform(1,0,bx*.32,1,0,0);ctx.scale(f.flip?-sc:sc,sc);
+  ctx.drawImage(im,fi*PFB.w,f.v*PFB.h+22,PFB.w,PFB.h-22,-PFB.ox,-PFB.oy+22,PFB.w,PFB.h-22);ctx.restore();}
+function burnMove(e){if(e._lx!=null){const dx=e.x-e._lx,spd=Math.abs(dx)+Math.abs(e.y-e._ly);if(spd>.01&&spd<20){e._fvx=(e._fvx||0)*.85+Math.sign(dx)*Math.min(1,Math.abs(dx)/(spd||1))*.15;}else if(spd<=.01)e._fvx=(e._fvx||0)*.9;}e._lx=e.x;e._ly=e.y;return-(e._fvx||0);}
+function burnLayer(e,front,top){if(!e._fl)burnInit(e);const al=Math.min(1,e.burnT/.3),since=((fxClock-(e._fTick||0))%.6+.6)%.6,flare=Math.exp(-since/.12);
+  if(!front){const bx=e._bx=burnMove(e);// 身后：暖光 + 大火团
+    const g=ctx.createRadialGradient(e.x,e.y-e.r*.3,e.r*.3,e.x,e.y-e.r*.3,e.r*1.9);g.addColorStop(0,`rgba(255,138,42,${(.22+.2*flare)*al})`);g.addColorStop(1,'rgba(255,138,42,0)');ctx.fillStyle=g;ctx.fillRect(e.x-e.r*2,e.y-e.r*2.3,e.r*4,e.r*4);
+    for(const f of e._fl)if(f.back)burnPatch(e,f,al,flare,bx);
+    if(flare>.6&&!e._flareP&&parts.length<160){e._flareP=1;for(let q=0;q<3;q++)P({k:'ember',x:e.x+(Math.random()-.5)*e.r,y:e.y-e.r*.8,vx:bx*30+(Math.random()-.5)*30,vy:-rnd(40,75),g:-10,t:rnd(.4,.7),T:.7,c:q?'#ffe26b':'#ff8a2a',r:1.5});}
+    if(flare<.3)e._flareP=0;return;}
+  const bx=e._bx||0;for(const f of e._fl)if(!f.back)burnPatch(e,f,al,flare,bx);
+  // 血条左边的小火焰图标
+  const ix=e.x-Math.max(e.r*2+4,18)/2-5,iy=top-4;ctx.save();ctx.globalAlpha=al;ctx.fillStyle='#7f1d1d';ctx.beginPath();ctx.arc(ix,iy,3.6,0,7);ctx.fill();
+  ctx.fillStyle='#f97316';ctx.beginPath();ctx.moveTo(ix,iy-3.6);ctx.quadraticCurveTo(ix+3,iy-.5,ix+2,iy+2);ctx.quadraticCurveTo(ix,iy+3.2,ix-2,iy+2);ctx.quadraticCurveTo(ix-3,iy-.5,ix,iy-3.6);ctx.fill();
+  ctx.fillStyle='#fde68a';ctx.beginPath();ctx.ellipse(ix,iy+1,1,1.4,0,0,7);ctx.fill();ctx.restore();}
+const SPRTI=new Map(),SPREDGE=new Map();
+// 取一张贴图的轮廓点（归一化坐标 + 向外的法线），用来放着火点
+function spriteEdge(im){if(!im||!im.width)return[];let E=SPREDGE.get(im);if(E)return E;E=[];try{const N=40,c=document.createElement('canvas');c.width=N;c.height=N;const x=c.getContext('2d');x.drawImage(im,0,0,N,N);const d=x.getImageData(0,0,N,N).data,A=(i,j)=>(i<0||j<0||i>=N||j>=N)?0:d[(j*N+i)*4+3]>60?1:0;
+  for(let j=1;j<N-1;j++)for(let i=1;i<N-1;i++)if(A(i,j)){const nx=A(i-1,j)-A(i+1,j),ny=A(i,j-1)-A(i,j+1);if(nx||ny){const l=Math.hypot(nx,ny);E.push([(i+.5)/N,(j+.5)/N,nx/l,ny/l]);}}}catch(e){}
+  SPREDGE.set(im,E);return E;}
+function tintSpr(im,c){if(!im||!im.width)return null;let m=SPRTI.get(im);if(!m){m={};SPRTI.set(im,m);}if(m[c])return m[c];const g=document.createElement('canvas');g.width=im.width;g.height=im.height;const x=g.getContext('2d');x.drawImage(im,0,0);x.globalCompositeOperation='source-atop';x.fillStyle=c;x.fillRect(0,0,g.width,g.height);m[c]=g;return g;}
+function statusGround(e){const fy=e.y+e.r*.8;
+  if(e.markT>0){const a=fxClock*1.2+e.d*.01,rx=e.r*1.55,ry=rx*.4,al=Math.min(1,e.markT/.4);ctx.save();ctx.globalAlpha=.85*al;ctx.strokeStyle='#c084fc';ctx.lineWidth=1.6;ctx.lineCap='round';
+    for(let i=0;i<4;i++){const a0=a+i*1.5708;ctx.beginPath();ctx.ellipse(e.x,fy,rx,ry,0,a0+.25,a0+1.32);ctx.stroke();const tx=Math.cos(a0)*rx,ty=Math.sin(a0)*ry;ctx.beginPath();ctx.moveTo(e.x+tx*.82,fy+ty*.82);ctx.lineTo(e.x+tx*1.18,fy+ty*1.18);ctx.stroke();}ctx.restore();}
+  if(false){const al=Math.min(1,e.burnT/.3)*(.7+.5*Math.exp(-(((fxClock-(e._fTick||0))%.6+.6)%.6)/.12)),g=ctx.createRadialGradient(e.x,fy,1,e.x,fy,e.r*1.5);g.addColorStop(0,`rgba(249,115,22,${.3*al})`);g.addColorStop(1,'rgba(249,115,22,0)');ctx.save();ctx.translate(e.x,fy);ctx.scale(1,.42);ctx.translate(-e.x,-fy);ctx.fillStyle=g;ctx.fillRect(e.x-e.r*1.5,fy-e.r*1.5,e.r*3,e.r*3);ctx.restore();}
+  if(e.slowT>0&&!(e.frzT>0)){const al=Math.min(1,e.slowT/.3);ctx.save();ctx.globalAlpha=.55*al;ctx.fillStyle='#e0f2fe';ctx.beginPath();ctx.ellipse(e.x,fy,e.r*1.25,e.r*.42,0,0,7);ctx.fill();
+    ctx.globalAlpha=.9*al;const sd=Math.floor(e.max*7+e.r*13)%97;for(let i=0;i<5;i++){const u=((i*37+sd)%100)/100,an=i*1.2566+u,x=e.x+Math.cos(an)*e.r*1.1,y=fy+Math.sin(an)*e.r*.36,h=2.5+u*3.5;ctx.fillStyle=i%2?'#bae6fd':'#f0f9ff';ctx.beginPath();ctx.moveTo(x-1.5,y);ctx.lineTo(x+(u-.5)*2,y-h);ctx.lineTo(x+1.5,y);ctx.closePath();ctx.fill();}ctx.restore();}
+  else if(e.frzT>0){ctx.fillStyle='rgba(224,242,254,.55)';ctx.beginPath();ctx.ellipse(e.x,fy,e.r*1.3,e.r*.45,0,0,7);ctx.fill();}}
+// 不规则的火舌：左右两条边各自抖动（越往上抖得越厉害、越细），尖端会歪
+function flameWild(x,y,w,h,lx,ly,t,sd,sw){sw=sw||1;const N=6,L=[],R=[];for(let i=0;i<=N;i++){const u=i/N,c=lx*Math.pow(u,1.3)+Math.sin(t*7+sd+u*4.2)*w*.5*u*sw+Math.sin(t*13.3+sd*2+u*7)*w*.28*u*sw,hw=w*Math.pow(1-u,.75)*(1+.3*Math.sin(t*9.1+u*6+sd)),yy=y-h*u+ly*u;L.push([x+c-hw*(1+.25*Math.sin(t*11+sd+i)),yy]);R.push([x+c+hw*(1+.25*Math.sin(t*10+sd*3+i*1.7)),yy]);}
+  ctx.beginPath();ctx.moveTo(L[0][0],L[0][1]);for(let i=1;i<=N;i++){const m=[(L[i-1][0]+L[i][0])/2,(L[i-1][1]+L[i][1])/2];ctx.quadraticCurveTo(L[i-1][0],L[i-1][1],m[0],m[1]);}ctx.lineTo(L[N][0],L[N][1]);
+  for(let i=N-1;i>=0;i--){const m=[(R[i+1][0]+R[i][0])/2,(R[i+1][1]+R[i][1])/2];ctx.quadraticCurveTo(R[i+1][0],R[i+1][1],m[0],m[1]);}ctx.lineTo(R[0][0],R[0][1]);ctx.quadraticCurveTo(x,y+w*.7,L[0][0],L[0][1]);ctx.closePath();ctx.fill();}
+function flameTongue(x,y,w,h,lean,ly){ly=ly||0;ctx.beginPath();ctx.moveTo(x-w,y);ctx.quadraticCurveTo(x-w*1.1+lean*.25,y-h*.45,x+lean,y-h+ly);ctx.quadraticCurveTo(x+w*1.1+lean*.45,y-h*.45,x+w,y);ctx.quadraticCurveTo(x,y+w*.6,x-w,y);ctx.closePath();ctx.fill();}
+function statusOver(e,top){const now=fxClock;
+  if(e.burnT>0&&!(e.frzT>0))burnLayer(e,1,top);
+  if(e.slowT>0&&!(e.frzT>0)){const ph=(now*.55+e.d*.003)%1;if(ph<.6){const k=ph/.6,x=e.x+Math.sin(k*5+e.d)*e.r*.7,y=top-2+k*e.r*1.6;ctx.save();ctx.globalAlpha=Math.sin(k*Math.PI)*.9;ctx.strokeStyle='#f0f9ff';ctx.lineWidth=1;ctx.translate(x,y);ctx.rotate(k*2);for(let j=0;j<3;j++){ctx.rotate(1.047);ctx.beginPath();ctx.moveTo(-2.6,0);ctx.lineTo(2.6,0);ctx.stroke();}ctx.restore();}}
+  if(e.shredT>0&&e.armor>0){const al=Math.min(1,e.shredT/.3),r=e.r;ctx.save();ctx.globalAlpha=.8*al;ctx.lineCap='round';ctx.lineJoin='round';
+    const x=e.x+r*.95,y=top-3;for(const d of [-1,1]){ctx.save();ctx.translate(x+d*1.7,y+(d>0?.8:0));ctx.rotate(d*.2);ctx.beginPath();ctx.rect(d>0?0:-7,-8,7,16);ctx.clip();
+      ctx.fillStyle=d>0?'#64748b':'#94a3b8';ctx.strokeStyle='#1e293b';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,-5.5);ctx.lineTo(4.5,-4.2);ctx.lineTo(4.3,.5);ctx.quadraticCurveTo(3.5,4,0,6);ctx.quadraticCurveTo(-3.5,4,-4.3,.5);ctx.lineTo(-4.5,-4.2);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}
+    ctx.strokeStyle='#ef4444';ctx.lineWidth=1.1;ctx.beginPath();ctx.moveTo(x,y-5);ctx.lineTo(x+1.2,y-1.5);ctx.lineTo(x-1,y+1);ctx.lineTo(x+.6,y+5);ctx.stroke();
+    ctx.restore();}
+  ctx.globalAlpha=1;}
 // 处决：一道红色斩击
 function slashFx(e){fx.push({k:'slash',x:e.x,y:e.y-4,r:e.r*2,t:.25,T:.25});sparks(e.x,e.y,'#fca5a5',6,160,.25);sfx('slash');}
 
@@ -2733,11 +2801,62 @@ function drawCrystal(cx,by,P,a,seed,cracks,op){op=op||1;const L=[-.6,-.8],cen=[c
   const w0=P[0][0],w1=P[P.length-1][0];ctx.globalAlpha=a*.95;ctx.fillStyle=ICEC[6];for(let x=w0-2;x<w1+2;x+=3.2){const h=2+((x*13+seed*7)%3);ctx.beginPath();ctx.moveTo(cx+x-1.6,by+1);ctx.lineTo(cx+x,by+1-h);ctx.lineTo(cx+x+1.6,by+1);ctx.closePath();ctx.fill();}
   ctx.globalAlpha=a*.5;ctx.fillStyle=ICEC[7];ctx.beginPath();ctx.ellipse(cx,by+1,(w1-w0)*.6,2.2,0,0,7);ctx.fill();
   ctx.restore();ctx.globalAlpha=1;}
-function drawIceBlock(e){const B=e.icB,grow=Math.min(1,B.t/.2),left=e.frzT,b=e.y+e.r*.6;if(!B.P)B.P=crystalPts(e.r*1.3,e.r*2.6,B.seed,3);
-  ctx.save();const top=b-e.r*3.2,cy=b-(b-top)*grow;ctx.beginPath();ctx.rect(e.x-e.r*3,cy,e.r*6,b-cy+6);ctx.clip();
-  drawCrystal(e.x,b,B.P,1,B.seed,left<.7?1-left/.7:0,1.15);ctx.restore();
-  if(grow<1){ctx.globalAlpha=.9;ctx.strokeStyle=ICEC[7];ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(e.x-e.r*1.2,cy);ctx.lineTo(e.x+e.r*1.2,cy);ctx.stroke();ctx.globalAlpha=1;}
-  else{const ph=(B.t*1.3+B.seed)%2.2;if(ph<.25){const k=ph/.25,gx=e.x-e.r*.4,gy=b-e.r*2;ctx.globalAlpha=Math.sin(k*Math.PI);ctx.strokeStyle='#fff';ctx.lineWidth=1.2;const L=3+3*Math.sin(k*Math.PI);ctx.beginPath();ctx.moveTo(gx-L,gy);ctx.lineTo(gx+L,gy);ctx.moveTo(gx,gy-L);ctx.lineTo(gx,gy+L);ctx.stroke();ctx.globalAlpha=1;}}}
+// 冻住怪的冰块：做成一整块有厚度的冰坨（正面 + 顶面 + 侧面三个面），不是几何切面。
+//  正面上浅下深的冰蓝渐变、半透明能看到里面发蓝的怪；一圈内倒角亮边；里面有几道斜的折射光带、几颗小气泡和白色冰絮；
+//  顶上盖着一层凹凸不平的白霜，左上角一块圆润的高光；底下挂着霜碴。每只怪的冰坨大小、歪斜、细节都不一样。
+function iceChunk(cx,by,w,h,seed,cracks,tSheen){let sd=1+Math.floor(seed*997);const r=()=>{sd=(sd*16807)%2147483647;return sd/2147483647;};
+  // 每块冰的棱角都不一样：整体宽窄高矮、左右两个上角被“敲掉”的大小（可能几乎没敲、也可能敲掉一大块）、
+  // 顶边是平的 / 斜的 / 中间凸起一个棱 / 凹下去一块、侧边可能鼓出或缺一口，都随机。
+  const j=()=>(r()-.5);w*=.9+.25*r();h*=.88+.28*r();const tilt=j()*.16,cl=.06+r()*r()*.5,cr=.06+r()*r()*.5,hl=.5+.4*r(),hr=.5+.4*r();
+  const yT=u=>-h*(.95+tilt*(u-.5)*2),Lc=[],Tc=[],Rc=[];
+  Lc.push([-w*(1+.05*j()),0]);if(r()<.5)Lc.push([-w*(1.02+.1*r()),-h*hl*(.35+.3*r())]);Lc.push([-w*(1+.04*j()),-h*hl*(1-cl*.5)]);
+  const xl=-w*(1-cl*1.1),xr=w*(1-cr*1.1);Tc.push([xl,yT(0)]);const mode=r();
+  if(mode<.3){const u=.3+.4*r();Tc.push([xl+(xr-xl)*u,yT(u)-h*(.05+.1*r())]);}
+  else if(mode<.55){const u=.25+.3*r(),u2=u+.15+.2*r();Tc.push([xl+(xr-xl)*u,yT(u)]);Tc.push([xl+(xr-xl)*(u+.05),yT(u)+h*(.05+.07*r())]);Tc.push([xl+(xr-xl)*u2,yT(u2)+h*(.04+.05*r())]);Tc.push([xl+(xr-xl)*(u2+.04),yT(u2)]);}
+  else if(mode<.75){const u=.35+.3*r();Tc.push([xl+(xr-xl)*u,yT(u)+h*.03*j()]);}
+  Tc.push([xr,yT(1)]);
+  Rc.push([w*(1+.04*j()),-h*hr*(1-cr*.5)]);if(r()<.5)Rc.push([w*(1.02+.1*r()),-h*hr*(.35+.3*r())]);Rc.push([w*(1+.05*j()),0]);
+  const F=[...Lc,...Tc,...Rc],ox=w*(.14+.12*r()),oy=-h*(.09+.07*r()),sh=([x,y])=>[x+ox,y+oy];
+  const T=[...Tc,...Tc.slice().reverse().map(sh)],S=[Tc[Tc.length-1],...Rc,...Rc.slice().reverse().map(([x,y],i)=>i===0?[x+ox,y+oy*.9]:[x+ox,y+oy]),sh(Tc[Tc.length-1])];
+  const poly=P=>{ctx.beginPath();P.forEach(([x,y],i)=>i?ctx.lineTo(cx+x,by+y):ctx.moveTo(cx+x,by+y));ctx.closePath();};
+  ctx.save();ctx.lineJoin='round';
+  // 侧面（暗）、顶面（亮）
+  poly(S);ctx.globalAlpha=.6;ctx.fillStyle='#2c6fb8';ctx.fill();ctx.globalAlpha=.8;ctx.strokeStyle='#8fd8ff';ctx.lineWidth=1;ctx.stroke();
+  poly(T);ctx.globalAlpha=.75;ctx.fillStyle='#d9f6ff';ctx.fill();
+  // 正面
+  const g=ctx.createLinearGradient(cx,by-h,cx,by);g.addColorStop(0,'rgba(200,240,255,.62)');g.addColorStop(.5,'rgba(120,200,245,.5)');g.addColorStop(1,'rgba(50,120,205,.62)');poly(F);ctx.globalAlpha=1;ctx.fillStyle=g;ctx.fill();
+  ctx.save();poly(F);ctx.clip();
+  // 折射光带
+  for(let i=0;i<3;i++){const x0=cx-w*1.3+r()*w*2,bw=w*(.12+.2*r());ctx.globalAlpha=.16+.1*r();ctx.fillStyle='#ffffff';ctx.beginPath();ctx.moveTo(x0,by);ctx.lineTo(x0+bw,by);ctx.lineTo(x0+bw+h*.45,by-h);ctx.lineTo(x0+h*.45,by-h);ctx.closePath();ctx.fill();}
+  // 扫过的反光
+  if(tSheen!=null){const sw=((tSheen*.6+seed)%2.2)-.4,x0=cx-w*1.6+sw*w*3;ctx.globalAlpha=.28;ctx.fillStyle='#fff';ctx.beginPath();ctx.moveTo(x0,by);ctx.lineTo(x0+w*.22,by);ctx.lineTo(x0+w*.22+h*.45,by-h);ctx.lineTo(x0+h*.45,by-h);ctx.closePath();ctx.fill();}
+  // 冰絮（里面的白色絮状纹）和气泡
+  ctx.strokeStyle='#ffffff';ctx.lineCap='round';for(let i=0;i<4;i++){const x=cx+j()*w*1.5,y=by-h*(.15+.65*r());ctx.globalAlpha=.3+.25*r();ctx.lineWidth=.8+r();ctx.beginPath();ctx.moveTo(x,y);ctx.quadraticCurveTo(x+w*.15*j(),y-h*.08,x+w*.3*j(),y-h*(.1+.1*r()));ctx.stroke();}
+  for(let i=0;i<4;i++){const x=cx+j()*w*1.6,y=by-h*(.1+.7*r()),rr=.8+r()*1.3;ctx.globalAlpha=.7;ctx.lineWidth=.7;ctx.beginPath();ctx.arc(x,y,rr,0,7);ctx.stroke();ctx.globalAlpha=.9;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x-rr*.3,y-rr*.3,rr*.3,0,7);ctx.fill();}
+  // 底部更深（冰越厚越蓝）
+  const g2=ctx.createLinearGradient(cx,by-h*.3,cx,by);g2.addColorStop(0,'rgba(30,80,170,0)');g2.addColorStop(1,'rgba(30,80,170,.35)');ctx.globalAlpha=1;ctx.fillStyle=g2;ctx.fillRect(cx-w*1.3,by-h*.3,w*2.6,h*.3);
+  // 裂纹
+  if(cracks>0){ctx.globalAlpha=1;ctx.strokeStyle='#ffffff';ctx.lineWidth=1.1;for(let i=0;i<4;i++){let x=cx+j()*w*1.2,y=by-r()*h*.8;ctx.beginPath();ctx.moveTo(x,y);const n=1+Math.floor(cracks*4);for(let q=0;q<n;q++){x+=j()*w*.6;y+=j()*h*.35;ctx.lineTo(x,y);}ctx.stroke();}}
+  ctx.restore();
+  // 内倒角亮边
+  const cxm=0,cym=-h*.46,I=F.map(([x,y])=>[cxm+(x-cxm)*.86,cym+(y-cym)*.86]);poly(I);ctx.globalAlpha=.45;ctx.strokeStyle='#f0fbff';ctx.lineWidth=1;ctx.stroke();
+  // 外轮廓
+  poly(F);ctx.globalAlpha=.55;ctx.strokeStyle='#1d5fa8';ctx.lineWidth=2.4;ctx.stroke();ctx.globalAlpha=1;ctx.strokeStyle='#c9f2ff';ctx.lineWidth=1.1;ctx.stroke();
+  poly(T);ctx.globalAlpha=.9;ctx.strokeStyle='#ffffff';ctx.lineWidth=1;ctx.stroke();
+  // 顶上的白霜（凹凸不平，沿着顶面前沿往下挂一点）
+  ctx.globalAlpha=.95;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.moveTo(cx+Tc[0][0],by+Tc[0][1]);for(let q=1;q<Tc.length;q++){const A=Tc[q-1],B=Tc[q],n=Math.max(2,Math.round(Math.abs(B[0]-A[0])/5));for(let i=1;i<=n;i++){const u=i/n,x=A[0]+(B[0]-A[0])*u,y=A[1]+(B[1]-A[1])*u;ctx.quadraticCurveTo(cx+x-(B[0]-A[0])/n/2,by+y+2+r()*h*.08,cx+x,by+y+(i%2?1:2.5));}}
+  for(let q=Tc.length-1;q>=0;q--)ctx.lineTo(cx+Tc[q][0]+ox*.6,by+Tc[q][1]+oy*.6);ctx.closePath();ctx.fill();
+  // 左上高光
+  ctx.globalAlpha=.75;ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(cx-w*.62,by-h*.66,w*.1,h*.13,-.35,0,7);ctx.fill();ctx.globalAlpha=.6;ctx.beginPath();ctx.ellipse(cx-w*.66,by-h*.44,w*.05,h*.05,-.35,0,7);ctx.fill();
+  // 底下的霜碴 + 地上一圈霜
+  ctx.globalAlpha=.9;ctx.fillStyle='#eafaff';for(let x=-w*1.08;x<w*1.1;x+=3){const hh=1.5+r()*3;ctx.beginPath();ctx.moveTo(cx+x-1.7,by+1);ctx.lineTo(cx+x+j()*1.5,by+1-hh);ctx.lineTo(cx+x+1.7,by+1);ctx.closePath();ctx.fill();}
+  ctx.globalAlpha=.45;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.ellipse(cx+ox*.3,by+1.5,w*1.3,2.6,0,0,7);ctx.fill();
+  ctx.restore();ctx.globalAlpha=1;}
+function drawIceBlock(e){const B=e.icB,grow=Math.min(1,B.t/.2),left=e.frzT,b=e.y+e.r*.62,w=e.r*1.22,h=e.r*2.45;
+  ctx.save();const top=b-e.r*3.1,cy=b-(b-top)*grow;ctx.beginPath();ctx.rect(e.x-e.r*3,cy,e.r*6,b-cy+6);ctx.clip();
+  iceChunk(e.x,b,w,h,B.seed,left<.7?1-left/.7:0,B.t);ctx.restore();
+  if(grow<1){ctx.globalAlpha=.9;ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(e.x-e.r*1.25,cy);ctx.lineTo(e.x+e.r*1.25,cy);ctx.stroke();ctx.globalAlpha=1;}
+  else{const ph=(B.t*1.3+B.seed)%2.2;if(ph<.25){const k=ph/.25,gx=e.x-e.r*.75,gy=b-e.r*1.65;ctx.globalAlpha=Math.sin(k*Math.PI);ctx.strokeStyle='#fff';ctx.lineWidth=1.2;const L=3+3*Math.sin(k*Math.PI);ctx.beginPath();ctx.moveTo(gx-L,gy);ctx.lineTo(gx+L,gy);ctx.moveTo(gx,gy-L);ctx.lineTo(gx,gy+L);ctx.stroke();ctx.globalAlpha=1;}}}
 function iceBurst(e){const b=e.y+e.r*.55;if(parts.length<170)for(let i=0;i<9;i++){const a=-Math.PI*Math.random(),v=rnd(60,150);P({k:'shard',x:e.x+rnd(-e.r,e.r),y:b-rnd(0,e.r*2),vx:Math.cos(a)*v,vy:Math.sin(a)*v,g:420,t:rnd(.4,.6),T:.6,c:i%3?ICEC[5]:ICEC[6],r:rnd(1.8,3),rot:Math.random()*6,vr:rnd(-10,10)});}
   texP('puff2','#e0f2fe',e.x,b-e.r*.6,{s0:e.r*1.2,s1:e.r*2.6,t:.35,T:.35,a0:.45});sfx('crack');}
 // 寒冰壁垒：城门前“咚”地立起一面巨大的冰盾（从地里升起 + 落地一震），盾面是多面冰晶，中间一枚雪花纹章，盾沿厚实发亮；
@@ -2885,7 +3004,7 @@ function spriteFx(k,x,y,s,T){fx.push({k:'sprite',sp:k,x,y,s,t:T,T});}
 function spriteInit(){
   if(typeof Image==='undefined')return;
   for(const k of ['boom','zhit','ahit']){try{const im=new Image();im.onload=()=>{SPS[k]=im;};im.src=(window.RUNE_PNG?window.RUNE_PNG+'fx_':'fx/')+'sp_'+k+'.png';}catch(e){}}
-  for(const k of ['lava0','lava1','lavaglow0','lavaglow1','pf_whirl','pf_arrow']){try{const im=new Image();im.onload=()=>{SPS[k]=im;};im.src=(window.RUNE_PNG?window.RUNE_PNG+'fx_':'fx/')+k+'.png';}catch(e){}}
+  for(const k of ['lava0','lava1','lavaglow0','lavaglow1','pf_whirl','pf_arrow','pf_burn']){try{const im=new Image();im.onload=()=>{SPS[k]=im;};im.src=(window.RUNE_PNG?window.RUNE_PNG+'fx_':'fx/')+k+'.png';}catch(e){}}
 }
 function drawSprite(f,alpha){const im=SPS[f.sp];if(!im)return;const a=f.t/f.T,n=Math.round(im.width/im.height),i=Math.min(n-1,Math.floor((1-a)*n)),fw=im.height;
   ctx.globalAlpha=alpha;ctx.drawImage(im,i*fw,0,fw,fw,f.x-f.s/2,f.y-f.s/2,f.s,f.s);ctx.globalAlpha=1;}
@@ -3630,10 +3749,12 @@ function draw(){
     if(e.elite){ctx.strokeStyle='rgba(251,191,36,.9)';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(e.x,e.y+e.r*.8,e.r*1.25,e.r*.48,0,0,7);ctx.stroke();}
     if(e.lead){ctx.fillStyle='rgba(248,113,113,.25)';ctx.beginPath();ctx.ellipse(e.x,e.y+e.r*.8,e.r*1.1,e.r*.4,0,0,7);ctx.fill();}
     if(e.afx.leader){ctx.strokeStyle='rgba(248,113,113,.35)';ctx.setLineDash([4,4]);ctx.beginPath();ctx.arc(e.x,e.y,2*CS,0,7);ctx.stroke();ctx.setLineDash([]);}
-    if(e.frzT>0||e.slowT>0){ctx.fillStyle=e.frzT>0?'rgba(186,230,253,.6)':'rgba(96,165,250,.4)';ctx.beginPath();ctx.ellipse(e.x,e.y+e.r*.8,e.r*1.3,e.r*.5,0,0,7);ctx.fill();}
+    if(FEAT.status2)statusGround(e);
+    else if(e.frzT>0||e.slowT>0){ctx.fillStyle=e.frzT>0?'rgba(186,230,253,.6)':'rgba(96,165,250,.4)';ctx.beginPath();ctx.ellipse(e.x,e.y+e.r*.8,e.r*1.3,e.r*.5,0,0,7);ctx.fill();}
     if(e.type==='boss2'){const c=TT[e.immune].color;ctx.strokeStyle=c;ctx.globalAlpha=.6;ctx.lineWidth=3;ctx.beginPath();ctx.arc(e.x,e.y-4,e.r*1.5,0,7);ctx.stroke();ctx.globalAlpha=1;}
     if(e.type==='boss3'&&e.enraged){ctx.fillStyle='rgba(239,68,68,.22)';ctx.beginPath();ctx.arc(e.x,e.y-4,e.r*1.6,0,7);ctx.fill();}
     let top=e.y-e.r-4;
+    if(FEAT.status2&&e.burnT>0&&!(e.frzT>0)&&!hidden)burnLayer(e,0,top);
     if(hidden)ctx.globalAlpha=.3;
     if(sp){
       const s=e.r*2.9;top=e.y-s*.62;
@@ -3641,6 +3762,9 @@ function draw(){
       const sx=(1+.06*hop*(e.boss?.5:1))*(1+.12*fk),sy=(1-.07*hop*(e.boss?.5:1))*(1-.1*fk);
       ctx.save();ctx.translate((e.kbx||0)+(e.numbT>0&&Math.floor(fxClock*9+e.d)%3===0?(Math.floor(fxClock*9)%2?1:-1)*(e.boss?.6:1.2):0)+e.x+(e.zjT>0?(Math.random()-.5)*(e.boss?2:5)*Math.min(1,e.zjT/.08):0),(e.kby||0)+e.y-hop*s*(e.boss?.02:.05));if(e.dir<0)ctx.scale(-1,1);ctx.scale(sx,sy);ctx.drawImage(sp,-s/2,-s*.62,s,s);
       if(fk>0&&SPRW[e.spr]){ctx.globalAlpha*=(e.elT>0?1:e.flA&&e.flT>0?e.flA:.8)*fk;ctx.drawImage(SPRW[e.spr],-s/2,-s*.62,s,s);}
+      if(FEAT.status2&&!hidden){if(e.slowT>0&&!(e.frzT>0)){const ts=tintSpr(sp,'#60a5fa');if(ts){ctx.globalAlpha=.4*Math.min(1,e.slowT/.3);ctx.drawImage(ts,-s/2,-s*.62,s,s);}}
+        if(e.frzT>0){const ts=tintSpr(sp,'#7dd3fc');if(ts){ctx.globalAlpha=.45;ctx.drawImage(ts,-s/2,-s*.62,s,s);}}
+        else if(e.burnT>0){const since=((fxClock-(e._fTick||0))%.6+.6)%.6,fl=Math.exp(-since/.1),age=Math.min(1,(e._burnAge||0)/6);const td=tintSpr(sp,'#2a1a14');if(td){ctx.globalAlpha=.35*age;ctx.drawImage(td,-s/2,-s*.62,s,s);}const ts=tintSpr(sp,'#ff8a2a');if(ts){ctx.globalAlpha=(.12+.5*fl)*Math.min(1,e.burnT/.3);ctx.drawImage(ts,-s/2,-s*.62,s,s);}}}
       ctx.restore();
     }else{ctx.fillStyle=e.col;ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,7);ctx.fill();}
     ctx.globalAlpha=1;

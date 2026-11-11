@@ -6,6 +6,7 @@
 另外直接使用了 pixelfx 的两个效果烘焙成的贴图（按 MIT 许可使用，保留下方版权声明）：
 - `fx/pf_whirl.png`：由 pixelfx `nature/tornado` 改编（换成绿白配色、去掉顶部闪电），风行者「疾风号令」的龙卷风。
 - `fx/pf_arrow.png`：pixelfx `projectiles/arrow`（尾羽改成绿白配色），风行者「箭雨」的箭。
+- `fx/pf_burn.png`：由 pixelfx `fire/campfire` 改编（去掉木柴、减少烟雾，做成 3 种火团形态），怪物「燃烧」状态的身上火焰。
 以上几项的画法为本游戏重新实现。
 
 MIT License
