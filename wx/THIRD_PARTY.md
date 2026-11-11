@@ -7,6 +7,11 @@
 - `fx/pf_whirl.png`：由 pixelfx `nature/tornado` 改编（换成绿白配色、去掉顶部闪电），风行者「疾风号令」的龙卷风。
 - `fx/pf_arrow.png`：pixelfx `projectiles/arrow`（尾羽改成绿白配色），风行者「箭雨」的箭。
 - `fx/pf_burn.png`：由 pixelfx `fire/campfire` 改编（去掉木柴、减少烟雾，做成 3 种火团形态），怪物「燃烧」状态的身上火焰。
+- `fx/pf_steam.png`：由 pixelfx `explosions/smoke-bomb` 改编（去掉烟雾弹罐子，换成白色水汽、往上冒），合体「蒸汽爆炸」。
+- `fx/pf_ember.png`：pixelfx `fire/fire-ring`，合体「余烬」。
+- `fx/pf_pshot.png`、`fx/pf_plasma.png`：pixelfx `projectiles/plasma-shot` 与 `explosions/plasma-explosion`（爆炸换成绿色），合体「等离子」。
+- `fx/pf_gold.png`：pixelfx `spawn/coin-drop`（烟团换成熔金橙色），合体「熔金」。
+- `fx/pf_over.png`：pixelfx `impacts/crit-hit`（换成紫色），电塔符文「过载」。
 以上几项的画法为本游戏重新实现。
 
 MIT License

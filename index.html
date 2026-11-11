@@ -107,7 +107,7 @@ button{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}
 <script src="maps.js"></script>
 <script>
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6p';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6q';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -576,7 +576,7 @@ const LIVE={
 
 // ======================= v0.3：大厅 / 英雄 / 诅咒 / 难度 =======================
 // 三个模块各有开关：网址加 ?off=meta,hero,curse 可以单独关闭（也方便出问题时直接关掉重发）
-const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true,map2:true,amb:true,ambsnd:true,lava2:true,death2:true,hero2:true,status2:true};
+const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true,map2:true,amb:true,ambsnd:true,lava2:true,death2:true,hero2:true,status2:true,combo2:true};
 try{const u=new URLSearchParams(location.search),q=u.get('off'),q2=u.get('on');if(q)q.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=false;});if(q2)q2.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=true;});}catch(e){}
 // 局外存档
 const META_DEF={shards:0,owned:{},hero:'wind',diff:0,unlockedDiff:0,runs:0,wins:0,auto:true};
@@ -756,9 +756,9 @@ function kill(e){
   e.dead=true;
   let g=e.gold+M.killGold;
   if(M.loot&&(e.elite||e.boss))g+=e.gold;
-  if(e.burnT>0&&has('C_moltengold')){g*=2;txt(e.x,e.y-12,'熔金','#fbbf24',.7);}
+  if(e.burnT>0&&has('C_moltengold')){g*=2;txt(e.x,e.y-12,'熔金','#fbbf24',.7);if(FEAT.combo2&&SPS.pf_gold){const ns=fx.reduce((n,f)=>n+(f.k==='pfx'&&f.id==='gold'&&f.t/f.T>.6),0);pfx('gold',e.x,e.y+e.r*.5,rnd(.62,.7)*Math.max(.6,1-.12*ns),{sp:rnd(1,1.15),al:Math.max(.6,1-.12*ns)});}}
   gold+=g;stats.bounty+=M.killGold;stats.kills++;
-  if(e.burnT>0&&M.ember){const R=CS*1.1;fx.push({k:'boom',x:e.x,y:e.y,r:R,t:.3,T:.3,c:'#f97316'});
+  if(e.burnT>0&&M.ember){const R=CS*1.1;if(FEAT.combo2&&SPS.pf_ember){const ns=fx.reduce((n,f)=>n+(f.k==='pfx'&&f.id==='ember'&&f.t/f.T>.5),0);pfx('ember',e.x,e.y+e.r*.45,R/92*rnd(.92,1.05)*Math.max(.6,1-.15*ns),{sp:rnd(1.15,1.3),al:Math.max(.55,1-.15*ns),gnd:1});shake=Math.max(shake,2.5);}else fx.push({k:'boom',x:e.x,y:e.y,r:R,t:.3,T:.3,c:'#f97316'});
     for(const o of enemies)if(o!==e&&!o.dead&&(o.x-e.x)**2+(o.y-e.y)**2<=R*R){burnOn(o,Math.max(4,e.burnD),2);hit(o,e.max*(e.boss?.03:.15),'cannon',{pure:true,noCrit:true});}}
   if(e.type==='split'){spawn('mini',Math.max(0,e.d-4),e.pi);spawn('mini',Math.max(0,e.d-16),e.pi);}
   if(e.boss&&FEAT.bossfall&&!FEAT.fx2){bossFall(e);return;}
@@ -775,7 +775,7 @@ function chainZap(first,n,dmg,decay,from,o){const lite=o&&o.lite;
   let cur=first,d=dmg;const hs=new Set(),pts=[from||[first.x,first.y-30]],tgs=[];
   for(let i=0;i<n&&cur;i++){
     hs.add(cur);pts.push([cur.x,cur.y]);tgs.push(cur);if(lite)cur.numbT=Math.max(cur.numbT||0,.4);else if(!FEAT.fx2&&!Z3())burst(cur.x,cur.y,'#f5d0fe',4,90,0,.25,1.5);
-    let dd=d;if(M.overload&&Math.random()<M.overload){dd*=3;txt(cur.x,cur.y-14,'过载','#e9d5ff');fx.push({k:'boom',x:cur.x,y:cur.y,r:CS*.55,t:.2,T:.2,c:'#e9d5ff'});sparks(cur.x,cur.y,'#f5d0fe',8,200,.25);}
+    let dd=d;if(M.overload&&Math.random()<M.overload){dd*=3;txt(cur.x,cur.y-14,'过载','#e9d5ff');overFx(cur);}
     if(M.staticF)cur.markT=4;
     hit(cur,dd,'tesla',o);d*=decay;
     let best=null,bd=(1.8*CS)**2;
@@ -873,7 +873,7 @@ function updProj(p,dt){
   explode(p.tx,p.ty,R,p.dmg,p.lvl,{crit:p.crit});
   if(p.k==='shell'){
     if(p.cluster)for(let k=0;k<4;k++){const a=Math.random()*6.283,r=CS*(.6+Math.random()*.7);projs.push({k:'bomblet',x:p.tx,y:p.ty,sx:p.tx,sy:p.ty,tx:p.tx+Math.cos(a)*r,ty:p.ty+Math.sin(a)*r,v:160,dmg:p.dmg*.35,lvl:p.lvl});}
-    if(has('C_plasma')){const f=nearest(p.tx,p.ty,1.6*CS,new Set());if(f)chainZap(f,2,p.dmg*.5,.9,[p.tx,p.ty]);}
+    if(has('C_plasma')){const f=nearest(p.tx,p.ty,1.6*CS,new Set());if(f){if(FEAT.combo2&&SPS.pf_pshot)plasmaShot(p.tx,p.ty-6,f,p.dmg*.5,1,new Set());else chainZap(f,2,p.dmg*.5,.9,[p.tx,p.ty]);}}
     if(p.evo){const lr=R*.9*(FEAT.lava2?lavaSize():1);lavas.push({x:p.tx,y:p.ty,r:lr,t:2.5,T:2.5,dps:p.dmg*.4,seed:Math.random()*100,bub:0,...lavaForm(lr)});}
   }
 }
@@ -883,7 +883,7 @@ function updEnemy(e,dt){
   if(e.burnT>0){e.burnT-=dt;e._burnAge=(e._burnAge||0)+dt;hit(e,e.burnD*dt,'cannon',{noCrit:true,pure:true});if(e.dead)return;}else{e._burnAge=0;e._fl=null;}
   if(has('C_steam')&&e.burnT>0&&(e.slowT>0||e.frzT>0)&&!(e.steamCd>0)){
     e.steamCd=3;const R=1.2*CS,dm=e.max*(e.boss?.03:.12);
-    fx.push({k:'boom',x:e.x,y:e.y,r:R,t:.35,T:.35,c:'#e2e8f0'});burst(e.x,e.y,'#f1f5f9',14,120,-40,.6,2.4);smoke(e.x,e.y,6,8,'#f1f5f9',-30);txt(e.x,e.y-18,'蒸汽爆炸','#e2e8f0',.8);sfx('boom');
+    if(FEAT.combo2&&SPS.pf_steam){{const ns=fx.reduce((n,f)=>n+(f.k==='pfx'&&f.id==='steam'&&f.t/f.T>.4),0);pfx('steam',e.x,e.y+e.r*.6,rnd(.5,.58)*Math.max(.45,1-.2*ns),{sp:rnd(1.25,1.4),al:Math.max(.5,.92-.14*ns)});};shake=Math.max(shake,3);}else{fx.push({k:'boom',x:e.x,y:e.y,r:R,t:.35,T:.35,c:'#e2e8f0'});burst(e.x,e.y,'#f1f5f9',14,120,-40,.6,2.4);smoke(e.x,e.y,6,8,'#f1f5f9',-30);}txt(e.x,e.y-18,'蒸汽爆炸','#e2e8f0',.8);sfx('boom');
     for(const o of enemies)if(!o.dead&&(o.x-e.x)**2+(o.y-e.y)**2<=R*R)hit(o,dm,'cannon',{pure:true,noCrit:true});
     if(e.dead)return;
   }
@@ -1008,7 +1008,7 @@ function chooseNode(k){step++;curNode=k;phase='build';renderPanel();snapRun('bui
 // ======================= 特效 =======================
 function updFx(dt){
   fxClock+=dt;if(FEAT.amb)updAmb(dt);
-  for(const f of fx){f.t-=dt;if(f.k==='bossfall')updBossFall(f,dt);}fx=fx.filter(f=>f.t>0);
+  for(const f of fx){f.t-=dt;if(f.k==='bossfall')updBossFall(f,dt);else if(f.k==='pshot'&&f.t>0)updPshot(f,dt);}fx=fx.filter(f=>f.t>0);
   for(const q of parts){if(q.k==='snow2'){const sp=Math.hypot(q.vx,q.vy);q.vy+=Math.max(0,q.fall-q.vy)*Math.min(1,dt*(sp<40?2.5:.6));}if(q.k==='orbit'){q.t-=dt;q.a+=q.w*dt;q.r+=q.vr*dt;q.vr*=Math.exp(-1.2*dt);q.w*=Math.exp(-.8*dt);q.x=q.cx+Math.cos(q.a)*q.r;q.y=q.cy+Math.sin(q.a)*q.r*q.sq+(q.drop?q.drop*(1-q.t/q.T):0);continue;}q.t-=dt;if(q.drag){const d=Math.exp(-q.drag*dt);q.vx*=d;q.vy*=d;}q.x+=q.vx*dt;q.y+=q.vy*dt;q.vy+=q.g*dt;}
   if(sched.length){for(const s of sched)s.t-=dt;const due=sched.filter(s=>s.t<=0);sched=sched.filter(s=>s.t>0);for(const s of due)s.f();}parts=parts.filter(q=>q.t>0);if(parts.length>420)parts.splice(0,parts.length-420);
   for(const d of decals)d.t-=dt;decals=decals.filter(d=>d.t>0);
@@ -1738,6 +1738,27 @@ function windCall(){let i=0;const L=[...towers].sort((a,b)=>a.y-b.y);for(const t
 // 主体几乎透明、去掉顶上的云团和闪电，换成绿白风色，烘成 20 帧（fx/pf_whirl.png，5×4 格，每格 112×82，底中心在 (56,78)）。
 // 播放：从塔底往上卷起（0.25 秒从下往上露出）→ 转一会儿 → 整阵风往上一抬散掉，共 0.7 秒。
 const PFW={w:112,h:82,cols:5,n:20,px:56,py:78};
+// pixelfx 像素序列帧：直接用素材库原画风
+const PFX={steam:{w:133,h:141,n:22,cols:8,ox:69,oy:123,fps:15},ember:{w:202,h:104,n:22,cols:8,ox:101,oy:71,fps:15},plasma:{w:199,h:184,n:15,cols:8,ox:101,oy:92,fps:24},gold:{w:125,h:68,n:26,cols:8,ox:63,oy:60,fps:18},over:{w:156,h:113,n:11,cols:8,ox:60,oy:60,fps:20}};
+function pfx(id,x,y,sc,o){const d=PFX[id];if(!d)return;const T=d.n/d.fps/((o&&o.sp)||1);fx.push(Object.assign({k:'pfx',id,x,y,sc,t:T,T,fl:Math.random()<.5},o||{}));}
+function drawPfx(f){const im=SPS['pf_'+f.id],d=PFX[f.id];if(!im||!d)return;const i=Math.min(d.n-1,Math.floor((1-f.t/f.T)*d.n));
+  ctx.save();ctx.imageSmoothingEnabled=false;ctx.globalAlpha=(f.al||1)*Math.min(1,f.t/f.T/.35);ctx.translate(f.x,f.y);ctx.scale(f.fl?-f.sc:f.sc,f.sc);
+  ctx.drawImage(im,(i%d.cols)*d.w,Math.floor(i/d.cols)*d.h,d.w,d.h,-d.ox,-d.oy,d.w,d.h);ctx.restore();}
+// 等离子：绿色等离子弹从爆炸点飞向目标，打中炸一团等离子，再跳向下一个（不用电塔的闪电）
+function overFx(e){if(FEAT.combo2&&SPS.pf_over){const ns=fx.reduce((n,f)=>n+(f.k==='pfx'&&f.id==='over'&&f.t/f.T>.5),0);const sc=rnd(.52,.6)*Math.max(.6,1-.15*ns),al=Math.max(.55,1-.15*ns);later(.06,()=>{if(!e.dead)pfx('over',e.x,e.y-e.r*.3,sc,{al});else pfx('over',e.x,e.y-e.r*.3,sc*.8,{al});});stopT=Math.max(stopT,.03);}else{fx.push({k:'boom',x:e.x,y:e.y,r:CS*.55,t:.2,T:.2,c:'#e9d5ff'});sparks(e.x,e.y,'#f5d0fe',8,200,.25);}}
+function plasmaShot(x,y,tg,dmg,left,hs){hs.add(tg);fx.push({k:'pshot',x,y,tg,dmg,left,hs,v:rnd(170,200),t:2,T:2,ph:Math.floor(Math.random()*12),age:0,ang:-Math.PI/2+(tg.x>=x?1:-1)*rnd(.5,1.1)});}
+function updPshot(f,dt){const e=f.tg,tx=e.x,ty=e.y-e.r*.4,dx=tx-f.x,dy=ty-f.y,d=Math.hypot(dx,dy);
+  if(e.dead&&d>4){f.t=Math.min(f.t,.0001);pfx('plasma',f.x,f.y,.2);return;}
+  const st=f.v*dt;if(d<=st+2){f.t=0;let dd=f.dmg;
+    if(M.overload&&Math.random()<M.overload){dd*=3;txt(e.x,e.y-14,'过载','#e9d5ff');overFx(e);}
+    if(M.staticF)e.markT=4;hit(e,dd,'tesla');pfx('plasma',tx,ty,rnd(.24,.3));sfx('zap');
+    if(f.left>0){let best=null,bd=(1.8*CS)**2;for(const o of enemies){if(!targetable(o)||f.hs.has(o))continue;const q=(o.x-e.x)**2+(o.y-e.y)**2;if(q<bd){bd=q;best=o;}}
+      if(best)later(.06,()=>plasmaShot(tx,ty,best,f.dmg*.9,f.left-1,f.hs));}
+    return;}
+  const ta=Math.atan2(dy,dx);let da=ta-f.ang;da=Math.atan2(Math.sin(da),Math.cos(da));f.age+=dt;f.ang+=da*Math.min(1,dt*(4+f.age*30));f.x+=Math.cos(f.ang)*st;f.y+=Math.sin(f.ang)*st;f.v+=dt*700;
+  if(Math.random()<dt*40&&parts.length<160)P({k:'ember',x:f.x,y:f.y,vx:(Math.random()-.5)*20,vy:(Math.random()-.5)*20,g:0,t:.25,T:.25,c:Math.random()<.5?'#b4ffa0':'#3fd46a',r:1.3});}
+function drawPshot(f){const im=SPS.pf_pshot;if(!im)return;const i=(Math.floor(fxClock*24)+f.ph)%12;ctx.save();ctx.imageSmoothingEnabled=false;ctx.translate(f.x,f.y);ctx.rotate(f.ang);ctx.scale(.42,.42);
+  ctx.drawImage(im,(i%4)*99,Math.floor(i/4)*49,99,49,-76,-24,99,49);ctx.restore();}
 function drawTornado(f){const im=SPS.pf_whirl,el=f.T-f.t;if(!im)return;const i=Math.floor(el*20+f.seed*3)%PFW.n,sx=(i%PFW.cols)*PFW.w,sy=Math.floor(i/PFW.cols)*PFW.h;
   const sc=f.s/40,grow=Math.min(1,el/.25),lift=Math.max(0,1-f.t/.8),a=1-lift;
   ctx.save();ctx.globalAlpha=a;ctx.translate(f.x,f.y-lift*f.s*.35);ctx.scale(sc,sc);
@@ -1984,7 +2005,7 @@ function spriteFx(k,x,y,s,T){fx.push({k:'sprite',sp:k,x,y,s,t:T,T});}
 function spriteInit(){
   if(typeof Image==='undefined')return;
   for(const k of ['boom','zhit','ahit']){try{const im=new Image();im.onload=()=>{SPS[k]=im;};im.src=(window.RUNE_PNG?window.RUNE_PNG+'fx_':'fx/')+'sp_'+k+'.png';}catch(e){}}
-  for(const k of ['lava0','lava1','lavaglow0','lavaglow1','pf_whirl','pf_arrow','pf_burn']){try{const im=new Image();im.onload=()=>{SPS[k]=im;};im.src=(window.RUNE_PNG?window.RUNE_PNG+'fx_':'fx/')+k+'.png';}catch(e){}}
+  for(const k of ['lava0','lava1','lavaglow0','lavaglow1','pf_whirl','pf_arrow','pf_burn','pf_steam','pf_ember','pf_plasma','pf_pshot','pf_gold','pf_over']){try{const im=new Image();im.onload=()=>{SPS[k]=im;};im.src=(window.RUNE_PNG?window.RUNE_PNG+'fx_':'fx/')+k+'.png';}catch(e){}}
 }
 function drawSprite(f,alpha){const im=SPS[f.sp];if(!im)return;const a=f.t/f.T,n=Math.round(im.width/im.height),i=Math.min(n-1,Math.floor((1-a)*n)),fw=im.height;
   ctx.globalAlpha=alpha;ctx.drawImage(im,i*fw,0,fw,fw,f.x-f.s/2,f.y-f.s/2,f.s,f.s);ctx.globalAlpha=1;}
@@ -2723,6 +2744,7 @@ function draw(){
   for(const f of fx)if(f.k==='bossfall')drawBossFall(f);
   if(FEAT.lava2&&lavas.length)drawLavas();
   if(craters.length)drawCraters();
+  for(const f of fx)if(f.k==='pfx'&&f.gnd)drawPfx(f);
   if(stuckArrows.length)drawStuck();
   for(const e of [...enemies].sort((a,b)=>a.y-b.y)){
     const sp=SPR[e.spr+'_'+BIOME]||SPR[e.spr],hidden=e.afx.stealth&&!e.revealed;
@@ -2793,6 +2815,8 @@ function draw(){
     else if(f.k==='die')drawDie(f);
     else if(f.k==='swave')drawSWave(f);
     else if(f.k==='tornado')drawTornado(f);
+    else if(f.k==='pfx'){if(!f.gnd)drawPfx(f);}
+    else if(f.k==='pshot')drawPshot(f);
     else if(f.k==='fwave')drawFWave(f);
     else if(f.k==='zcore')drawZcore(f);
     else if(f.k==='zrad')drawZrad(f);
