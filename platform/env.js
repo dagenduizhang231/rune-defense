@@ -38,7 +38,7 @@ body{padding-top:${ins.top}px}
   }
   const window = {
     devicePixelRatio: host.dpr, innerWidth: host.width, innerHeight: H,
-    RUNE_PNG: host.pngBase, RUNE_PNG_KEYS: host.pngKeys,
+    RUNE_PNG: host.pngBase, RUNE_PNG_KEYS: host.pngKeys, RUNE_SUBFX: host.subFx, RUNE_LOADSUB: host.loadSub,
     AudioContext: host.audioCtor || undefined, webkitAudioContext: undefined,
     addEventListener() {}, removeEventListener() {},
     setTimeout: (f, t) => setTimeout(f, t), clearTimeout: id => clearTimeout(id), setInterval: (f, t) => setInterval(f, t), clearInterval: id => clearInterval(id),

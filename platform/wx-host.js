@@ -31,6 +31,10 @@ var __HOST = (function () {
     Image: function () { return wx.createImage(); },
     loadImage(src, cb) { const im = wx.createImage(); im.onload = cb; im.src = src; return im; },
     pngBase: 'images/', pngKeys: null,
+    // 像素特效图在分包 fxpkg/ 里：开局后台下载，下载好之前这些特效先用旧版画法
+    subFx: 'fxpkg/',
+    loadSub(cb) { let done = false; const go = () => { if (!done) { done = true; cb(); } };
+      try { if (wx.loadSubpackage) wx.loadSubpackage({ name: 'fxpkg', success: go, fail: go }); else go(); } catch (e) { go(); } },
     storage: {
       get(k) { try { const v = wx.getStorageSync(k); return v === '' || v == null ? null : String(v); } catch (e) { return null; } },
       set(k, v) { try { wx.setStorageSync(k, v); } catch (e) {} },

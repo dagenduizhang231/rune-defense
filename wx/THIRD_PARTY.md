@@ -12,6 +12,13 @@
 - `fx/pf_pshot.png`、`fx/pf_plasma.png`：pixelfx `projectiles/plasma-shot` 与 `explosions/plasma-explosion`（爆炸换成绿色），合体「等离子」。
 - `fx/pf_gold.png`：pixelfx `spawn/coin-drop`（烟团换成熔金橙色），合体「熔金」。
 - `fx/pf_over.png`：pixelfx `impacts/crit-hit`（换成紫色），电塔符文「过载」。
+- `fx/pf_cboom.png`：由 pixelfx `explosions/barrel-explosion` 截取（去掉油桶），炮塔命中爆炸。
+- `fx/pf_ccrit.png`：pixelfx `impacts/crit-hit`，炮塔 / 电塔 / 冰塔的暴击。
+- `fx/pf_zhit.png`：pixelfx `lightning/zap-hit`（换成紫色），电塔命中。
+- `fx/pf_wslash.png`：pixelfx `melee/double-slash`（换成绿色），风之心。
+- `fx/pf_lpool.png`：由 pixelfx `nature/toxic-puddle` 改成熔岩配色，火之心。
+- `fx/pf_fzA.png`、`fx/pf_fzH.png`、`fx/pf_fzB.png`：由 pixelfx `ice/freeze` 改编（去掉里面的角色，只保留冰晶），冰之心。
+- `fx/pf_thor.png`：pixelfx `lightning/lightning-strike`，雷之心。
 以上几项的画法为本游戏重新实现。
 
 MIT License

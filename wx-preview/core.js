@@ -870,7 +870,7 @@ body{padding-top:${ins.top}px}
   }
   const window = {
     devicePixelRatio: host.dpr, innerWidth: host.width, innerHeight: H,
-    RUNE_PNG: host.pngBase, RUNE_PNG_KEYS: host.pngKeys,
+    RUNE_PNG: host.pngBase, RUNE_PNG_KEYS: host.pngKeys, RUNE_SUBFX: host.subFx, RUNE_LOADSUB: host.loadSub,
     AudioContext: host.audioCtor || undefined, webkitAudioContext: undefined,
     addEventListener() {}, removeEventListener() {},
     setTimeout: (f, t) => setTimeout(f, t), clearTimeout: id => clearTimeout(id), setInterval: (f, t) => setInterval(f, t), clearInterval: id => clearInterval(id),
@@ -1074,7 +1074,7 @@ window.RUNE_MAPS=[{"type":"snake","paths":[[[-1,1],[1,1],[1,11],[4,11],[4,1],[7,
 var RuneMusic=window.RuneMusic;
 
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6q';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6r';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -1543,7 +1543,7 @@ const LIVE={
 
 // ======================= v0.3：大厅 / 英雄 / 诅咒 / 难度 =======================
 // 三个模块各有开关：网址加 ?off=meta,hero,curse 可以单独关闭（也方便出问题时直接关掉重发）
-const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true,map2:true,amb:true,ambsnd:true,lava2:true,death2:true,hero2:true,status2:true,combo2:true};
+const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true,map2:true,amb:true,ambsnd:true,lava2:true,death2:true,hero2:true,status2:true,combo2:true,tow2:true,frost3:false,evo2:true};
 try{const u=new URLSearchParams(location.search),q=u.get('off'),q2=u.get('on');if(q)q.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=false;});if(q2)q2.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=true;});}catch(e){}
 // 局外存档
 const META_DEF={shards:0,owned:{},hero:'wind',diff:0,unlockedDiff:0,runs:0,wins:0,auto:true};
@@ -1783,14 +1783,15 @@ function updTower(t,dt){
   }else if(t.type==='frost'){
     sfx('frost');
     if(FEAT.frost2&&!FEAT.fx2){const R=s.range,dn=(t.c+t.r)%2?1:-1;
-      if(!(t._fwT>fxClock-2.2)){t._fwT=fxClock;const nh=enemies.filter(e=>!e.dead&&(e.x-t.x)**2+(e.y-t.y)**2<=R*R).length;frostGust(t,R,dn,nh);}else lightSnow(t,R,dn);}
+      if(FEAT.frost3){const big=!(t._fwT>fxClock-2.2);if(big)t._fwT=fxClock;fx.push({k:'pring',x:t.x,y:t.y,R,t:big?.5:.35,T:big?.5:.35,big,seed:Math.floor(Math.random()*1e6),gnd:1});}
+      else if(!(t._fwT>fxClock-2.2)){t._fwT=fxClock;const nh=enemies.filter(e=>!e.dead&&(e.x-t.x)**2+(e.y-t.y)**2<=R*R).length;frostGust(t,R,dn,nh);}else lightSnow(t,R,dn);}
     else if(FEAT.fx2)fx2Frost(t.x,t.y,s.range,t.branch==='nova');else{fx.push({k:'ring',x:t.x,y:t.y,r:s.range,t:.35,T:.35,c:t.branch==='nova'?'#e0f2fe':'#93c5fd'});
     for(let k=0;k<6;k++){const an=k*1.047+Math.random()*.5;P({k:'shard',x:t.x+Math.cos(an)*s.range*.3,y:t.y+Math.sin(an)*s.range*.3,vx:Math.cos(an)*s.range*1.6,vy:Math.sin(an)*s.range*1.6,g:0,t:.3,T:.3,c:'#e0f2fe',r:3,rot:an+1.57,vr:0});}}
     const slow=Math.min(t.branch==='glacier'?.85:.8,M.frostSlow+(t.branch==='glacier'?.25:0))*(BIO.slow||1);
     const fz=M.freeze+(t.branch==='glacier'?.15:0);
     for(const e of list){
       e.slowA=e.slowT>0?Math.max(e.slowA,slow):slow;e.slowT=M.coldWave?2.6:1.6;
-      if(evo){if(!(e.frzCd>0)){e.frzT=Math.max(e.frzT,e.boss?.3:.8);e.frzCd=3;}}else if(fz&&Math.random()<fz)e.frzT=e.boss?.35:1;
+      if(evo){if(!(e.frzCd>0)){e.frzT=Math.max(e.frzT,e.boss?.3:.8);e.frzCd=3;if(FEAT.evo2&&SPS.pf_fzA&&!(e.frzT>0&&e.icB&&!e.pxI)){e.pxI={sx:rnd(.9,1.1),sy:rnd(.92,1.12),fl:Math.random()<.5,ph:Math.floor(Math.random()*12)};if(e.icB)e.icB.t=0;}}}else if(fz&&Math.random()<fz)e.frzT=e.boss?.35:1;
       if(t.branch==='nova'){e.shredT=3;e.shredV=Math.max(e.shredV||0,3);}
       else if(M.shredRune){e.shredT=3;e.shredV=Math.max(e.shredV||0,4);}
       if(FEAT.frost2&&!FEAT.fx2)snowHit(e);else if(FEAT.fx2)frostBloom(e);else burst(e.x,e.y,'#e0f2fe',3,40,0,.4,1.6);hit(e,s.dmg,'frost',{crit:fifth});
@@ -1798,7 +1799,10 @@ function updTower(t,dt){
   }else if(t.type==='tesla'){
     sfx(Z3()&&'DEFG'.includes(zv())?'zcrack':'zap');
     chainZap(list[0],teslaChainN(t),s.dmg,teslaDecay(t),[t.x,t.y-CS*.75],{crit:fifth});
-    if(evo){const other=list.find(e=>e!==list[0])||list[0];chainZap(other,teslaChainN(t),s.dmg*.6,teslaDecay(t),[t.x,t.y-CS*.75]);}
+    if(evo){const other=list.find(e=>e!==list[0])||list[0];
+      if(FEAT.evo2&&SPS.pf_thor&&fx.reduce((n,f)=>n+(f.k==='pfx'&&f.id==='thor'&&f.t/f.T>.6),0)<3){pfx('thor',other.x,other.y+other.r*.55,rnd(.44,.5)*(other.boss?1.2:1),{fl:Math.random()<.5});shake=Math.max(shake,2.5);stopT=Math.max(stopT,.025);decal('zmark',other.x,other.y+other.r*.5,other.r*1.2,1.2);
+        chainZap(other,teslaChainN(t),s.dmg*.6,teslaDecay(t),null);}
+      else chainZap(other,teslaChainN(t),s.dmg*.6,teslaDecay(t),[t.x,t.y-CS*.75]);}
   }
 }
 function nearest(x,y,R,skip){let best=null,bd=R*R;for(const e of enemies){if(e.dead||skip.has(e))continue;const q=(e.x-x)**2+(e.y-y)**2;if(q<bd){bd=q;best=e;}}return best;}
@@ -1822,13 +1826,19 @@ function updProj(p,dt){
     if(has('C_firearrow'))burnOn(e,4*p.lvl,2);
     if(has('C_icearrow')){e.slowA=e.slowT>0?Math.max(e.slowA,.25):.25;e.slowT=Math.max(e.slowT,1);}
     const skip=new Set([e]);
-    if(p.evo){for(let k=0;k<2;k++){const o=nearest(p.tx,p.ty,1.2*CS,skip);if(!o)break;skip.add(o);if(A2)o._arw=arwInfo(p,0);hit(o,p.dmg*.5,'arrow',{ap:p.ap,evo:true});if(!A2)burst(o.x,o.y,'#bbf7d0',3,60,0,.25,1.5);}}
+    if(p.evo){const W=FEAT.evo2&&SPS.pf_wslash,nw=W?fx.reduce((n,f)=>n+(f.k==='pfx'&&f.id==='wslash'&&f.t/f.T>.4),0):0;
+      if(W&&nw<5)pfx('wslash',e.x,e.y-e.r*.3,rnd(.44,.5)*(e.boss?1.3:1),{fl:Math.random()<.5,al:.9});
+      for(let k=0;k<2;k++){const o=nearest(p.tx,p.ty,1.2*CS,skip);if(!o)break;skip.add(o);if(A2)o._arw=arwInfo(p,0);hit(o,p.dmg*.5,'arrow',{ap:p.ap,evo:true});if(!A2)burst(o.x,o.y,'#bbf7d0',3,60,0,.25,1.5);
+        if(W&&nw<5){fx.push({k:'wstreak',x1:e.x,y1:e.y-e.r*.3,x2:o.x,y2:o.y-o.r*.3,t:.18,T:.18,seed:Math.floor(Math.random()*1e6)});const oo=o;later(.05,()=>{if(!oo.dead)pfx('wslash',oo.x,oo.y-oo.r*.3,rnd(.32,.36),{fl:Math.random()<.5,al:.85});});}}}
     else if(M.pierce){const o=nearest(p.tx,p.ty,1.2*CS,skip);if(o&&A2)o._arw=arwInfo(p,0);if(o)hit(o,p.dmg*.6,'arrow',{ap:p.ap});}
     return;
   }
   // 炮弹 / 子炸弹
   const R=(p.k==='bomblet'?.55:.9*(p.splash||1))*CS*M.cannonSplash;
-  if(FEAT.sprfx&&!FEAT.fx2&&SPS.boom){
+  if(FEAT.tow2&&SPS.pf_cboom){const ns=fx.reduce((n,f)=>n+(f.k==='pfx'&&f.id==='cboom'&&f.t/f.T>.6),0),sh=p.k==='shell',sc=R/36*rnd(.52,.6)*(sh?1:.7)*(ns>=4?.8:1);
+    pfx('cboom',p.tx,p.ty+5,sc,{sp:rnd(1,1.15),al:ns>=4?.75:1});
+    if(sh){chunks(p.tx,p.ty,BIOME==='snow'?'#e2e8f0':BIOME==='volcano'?'#3f3f46':'#7c6a4f',4,140,2.6);decal('scorch',p.tx,p.ty+3,R*.7,2.4);shake=Math.max(shake,p.splash>1?4:2.5);sfx('boom');}}
+  else if(FEAT.sprfx&&!FEAT.fx2&&SPS.boom){
     if(p.k==='shell'){const busy=fx.filter(f=>f.k==='sprite'&&f.t>f.T*.4).length>=5;spriteFx('boom',p.tx,p.ty-R*.2,R*2.3*(busy?.75:1),busy?.35:.5);
       chunks(p.tx,p.ty,BIOME==='snow'?'#e2e8f0':BIOME==='volcano'?'#3f3f46':'#7c6a4f',5,140,2.6);decal('scorch',p.tx,p.ty+3,R*.7,2.4);shake=Math.max(shake,p.splash>1?4:2.5);sfx('boom');}
     else spriteFx('boom',p.tx,p.ty-R*.15,R*2.3*.55,.3);
@@ -1862,7 +1872,7 @@ function updEnemy(e,dt){
       if(best){best.stun=3;fx.push({k:'ring',x:best.x,y:best.y,r:CS*.8,t:.5,T:.5,c:'#f87171'});txt(best.x,best.y-30,'震慑','#f87171',1.2);sfx('leak');}}}
   }
   let f=1;
-  if(e.frzT>0){if(FEAT.status2&&!e.icB)e.icB={t:0,seed:Math.random()*99};e.frzT-=dt;f=0;if(e.icB){e.icB.t+=dt;if(e.frzT<=0){iceBurst(e);e.icB=null;}}}
+  if(e.frzT>0){if(FEAT.status2&&!e.icB)e.icB={t:0,seed:Math.random()*99};e.frzT-=dt;f=0;if(e.icB){e.icB.t+=dt;if(e.frzT<=0){if(e.pxI)pxIceBurst(e);else iceBurst(e);e.icB=null;e.pxI=null;}}}
   else if(e.slowT>0){e.slowT-=dt;f=1-e.slowA;}
   {const tk=tiles[Math.floor(e.x/CS)+','+Math.floor(e.y/CS)];if(tk==='swamp')f*=.7;else if(tk==='ice')f*=1.3;}
   if(e.lead)f*=1.25;
@@ -2016,6 +2026,7 @@ function deathFx(e){
 // 命中火花：按伤害来源区分颜色
 function hitFx(e,src,crit){
   if(src==='arrow'&&FEAT.arrow2&&e._arw){arrowFx(e,crit,e._arw);e._arw=null;return;}
+  if(crit&&FEAT.tow2&&src!=='arrow'&&SPS.pf_ccrit){const ns=fx.reduce((n,f)=>n+(f.k==='pfx'&&f.id==='ccrit'&&f.t/f.T>.5),0);if(ns<3)pfx('ccrit',e.x,e.y-e.r*.3,rnd(.42,.5));sfx('crit');return;}
   if(crit){sparks(e.x,e.y-6,'#fde047',8,180,.3);fx.push({k:'star',x:e.x,y:e.y-8,r:14,t:.22,T:.22});sfx('crit');return;}
   if(src==='arrow')sparks(e.x,e.y-4,'#f1f5f9',3,120,.16);
   else if(src==='frost'){if(!FEAT.fx2&&!FEAT.frost2)shards(e.x,e.y-4,2,'#e0f2fe',70);}
@@ -2269,13 +2280,20 @@ function zv(){return window.__zap||'G';}
 function jagPts(x1,y1,x2,y2,amp,seed,depth){let pts=[[x1,y1],[x2,y2]],s=seed;const r=()=>{s=(s*16807)%2147483647;return s/2147483647-.5;};
   for(let d=0;d<depth;d++){const np=[pts[0]];for(let i=1;i<pts.length;i++){const[a,b]=pts[i-1],[c,q]=pts[i],len=Math.hypot(c-a,q-b)||1,o=r()*amp;np.push([(a+c)/2-(q-b)/len*o,(b+q)/2+(c-a)/len*o],[c,q]);}pts=np;amp*=.55;}return pts;}
 function zap3(pts,from,tgs){const v=zv(),hop=.035,n=pts.length-1,busy=fx.filter(f=>f.k==='bolt3').length>=4,T=.22+n*hop;
-  fx.push({k:'bolt3',pts,t:T,T,hop,seed:1+Math.floor(Math.random()*1e6),v,busy});
+  if(FEAT.tow2){const b2=fx.filter(f=>f.k==='pbolt').length>=4;fx.push({k:'pbolt',pts,t:T,T,hop,seed:1+Math.floor(Math.random()*1e6),busy:b2});}else fx.push({k:'bolt3',pts,t:T,T,hop,seed:1+Math.floor(Math.random()*1e6),v,busy});
   if(from)texP('glow','#c084fc',from[0],from[1],{s0:12,s1:26,t:.14,T:.14,a0:.9,add:true});
   for(let i=1;i<=n;i++){const[x,y]=pts[i],[px,py]=pts[i-1],dir=Math.atan2(y-py,x-px),e=tgs&&tgs[i-1];later((i-1)*hop,()=>zhit3(e&&!e.dead?e.x:x,e&&!e.dead?e.y:y,e,i===1,i===n,dir,v));}
 }
 function zhit3(x,y,e,first,last,dir,v){
   if(e){if(e._zh>fxClock-.12){e.flT=Math.max(e.flT||0,.1);return;}e._zh=fxClock;}
   const r=e?e.r:10,big=first?(v==='C'?1.45:1.25):1,hy=y-r*.3,nsp=fx.filter(f=>f.k==='zsp').length;
+  if(FEAT.tow2&&SPS.pf_zhit){const nz=fx.reduce((n,f)=>n+(f.k==='pfx'&&f.id==='zhit'&&f.t/f.T>.5),0);
+    if(nz<6||first)pfx('zhit',x,hy,(first?.62:.46)*(nz>=4?.8:1)*rnd(.92,1.06),{rot:dir,fl:false,sp:rnd(1,1.15)});
+    texP('glow','#a855f7',x,hy,{s0:r*2.2*big,s1:r*.8,t:.12,T:.12,a0:.55,add:true});
+    if(e){if(v==='G')e.numbT=e.boss?.5:.75;e.flT=.09;e.flA=.45;e.kbx=Math.cos(dir)*(e.boss?2:6)*big;e.kby=Math.sin(dir)*(e.boss?1.5:4)*big;e.zjT=first?.2:.12;if(first&&!e.boss)e.hsT=.07;}
+    if(first&&fx.filter(f=>f.k==='pbolt').length<4)shake=Math.max(shake,2);
+    if(parts.length<170)for(let j=0;j<(first?4:2);j++){const a=dir+rnd(-1.2,1.2),sp=rnd(160,280);P({k:'ember',x,y:hy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-40,g:380,t:rnd(.12,.24),T:.24,c:j%2?'#d8b4fe':'#ffffff',r:1.4});}
+    return;}
   if(nsp<8)fx.push({k:'zsp',sp:'zhit',x,y:hy,s:r*3.6*big*(nsp>=4?.7:1),t:.22,T:.22});
   texP('glow','#a855f7',x,hy,{s0:r*3*big,s1:r,t:.15,T:.15,a0:.8,add:true});
   if(e){e.flT=.14;e.zjT=v==='C'&&first?.16:.09;}
@@ -2527,33 +2545,54 @@ function lavaForm(r){const R=()=>Math.random(),N=72,rad=new Array(N).fill(0),dro
   for(let k=0;k<N;k++)rad[k]*=1+(R()-.5)*.06;
   return{form:{rad,drops,type,v:Math.floor(R()*2),rot:R()*6.28,ox:R()*192,oy:R()*192,dr:(R()<.5?-1:1)*(3+R()*4),sc:.85+R()*.4}};}
 // 主体：极坐标轮廓（平滑曲线）；pad 让轮廓整体外扩（画焦黑外沿用）
+let LC_=ctx;
 function lavaBody(F,sc,pad,t){const N=F.rad.length,P=[];for(let k=0;k<N;k++){const a=k/N*6.283,w=1+.025*Math.sin(a*4+t*1.2);P.push([Math.cos(a)*(F.rad[k]*sc*w+pad),Math.sin(a)*(F.rad[k]*sc*w+pad)]);}
-  const m=(p,q)=>[(p[0]+q[0])/2,(p[1]+q[1])/2];let s0=m(P[N-1],P[0]);ctx.moveTo(s0[0],s0[1]);for(let k=0;k<N;k++){const q=m(P[k],P[(k+1)%N]);ctx.quadraticCurveTo(P[k][0],P[k][1],q[0],q[1]);}ctx.closePath();}
-function lavaPath(L,sc,pad,keep){if(!keep)ctx.beginPath();for(const o of L){ctx.moveTo(o.x+Math.cos(o.a)*(o.rx*sc+pad),o.y+Math.sin(o.a)*(o.rx*sc+pad));ctx.ellipse(o.x,o.y,o.rx*sc+pad,o.ry*sc+pad,o.a,0,6.2832);}}
-function drawLavas(){const now=fxClock;let bubbles=0;ctx.save();
+  const m=(p,q)=>[(p[0]+q[0])/2,(p[1]+q[1])/2];let s0=m(P[N-1],P[0]);LC_.moveTo(s0[0],s0[1]);for(let k=0;k<N;k++){const q=m(P[k],P[(k+1)%N]);LC_.quadraticCurveTo(P[k][0],P[k][1],q[0],q[1]);}LC_.closePath();}
+function lavaPath(L,sc,pad,keep){if(!keep)LC_.beginPath();for(const o of L){LC_.moveTo(o.x+Math.cos(o.a)*(o.rx*sc+pad),o.y+Math.sin(o.a)*(o.rx*sc+pad));LC_.ellipse(o.x,o.y,o.rx*sc+pad,o.ry*sc+pad,o.a,0,6.2832);}}
+function drawLavas(c){LC_=c;const now=fxClock;let bubbles=0;c.save();
   for(const l of lavas){const F=l.form;if(!F)continue;const el=l.T-l.t,grow=Math.min(1,el/.16),sc=.3+.7*(1-Math.pow(1-grow,3)),cool=l.t<.8?1-l.t/.8:0,a=Math.min(1,l.t/.25),dsc=Math.min(1,el/.25);
     const tex=SPS['lava'+F.v],glw=SPS['lavaglow'+F.v];
     // 地面热光（压扁的椭圆）
-    const gl=ctx.createRadialGradient(l.x,l.y,l.r*.3,l.x,l.y,l.r*1.6);gl.addColorStop(0,`rgba(249,115,22,${.3*(1-cool)*a})`);gl.addColorStop(1,'rgba(249,115,22,0)');ctx.fillStyle=gl;ctx.save();ctx.translate(l.x,l.y);ctx.scale(1,.75);ctx.translate(-l.x,-l.y);ctx.fillRect(l.x-l.r*1.6,l.y-l.r*1.6,l.r*3.2,l.r*3.2);ctx.restore();
-    ctx.save();ctx.translate(l.x,l.y);ctx.scale(1,.74);ctx.rotate(F.rot);
+    const gl=c.createRadialGradient(l.x,l.y,l.r*.3,l.x,l.y,l.r*1.6);gl.addColorStop(0,`rgba(249,115,22,${.3*(1-cool)*a})`);gl.addColorStop(1,'rgba(249,115,22,0)');c.fillStyle=gl;c.save();c.translate(l.x,l.y);c.scale(1,.75);c.translate(-l.x,-l.y);c.fillRect(l.x-l.r*1.6,l.y-l.r*1.6,l.r*3.2,l.r*3.2);c.restore();
+    c.save();c.translate(l.x,l.y);c.scale(1,.74);c.rotate(F.rot);
     // 外沿焦黑硬壳（比岩浆大一圈）
-    ctx.globalAlpha=a*.95;ctx.fillStyle='#1f0c06';ctx.beginPath();lavaBody(F,sc,2.2,now);ctx.fill();lavaPath(F.drops,dsc,1.2);ctx.fill();
+    c.globalAlpha=a*.95;c.fillStyle='#1f0c06';c.beginPath();lavaBody(F,sc,2.2,now);c.fill();lavaPath(F.drops,dsc,1.2);c.fill();
     // 岩浆本体：用裂纹熔岩贴图填满形状，贴图慢慢漂移（在流动）
-    ctx.save();ctx.beginPath();lavaBody(F,sc,0,now);lavaPath(F.drops,dsc,0,1);ctx.clip();
+    c.save();c.beginPath();lavaBody(F,sc,0,now);lavaPath(F.drops,dsc,0,1);c.clip();
     const ts=l.r*2.2*F.sc,ox=((F.ox+now*F.dr)%ts+ts)%ts,oy=(F.oy%ts+ts)%ts;
-    if(tex){ctx.globalAlpha=a;for(let ix=-2;ix<=1;ix++)for(let iy=-2;iy<=1;iy++)ctx.drawImage(tex,ix*ts+ox-ts*.5,iy*ts+oy-ts*.5,ts,ts);}
-    else{ctx.globalAlpha=a;ctx.fillStyle='#c2410c';ctx.fillRect(-l.r*2,-l.r*2,l.r*4,l.r*4);}
+    if(tex){c.globalAlpha=a;for(let ix=-2;ix<=1;ix++)for(let iy=-2;iy<=1;iy++)c.drawImage(tex,ix*ts+ox-ts*.5,iy*ts+oy-ts*.5,ts,ts);}
+    else{c.globalAlpha=a;c.fillStyle='#c2410c';c.fillRect(-l.r*2,-l.r*2,l.r*4,l.r*4);}
     // 裂缝发光一呼一吸
-    if(glw&&cool<1){ctx.globalCompositeOperation='lighter';ctx.globalAlpha=a*(1-cool)*(.35+.25*Math.sin(now*3+l.seed));for(let ix=-2;ix<=1;ix++)for(let iy=-2;iy<=1;iy++)ctx.drawImage(glw,ix*ts+ox-ts*.5,iy*ts+oy-ts*.5,ts,ts);ctx.globalCompositeOperation='source-over';}
+    if(glw&&cool<1){c.globalCompositeOperation='lighter';c.globalAlpha=a*(1-cool)*(.35+.25*Math.sin(now*3+l.seed));for(let ix=-2;ix<=1;ix++)for(let iy=-2;iy<=1;iy++)c.drawImage(glw,ix*ts+ox-ts*.5,iy*ts+oy-ts*.5,ts,ts);c.globalCompositeOperation='source-over';}
     // 冷却：慢慢变暗结壳
-    if(cool>0){ctx.globalAlpha=cool*.8;ctx.fillStyle='#160805';ctx.fillRect(-l.r*2,-l.r*2,l.r*4,l.r*4);}
-    ctx.restore();ctx.restore();
+    if(cool>0){c.globalAlpha=cool*.8;c.fillStyle='#160805';c.fillRect(-l.r*2,-l.r*2,l.r*4,l.r*4);}
+    c.restore();c.restore();
     // 冒泡（全场最多 4 个）
     if(cool<.5&&bubbles<4){const ph=((now+l.seed)*1.3)%1;if(ph<.45){bubbles++;const ba=l.seed*3+Math.floor(now*1.3),br=F.rad[0]*.45,o={x:Math.cos(ba)*br,y:Math.sin(ba)*br},ca=Math.cos(F.rot),sa=Math.sin(F.rot),bx=l.x+(o.x*ca-o.y*sa),by=l.y+(o.x*sa+o.y*ca)*.74,k=ph/.45;
-      if(k<.75){ctx.globalAlpha=a;ctx.fillStyle='#fb923c';ctx.beginPath();ctx.arc(bx,by,1.2+k*2.8,0,7);ctx.fill();ctx.fillStyle='#fef3c7';ctx.beginPath();ctx.arc(bx-.8,by-.8,.5+k*1.1,0,7);ctx.fill();}
-      else{ctx.globalAlpha=a*(1-(k-.75)/.25);ctx.strokeStyle='#fdba74';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(bx,by,3.5+(k-.75)*12,(3.5+(k-.75)*12)*.6,0,0,7);ctx.stroke();
+      if(k<.75){c.globalAlpha=a;c.fillStyle='#fb923c';c.beginPath();c.arc(bx,by,1.2+k*2.8,0,7);c.fill();c.fillStyle='#fef3c7';c.beginPath();c.arc(bx-.8,by-.8,.5+k*1.1,0,7);c.fill();}
+      else{c.globalAlpha=a*(1-(k-.75)/.25);c.strokeStyle='#fdba74';c.lineWidth=1;c.beginPath();c.ellipse(bx,by,3.5+(k-.75)*12,(3.5+(k-.75)*12)*.6,0,0,7);c.stroke();
         if(k>.76&&k<.8&&parts.length<160)for(let q=0;q<2;q++)P({k:'spark',x:bx,y:by,vx:rnd(-25,25),vy:rnd(-70,-40),g:160,t:.4,T:.4,c:'#fdba74',r:1.2});}}}
   }
+  c.restore();c.globalAlpha=1;LC_=ctx;}
+
+// 火之心 v2：直接用素材库的像素熔岩池（tar 熔岩配色，冒泡、内部熔光脉动），压成俯视椭圆铺在地上，上面冒像素火苗
+function drawLavaPool(){const im=SPS.pf_lpool,d=PFX.lpool,fb=SPS.pf_burn;if(!im)return;ctx.save();ctx.imageSmoothingEnabled=false;
+  for(const l of lavas){if(!l.pp){l.pp={ph:Math.floor(Math.random()*30),fl:Math.random()<.5,sy:rnd(1.6,2),sx:rnd(.92,1.1),fs:[]};const n=2+Math.floor(Math.random()*2);for(let i=0;i<n;i++)l.pp.fs.push({x:rnd(-.55,.55),y:rnd(-.25,.25),v:Math.floor(Math.random()*3),ph:Math.floor(Math.random()*22),s:rnd(.75,1.25),d:rnd(0,.3),fl:Math.random()<.5});}
+    const P_=l.pp,el=l.T-l.t,g=1-Math.pow(1-Math.min(1,el/.22),3),a=Math.min(1,l.t/.5),sc=l.r*2/108*P_.sx*(.4+.6*g),i=(Math.floor(fxClock*15)+P_.ph)%d.n;
+    ctx.globalAlpha=a;ctx.save();ctx.translate(Math.round(l.x),Math.round(l.y+l.r*.25));ctx.scale(P_.fl?-sc:sc,sc*P_.sy);
+    ctx.drawImage(im,(i%d.cols)*d.w,Math.floor(i/d.cols)*d.h,d.w,d.h,-d.ox,-d.oy,d.w,d.h);ctx.restore();
+    if(fb)for(const f of P_.fs){const gg=Math.min(1,Math.max(0,(el-f.d)/.2));if(gg<=0)continue;const s2=l.r*.013*f.s*gg*Math.min(1,l.t/.6),fi=(Math.floor(fxClock*15)+f.ph)%22;
+      ctx.save();ctx.translate(Math.round(l.x+f.x*l.r),Math.round(l.y+l.r*.2+f.y*l.r*.6));ctx.scale(f.fl?-s2:s2,s2);ctx.drawImage(fb,fi*41,f.v*62+22,41,40,-17,-36,41,40);ctx.restore();}}
+  ctx.restore();ctx.globalAlpha=1;}
+// 火之心像素版（FEAT.evo2）：熔岩池画在 1 像素 = 1 游戏单位的小画布上再放大（不插值）→ 像素风；上面冒素材库的像素火苗
+let LVC=null,LVX=null;
+function drawLavasPx(){if(!LVC){LVC=document.createElement('canvas');LVC.width=W;LVC.height=H;LVX=LVC.getContext('2d');}
+  LVX.setTransform(1,0,0,1,0,0);LVX.clearRect(0,0,W,H);LVX.imageSmoothingEnabled=true;drawLavas(LVX);
+  ctx.save();ctx.imageSmoothingEnabled=false;ctx.drawImage(LVC,0,0,W,H);
+  const im=SPS.pf_burn;if(im){for(const l of lavas){if(!l.fl){const n=2+Math.floor(Math.random()*2);l.fl=[];for(let i=0;i<n;i++){const a=Math.random()*6.283,d=l.r*rnd(.05,.5);l.fl.push({x:Math.cos(a)*d,y:Math.sin(a)*d*.74,v:Math.floor(Math.random()*3),ph:Math.floor(Math.random()*22),s:rnd(.75,1.25),d:rnd(0,.25),fl:Math.random()<.5});}}
+    const el=l.T-l.t,cool=l.t<.8?1-l.t/.8:0;
+    for(const f of l.fl){const g=Math.min(1,Math.max(0,(el-f.d)/.2));if(g<=0)continue;const sc=l.r*.013*f.s*g*(1-cool*.7),fi=(Math.floor(fxClock*15)+f.ph)%22;
+      ctx.globalAlpha=(1-cool)*Math.min(1,l.t/.25);ctx.save();ctx.translate(Math.round(l.x+f.x),Math.round(l.y+f.y));ctx.scale(f.fl?-sc:sc,sc);ctx.drawImage(im,fi*41,f.v*62+22,41,40,-17,-36,41,40);ctx.restore();}}}
   ctx.restore();ctx.globalAlpha=1;}
 
 // 小怪死亡 2.0（FEAT.death2）：不再出白闪白环。每种怪自己的死法，用怪自己的贴图做动画，0.6 秒内干净收尾。
@@ -2706,10 +2745,10 @@ function windCall(){let i=0;const L=[...towers].sort((a,b)=>a.y-b.y);for(const t
 // 播放：从塔底往上卷起（0.25 秒从下往上露出）→ 转一会儿 → 整阵风往上一抬散掉，共 0.7 秒。
 const PFW={w:112,h:82,cols:5,n:20,px:56,py:78};
 // pixelfx 像素序列帧：直接用素材库原画风
-const PFX={steam:{w:133,h:141,n:22,cols:8,ox:69,oy:123,fps:15},ember:{w:202,h:104,n:22,cols:8,ox:101,oy:71,fps:15},plasma:{w:199,h:184,n:15,cols:8,ox:101,oy:92,fps:24},gold:{w:125,h:68,n:26,cols:8,ox:63,oy:60,fps:18},over:{w:156,h:113,n:11,cols:8,ox:60,oy:60,fps:20}};
+const PFX={steam:{w:133,h:141,n:22,cols:8,ox:69,oy:123,fps:15},ember:{w:202,h:104,n:22,cols:8,ox:101,oy:71,fps:15},plasma:{w:199,h:184,n:15,cols:8,ox:101,oy:92,fps:24},gold:{w:125,h:68,n:26,cols:8,ox:63,oy:60,fps:18},over:{w:156,h:113,n:11,cols:8,ox:60,oy:60,fps:20},cboom:{w:246,h:174,n:12,cols:6,ox:111,oy:144,fps:18},ccrit:{w:156,h:113,n:11,cols:8,ox:60,oy:60,fps:22},zhit:{w:106,h:60,n:12,cols:6,ox:67,oy:33,fps:26},wslash:{w:102,h:86,n:18,cols:6,ox:28,oy:52,fps:30},thor:{w:163,h:237,n:19,cols:7,ox:79,oy:227,fps:24},lpool:{w:125,h:37,n:30,cols:6,ox:62,oy:30,fps:15},fzA:{w:79,h:67,n:14,cols:7,ox:40,oy:62,fps:60},fzH:{w:77,h:71,n:12,cols:6,ox:38,oy:66,fps:12},fzB:{w:132,h:77,n:14,cols:7,ox:69,oy:72,fps:28}};
 function pfx(id,x,y,sc,o){const d=PFX[id];if(!d)return;const T=d.n/d.fps/((o&&o.sp)||1);fx.push(Object.assign({k:'pfx',id,x,y,sc,t:T,T,fl:Math.random()<.5},o||{}));}
 function drawPfx(f){const im=SPS['pf_'+f.id],d=PFX[f.id];if(!im||!d)return;const i=Math.min(d.n-1,Math.floor((1-f.t/f.T)*d.n));
-  ctx.save();ctx.imageSmoothingEnabled=false;ctx.globalAlpha=(f.al||1)*Math.min(1,f.t/f.T/.35);ctx.translate(f.x,f.y);ctx.scale(f.fl?-f.sc:f.sc,f.sc);
+  ctx.save();ctx.imageSmoothingEnabled=false;ctx.globalAlpha=(f.al||1)*Math.min(1,f.t/f.T/.35);ctx.translate(f.x,f.y);if(f.rot)ctx.rotate(f.rot);ctx.scale(f.fl?-f.sc:f.sc,f.sc);
   ctx.drawImage(im,(i%d.cols)*d.w,Math.floor(i/d.cols)*d.h,d.w,d.h,-d.ox,-d.oy,d.w,d.h);ctx.restore();}
 // 等离子：绿色等离子弹从爆炸点飞向目标，打中炸一团等离子，再跳向下一个（不用电塔的闪电）
 function overFx(e){if(FEAT.combo2&&SPS.pf_over){const ns=fx.reduce((n,f)=>n+(f.k==='pfx'&&f.id==='over'&&f.t/f.T>.5),0);const sc=rnd(.52,.6)*Math.max(.6,1-.15*ns),al=Math.max(.55,1-.15*ns);later(.06,()=>{if(!e.dead)pfx('over',e.x,e.y-e.r*.3,sc,{al});else pfx('over',e.x,e.y-e.r*.3,sc*.8,{al});});stopT=Math.max(stopT,.03);}else{fx.push({k:'boom',x:e.x,y:e.y,r:CS*.55,t:.2,T:.2,c:'#e9d5ff'});sparks(e.x,e.y,'#f5d0fe',8,200,.25);}}
@@ -2820,7 +2859,14 @@ function iceChunk(cx,by,w,h,seed,cracks,tSheen){let sd=1+Math.floor(seed*997);co
   ctx.globalAlpha=.9;ctx.fillStyle='#eafaff';for(let x=-w*1.08;x<w*1.1;x+=3){const hh=1.5+r()*3;ctx.beginPath();ctx.moveTo(cx+x-1.7,by+1);ctx.lineTo(cx+x+j()*1.5,by+1-hh);ctx.lineTo(cx+x+1.7,by+1);ctx.closePath();ctx.fill();}
   ctx.globalAlpha=.45;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.ellipse(cx+ox*.3,by+1.5,w*1.3,2.6,0,0,7);ctx.fill();
   ctx.restore();ctx.globalAlpha=1;}
-function drawIceBlock(e){const B=e.icB,grow=Math.min(1,B.t/.2),left=e.frzT,b=e.y+e.r*.62,w=e.r*1.22,h=e.r*2.45;
+// 冰之心（永冻）的像素冰晶：素材库 freeze 的冰块（去掉了里面的小人），包住我们自己的怪：先一块块长出来 → 反光 → 结束时裂开炸碎
+function pxIceSc(e){return e.r*2.7/36;}
+function pxIceDraw(id,i,e,a){const d=PFX[id],im=SPS['pf_'+id];if(!im)return;const P_=e.pxI,sc=pxIceSc(e)*(e.boss?1.1:1),b=e.y+e.r*.66;
+  ctx.save();ctx.imageSmoothingEnabled=false;ctx.globalAlpha=a;ctx.translate(Math.round(e.x),Math.round(b));ctx.scale((P_&&P_.fl?-1:1)*sc*(P_?P_.sx:1),sc*(P_?P_.sy:1));
+  ctx.drawImage(im,(i%d.cols)*d.w,Math.floor(i/d.cols)*d.h,d.w,d.h,-d.ox,-d.oy,d.w,d.h);ctx.restore();}
+function pxIceBurst(e){const P_=e.pxI,sc=pxIceSc(e)*(e.boss?1.1:1);const nb=fx.reduce((n,f)=>n+(f.k==='pfx'&&f.id==='fzB'&&f.t/f.T>.6),0);pfx('fzB',e.x,e.y+e.r*.66,sc*.8*(nb>=2?.75:1),{fl:P_&&P_.fl,al:nb>=2?.6:.9});shake=Math.max(shake,1.5);if(typeof sfx==='function')sfx('frost');}
+function drawIceBlock(e){if(e.pxI&&SPS.pf_fzA){const t=e.icB.t;if(t<.24)pxIceDraw('fzA',Math.min(13,Math.floor(t/.24*14)),e,1);else pxIceDraw('fzH',(Math.floor((t-.24)*12)+e.pxI.ph)%12,e,1);return;}
+const B=e.icB,grow=Math.min(1,B.t/.2),left=e.frzT,b=e.y+e.r*.62,w=e.r*1.22,h=e.r*2.45;
   ctx.save();const top=b-e.r*3.1,cy=b-(b-top)*grow;ctx.beginPath();ctx.rect(e.x-e.r*3,cy,e.r*6,b-cy+6);ctx.clip();
   iceChunk(e.x,b,w,h,B.seed,left<.7?1-left/.7:0,B.t);ctx.restore();
   if(grow<1){ctx.globalAlpha=.9;ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(e.x-e.r*1.25,cy);ctx.lineTo(e.x+e.r*1.25,cy);ctx.stroke();ctx.globalAlpha=1;}
@@ -2897,6 +2943,31 @@ function steamPuff(t,s,x,y){const now=fxClock;if((t._stm||0)>now)return;t._stm=n
   if(parts.length>140||parts.filter(q=>q.stm).length>=6)return;const pv=towerPivot(t),a=t.type==='cannon'?(t.ang||0):0,X=pv.x+x*Math.cos(a)-y*Math.sin(a),Y=pv.y+x*Math.sin(a)+y*Math.cos(a);
   texP('puff','#e2e8f0',X,Y,{vy:-16,vx:rnd(-4,4),s0:s*.12,s1:s*.32,t:1.1,T:1.1,a0:.28,stm:1});}
 function strokePts(p){ctx.beginPath();ctx.moveTo(p[0][0],p[0][1]);for(let i=1;i<p.length;i++)ctx.lineTo(p[i][0],p[i][1]);ctx.stroke();}
+// 像素风闪电：折线按 1 像素栅格画（白芯 + 紫边），每 0.05 秒重新抖动，结束前变成断续的虚线淡出
+function pxPath(p,w,step){let k=0;for(let i=1;i<p.length;i++){let x0=Math.round(p[i-1][0]),y0=Math.round(p[i-1][1]);const x1=Math.round(p[i][0]),y1=Math.round(p[i][1]),dx=Math.abs(x1-x0),dy=-Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1;let er=dx+dy;
+  for(;;){if(!step||(k++%step)===0)ctx.fillRect(x0-(w>>1),y0-(w>>1),w,w);if(x0===x1&&y0===y1)break;const e2=2*er;if(e2>=dy){er+=dy;x0+=sx;}if(e2<=dx){er+=dx;y0+=sy;}}}}
+function drawPbolt(f){const el=f.T-f.t,n=f.pts.length-1,tail=f.t/f.T,fr=Math.floor(fxClock/.05);ctx.save();
+  for(let i=1;i<=n;i++){const age=el-(i-1)*f.hop;if(age<0)break;
+    const[x1,y1]=f.pts[i-1],[x2,y2]=f.pts[i],len=Math.hypot(x2-x1,y2-y1),seed=1+((f.seed+i*977+fr*7919)%2147483640),p=jagPts(x1,y1,x2,y2,Math.min(22,len*.22),seed,4);
+    const fresh=age<.06,late=tail<.35,dot=late?2:0;
+    let s2=seed;const r=()=>{s2=(s2*16807)%2147483647;return s2/2147483647;},br=[];
+    if(!f.busy)for(let k=0;k<2;k++){const q=p[3+Math.floor(r()*(p.length-6))],a=Math.atan2(y2-y1,x2-x1)+(r()<.5?1:-1)*(.6+r()*.7),L=6+r()*10;br.push(jagPts(q[0],q[1],q[0]+Math.cos(a)*L,q[1]+Math.sin(a)*L,L*.4,1+Math.floor(r()*1e6),2));}
+    ctx.globalAlpha=late?tail/.35:1;
+    ctx.fillStyle=late?'#4c1d95':'#6d28d9';pxPath(p,fresh?6:4,dot);for(const b of br)pxPath(b,2,dot);
+    ctx.fillStyle=late?'#8b5cf6':fresh?'#ffffff':'#e9d5ff';pxPath(p,fresh?3:2,dot);for(const b of br)pxPath(b,1,dot);
+  }
+  ctx.restore();}
+// 冰塔像素霜环：一圈 2 像素的冰晶点从塔边扩到射程，前沿白、后面淡蓝，结尾变虚线淡出
+function drawPring(f){const k=1-f.t/f.T,e=1-Math.pow(1-k,2.4),r=f.R*(.25+.75*e),ry=r*.82,n=Math.max(24,Math.floor(r*6.283/(f.big?3:4.5)));let s=f.seed;const rr=()=>{s=(s*16807)%2147483647;return s/2147483647;};
+  ctx.save();ctx.globalAlpha=(f.big?1:.55)*Math.min(1,(1-k)*2.2);const late=k>.6;
+  for(let i=0;i<n;i++){if(late&&i%2)continue;const a=i/n*6.283,j=(rr()-.5)*2.5,x=Math.round(f.x+Math.cos(a)*(r+j)),y=Math.round(f.y+Math.sin(a)*(ry+j*.8));
+    ctx.fillStyle=late?'#7dd3fc':k<.25?'#ffffff':'#e0f2fe';ctx.fillRect(x-1,y-1,2,2);
+    if(f.big&&!late&&rr()<.18){ctx.fillStyle='#bae6fd';const h=2+Math.floor(rr()*4);ctx.fillRect(x,y-h,1,h);ctx.fillStyle='#ffffff';ctx.fillRect(x,y-h,1,1);}
+    if(f.big&&rr()<.3){const r2=r*(.82+rr()*.1),x2=Math.round(f.x+Math.cos(a)*r2),y2=Math.round(f.y+Math.sin(a)*r2*.82);ctx.fillStyle='#7dd3fc';ctx.fillRect(x2,y2,1,1);}}
+  ctx.restore();}
+// 风之心：主目标到溅射目标之间一道像素风刃（绿白虚线，前沿亮），0.18 秒
+function drawWstreak(f){const k=1-f.t/f.T,a=Math.max(0,k*1.6-.6),b=Math.min(1,k*1.6),x1=f.x1+(f.x2-f.x1)*a,y1=f.y1+(f.y2-f.y1)*a,x2=f.x1+(f.x2-f.x1)*b,y2=f.y1+(f.y2-f.y1)*b;
+  const p=jagPts(x1,y1,x2,y2,2,f.seed,3);ctx.save();ctx.globalAlpha=Math.min(1,f.t/f.T*2);ctx.fillStyle='#22c55e';pxPath(p,2,0);ctx.fillStyle='#dcfce7';pxPath(p,1,2);ctx.fillStyle='#ffffff';ctx.fillRect(Math.round(x2)-1,Math.round(y2)-1,2,2);ctx.restore();}
 function drawBolt3(f){const el=f.T-f.t,n=f.pts.length-1,tail=Math.min(1,f.t/.12),fr=Math.floor(fxClock/.05);
   ctx.lineCap='round';ctx.lineJoin='round';
   for(let i=1;i<=n;i++){const age=el-(i-1)*f.hop;if(age<0)break;
@@ -2969,10 +3040,13 @@ function comboFormFx(c){
 // 同屏 5 个以上时新爆炸缩小、变快；子母弹的小炸弹用迷你版；地上焦痕更短更少。
 const SPS={};
 function spriteFx(k,x,y,s,T){fx.push({k:'sprite',sp:k,x,y,s,t:T,T});}
+const PF_KEYS=['lava0','lava1','lavaglow0','lavaglow1','pf_whirl','pf_arrow','pf_burn','pf_steam','pf_ember','pf_plasma','pf_pshot','pf_gold','pf_over','pf_cboom','pf_ccrit','pf_zhit','pf_wslash','pf_fzA','pf_fzH','pf_fzB','pf_lpool','pf_thor'].filter(k=>k.startsWith('pf_'));
 function spriteInit(){
   if(typeof Image==='undefined')return;
   for(const k of ['boom','zhit','ahit']){try{const im=new Image();im.onload=()=>{SPS[k]=im;};im.src=(window.RUNE_PNG?window.RUNE_PNG+'fx_':'fx/')+'sp_'+k+'.png';}catch(e){}}
-  for(const k of ['lava0','lava1','lavaglow0','lavaglow1','pf_whirl','pf_arrow','pf_burn','pf_steam','pf_ember','pf_plasma','pf_pshot','pf_gold','pf_over']){try{const im=new Image();im.onload=()=>{SPS[k]=im;};im.src=(window.RUNE_PNG?window.RUNE_PNG+'fx_':'fx/')+k+'.png';}catch(e){}}
+  for(const k of ['lava0','lava1','lavaglow0','lavaglow1','pf_whirl','pf_arrow','pf_burn','pf_steam','pf_ember','pf_plasma','pf_pshot','pf_gold','pf_over','pf_cboom','pf_ccrit','pf_zhit','pf_wslash','pf_fzA','pf_fzH','pf_fzB','pf_lpool','pf_thor']){if(k.startsWith('pf_')&&window.RUNE_SUBFX)continue;try{const im=new Image();im.onload=()=>{SPS[k]=im;};im.src=(window.RUNE_PNG?window.RUNE_PNG+'fx_':'fx/')+k+'.png';}catch(e){}}
+  // 微信版：像素特效图（pf_*）在分包里，分包下载好再加载；下载前这些特效自动退回旧画法
+  if(window.RUNE_SUBFX&&window.RUNE_LOADSUB)window.RUNE_LOADSUB(()=>{for(const k of PF_KEYS){try{const im=new Image();im.onload=()=>{SPS[k]=im;};im.src=window.RUNE_SUBFX+'fx_'+k+'.png';}catch(e){}}});
 }
 function drawSprite(f,alpha){const im=SPS[f.sp];if(!im)return;const a=f.t/f.T,n=Math.round(im.width/im.height),i=Math.min(n-1,Math.floor((1-a)*n)),fw=im.height;
   ctx.globalAlpha=alpha;ctx.drawImage(im,i*fw,0,fw,fw,f.x-f.s/2,f.y-f.s/2,f.s,f.s);ctx.globalAlpha=1;}
@@ -3010,6 +3084,7 @@ function lightSnow(t,R,dirn){const base=Math.random()*6.28;if(parts.length>150)r
 // 怪被冰塔打中：身上扑一层雪粉，掉几片雪花
 function snowHit(e){
   if(e._snowT>fxClock-.6)return;e._snowT=fxClock;   // 同一只怪 0.6 秒内只扑一次雪
+  if(FEAT.frost3&&SPS.pf_fhit){const nf=fx.reduce((n,f)=>n+(f.k==='pfx'&&f.id==='fhit'&&f.t/f.T>.5),0);if(nf<6)pfx('fhit',e.x,e.y+e.r*.35,rnd(.3,.36)*(e.boss?1.4:1),{sp:rnd(1,1.2)});return;}
   texP('puff2','#f8fafc',e.x,e.y-4,{s0:e.r*1.2,s1:e.r*2.6,t:.4,T:.4,a0:.55,opt:1});
   for(let i=0;i<3;i++){const a=Math.random()*6.28;P({k:'snowflake',x:e.x+rnd(-4,4),y:e.y-6,vx:Math.cos(a)*rnd(20,50),vy:Math.sin(a)*rnd(10,30)-20,g:60,drag:2,t:rnd(.5,.7),T:.7,r:rnd(1.6,2.4),rot:Math.random()*6,spin:rnd(-5,5),opt:1});}
 }
@@ -3709,9 +3784,9 @@ function draw(){
   // 敌人（序列帧特效的后半段——烟——先画，压在怪下面）
   for(const f of fx)if(f.k==='sprite'&&f.t/f.T<.6)drawSprite(f,Math.min(1,f.t/f.T/.6)*.85);
   for(const f of fx)if(f.k==='bossfall')drawBossFall(f);
-  if(FEAT.lava2&&lavas.length)drawLavas();
+  if(FEAT.lava2&&lavas.length){if(FEAT.evo2&&SPS.pf_lpool)drawLavaPool();else drawLavas(ctx);}
   if(craters.length)drawCraters();
-  for(const f of fx)if(f.k==='pfx'&&f.gnd)drawPfx(f);
+  for(const f of fx){if(f.k==='pfx'&&f.gnd)drawPfx(f);else if(f.k==='pring')drawPring(f);}
   if(stuckArrows.length)drawStuck();
   for(const e of [...enemies].sort((a,b)=>a.y-b.y)){
     const sp=SPR[e.spr+'_'+BIOME]||SPR[e.spr],hidden=e.afx.stealth&&!e.revealed;
@@ -3784,6 +3859,8 @@ function draw(){
     else if(f.k==='tornado')drawTornado(f);
     else if(f.k==='pfx'){if(!f.gnd)drawPfx(f);}
     else if(f.k==='pshot')drawPshot(f);
+    else if(f.k==='pbolt')drawPbolt(f);
+    else if(f.k==='wstreak')drawWstreak(f);
     else if(f.k==='fwave')drawFWave(f);
     else if(f.k==='zcore')drawZcore(f);
     else if(f.k==='zrad')drawZrad(f);

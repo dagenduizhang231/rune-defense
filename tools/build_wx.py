@@ -87,7 +87,7 @@ const t0=performance.now();
 const host={width:W,height:H,dpr,screenCtx:cv.getContext('2d'),insets:{top,bottom:H>=800?34:0},fontFamily:'-apple-system,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif',
  createCanvas:()=>document.createElement('canvas'),Image:window.Image,
  loadImage(src,cb){const im=new Image();im.onload=cb;im.src=src;return im;},
- pngBase:'images/',pngKeys:PNG_KEYS,search:location.search,
+ pngBase:'images/',pngKeys:PNG_KEYS,search:location.search,subFx:'fxpkg/',loadSub(cb){setTimeout(cb,30);},
  storage:{get:k=>localStorage.getItem('wxp_'+k),set:(k,v)=>localStorage.setItem('wxp_'+k,v),remove:k=>localStorage.removeItem('wxp_'+k),clear(){for(const k of Object.keys(localStorage))if(k.startsWith('wxp_'))localStorage.removeItem(k);}},
  rAF:cb=>requestAnimationFrame(cb),now:()=>performance.now()-t0,
  audioCtor:window.AudioContext||window.webkitAudioContext,
@@ -116,15 +116,23 @@ def main():
         if os.path.isdir(img): shutil.rmtree(img)
         print('烤贴图…'); keys = bake(img); compress(img)
     # 特效贴图（Kenney 粒子包，CC0）：复制成 images/fx_*.png，不算进角色贴图列表
+    # 像素特效序列帧（pixelfx，pf_*.png）体积大，放进分包 fxpkg/，开局后台加载；其余特效图留在主包
+    sub = os.path.join(out, 'fxpkg')
+    if os.path.isdir(sub): shutil.rmtree(sub)
+    os.makedirs(sub)
+    for f in os.listdir(img):
+        if f.startswith('fx_'): os.remove(os.path.join(img, f))
     for f in os.listdir(J('fx')):
-        if f.endswith('.png'): shutil.copy(J('fx', f), os.path.join(img, 'fx_' + f))
+        if not f.endswith('.png'): continue
+        shutil.copy(J('fx', f), os.path.join(sub if f.startswith('pf_') else img, 'fx_' + f))
+    open(os.path.join(sub, 'game.js'), 'w', encoding='utf-8').write('// 符文塔防 · 像素特效分包（只放图片）\n')
     keys = [k for k in keys if not k.startswith('fx_')]
     shutil.copy(J('THIRD_PARTY.md'), os.path.join(out, 'THIRD_PARTY.md'))
     # 微信工程
     open(os.path.join(out, 'game.js'), 'w', encoding='utf-8').write(
         f"// 符文塔防 {ver} · 微信小游戏版（由 tools/build_wx.py 生成，不要手改）\n" + read('platform/wx-host.js') + '\n' + core(css, body, game, False) +
         f"\n__HOST.pngKeys={json.dumps(keys)};\n__BOOT(__HOST);\n")
-    open(os.path.join(out, 'game.json'), 'w', encoding='utf-8').write(json.dumps({'deviceOrientation': 'portrait', 'showStatusBar': False}, indent=2))
+    open(os.path.join(out, 'game.json'), 'w', encoding='utf-8').write(json.dumps({'deviceOrientation': 'portrait', 'showStatusBar': False, 'subpackages': [{'name': 'fxpkg', 'root': 'fxpkg/'}]}, indent=2))
     pc = os.path.join(out, 'project.config.json')
     cfg = {'appid': appid, 'projectname': 'rune-defense', 'compileType': 'game', 'description': '符文塔防',
            'setting': {'es6': True, 'enhance': True, 'minified': True, 'postcss': False, 'urlCheck': False},
@@ -139,8 +147,12 @@ def main():
     pimg = os.path.join(prev, 'images')
     if os.path.isdir(pimg): shutil.rmtree(pimg)
     shutil.copytree(img, pimg)
+    psub = os.path.join(prev, 'fxpkg')
+    if os.path.isdir(psub): shutil.rmtree(psub)
+    shutil.copytree(sub, psub)
     size = sum(os.path.getsize(os.path.join(dp, f)) for dp, _, fs in os.walk(out) for f in fs)
-    print(f'完成 {ver}：{len(keys)} 张贴图，微信包 {size/1024:.0f} KB（主包上限 4096 KB）')
+    ssz = sum(os.path.getsize(os.path.join(sub, f)) for f in os.listdir(sub))
+    print(f'完成 {ver}：{len(keys)} 张贴图，微信主包 {(size-ssz)/1024:.0f} KB（上限 4096 KB），特效分包 {ssz/1024:.0f} KB，合计 {size/1024:.0f} KB')
 
 if __name__ == '__main__':
     main()
