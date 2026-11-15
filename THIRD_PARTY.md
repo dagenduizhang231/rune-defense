@@ -19,6 +19,11 @@
 - `fx/pf_lpool.png`：由 pixelfx `nature/toxic-puddle` 改成熔岩配色，火之心。
 - `fx/pf_fzA.png`、`fx/pf_fzH.png`、`fx/pf_fzB.png`：由 pixelfx `ice/freeze` 改编（去掉里面的角色，只保留冰晶），冰之心。
 - `fx/pf_thor.png`：pixelfx `lightning/lightning-strike`，雷之心。
+- `fx/pf_land.png`：pixelfx `impacts/heavy-landing`（换成泥土色），建塔落地。
+- `fx/pf_upA.png`：由 pixelfx `ui/level-up` 改编（光柱加宽、去掉文字和白闪），升级。
+- `fx/pf_poof.png`：pixelfx `spawn/poof`（截掉开头白光），卖塔。
+- `fx/pf_coin.png`：pixelfx `pickups/coin-spin`，全局掉落金币。
+- `fx/pf_tHigh.png`、`fx/pf_tWell.png`、`fx/pf_tSwamp.png`：pixelfx `nature/earth-spike`、`arcane/rune-circle`、`nature/acid-splash`（换成泥绿色），放置高地 / 符文井 / 沼泽。
 以上几项的画法为本游戏重新实现。
 
 MIT License
