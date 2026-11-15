@@ -24,6 +24,8 @@
 - `fx/pf_poof.png`：pixelfx `spawn/poof`（截掉开头白光），卖塔。
 - `fx/pf_coin.png`：pixelfx `pickups/coin-spin`，全局掉落金币。
 - `fx/pf_tHigh.png`、`fx/pf_tWell.png`、`fx/pf_tSwamp.png`：pixelfx `nature/earth-spike`、`arcane/rune-circle`、`nature/acid-splash`（换成泥绿色），放置高地 / 符文井 / 沼泽。
+- `fx/pf_eShield.png`、`fx/pf_eBreak.png`、`fx/pf_eHeal.png`、`fx/pf_eBlink.png`、`fx/pf_eRevive.png`、`fx/pf_eLead.png`：pixelfx `holy/divine-shield`（蓝色）、`impacts/parry`（银白）、`holy/heal`（绿色，去掉角色重着色）、`arcane/blink-in`、`holy/resurrection`、`holy/halo`（红色），精英词缀；均去掉了示例角色。
+- `fx/pf_bSplit.png`、`fx/pf_bImm_*.png`、`fx/pf_bSlam.png`、`fx/pf_bRage.png`、`fx/pf_bStun.png`：pixelfx `water/splash`（粉紫）、`arcane/mana-burst`（四种塔色）、`impacts/ground-slam`、`shadow/shadow-flames`（橙红）、`status/stunned`，Boss 技能。
 以上几项的画法为本游戏重新实现。
 
 MIT License
