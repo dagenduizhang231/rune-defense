@@ -543,6 +543,8 @@ const COMBOS=[
  {id:'C_harvest',a:'thunder',b:'gold',name:'电磁收割',desc:'每持有 100 金，电塔连锁 +1（最多 +3）'},
 ];
 COMBOS.forEach(c=>{c.r=3;c.max=1;c.ap=()=>{};});
+// 数值调整 bal2（暂未开启，等内容做完统一做强度测试）：熔金 +50%、贪婪之眼 4%/上限 30%、每级难度血量 +4%
+if(FEAT.bal2){COMBOS.find(c=>c.id==='C_moltengold').desc='在燃烧中被击败的敌人，掉落的金币 +50%';CARDS.find(c=>c.id==='g6').desc='每持有 100 金，所有伤害 +4%（最多 +30%）';}
 // 传说：只在 Boss 宝箱出现，让满级塔进化
 const LEGENDS=[
  {id:'L_arrow',tag:'arrow',name:'风之心',desc:'满级（4 级）箭塔进化为「神射手」：每支箭再波及目标周围 2 个敌人（50% 伤害），暴击率 +20%'},
@@ -587,7 +589,7 @@ const LIVE={
 
 // ======================= v0.3：大厅 / 英雄 / 诅咒 / 难度 =======================
 // 三个模块各有开关：网址加 ?off=meta,hero,curse 可以单独关闭（也方便出问题时直接关掉重发）
-const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true,map2:true,amb:true,ambsnd:true,lava2:true,death2:true,hero2:true,status2:true,combo2:true,tow2:true,frost3:false,evo2:true,misc2:true,upfx:1,elite2:true};
+const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true,map2:true,amb:true,ambsnd:true,lava2:true,death2:true,hero2:true,status2:true,combo2:true,tow2:true,frost3:false,evo2:true,misc2:true,upfx:1,elite2:true,bal2:false};
 try{const u=new URLSearchParams(location.search),q=u.get('off'),q2=u.get('on');if(q)q.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=false;});if(q2)q2.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=true;});}catch(e){}
 // 局外存档
 const META_DEF={shards:0,owned:{},hero:'wind',diff:0,unlockedDiff:0,runs:0,wins:0,auto:true};
@@ -749,7 +751,7 @@ function hit(e,dmg,src,o){
   if(M.shatter&&ctrl)dmg*=1+M.shatter;
   if(e.markT>0)dmg*=1.15;
   if(M.shredRune&&e.shredT>0)dmg*=1.1;
-  if(M.greed)dmg*=1+Math.min(.4,Math.floor(gold/100)*.05);
+  if(M.greed)dmg*=FEAT.bal2?1+Math.min(.3,Math.floor(gold/100)*.04):1+Math.min(.4,Math.floor(gold/100)*.05);
   if(src==='cannon'&&M.kindle&&e.burnT>0)dmg*=1.2;
   if(src==='arrow'&&M.hunter&&(e.elite||e.boss))dmg*=1.4;
   if(src==='arrow'&&M.gale&&(e.spd>=1.6))dmg*=1.6;
@@ -772,7 +774,7 @@ function kill(e){
   e.dead=true;
   let g=e.gold+M.killGold;
   if(M.loot&&(e.elite||e.boss))g+=e.gold;
-  if(e.burnT>0&&has('C_moltengold')){g*=2;txt(e.x,e.y-12,'熔金','#fbbf24',.7);if(FEAT.combo2&&SPS.pf_gold){const ns=fx.reduce((n,f)=>n+(f.k==='pfx'&&f.id==='gold'&&f.t/f.T>.6),0);pfx('gold',e.x,e.y+e.r*.5,rnd(.62,.7)*Math.max(.6,1-.12*ns),{sp:rnd(1,1.15),al:Math.max(.6,1-.12*ns)});}}
+  if(e.burnT>0&&has('C_moltengold')){g=FEAT.bal2?Math.round(g*1.5):g*2;txt(e.x,e.y-12,'熔金','#fbbf24',.7);if(FEAT.combo2&&SPS.pf_gold){const ns=fx.reduce((n,f)=>n+(f.k==='pfx'&&f.id==='gold'&&f.t/f.T>.6),0);pfx('gold',e.x,e.y+e.r*.5,rnd(.62,.7)*Math.max(.6,1-.12*ns),{sp:rnd(1,1.15),al:Math.max(.6,1-.12*ns)});}}
   gold+=g;stats.bounty+=M.killGold;stats.kills++;
   if(e.burnT>0&&M.ember){const R=CS*1.1;if(FEAT.combo2&&SPS.pf_ember){const ns=fx.reduce((n,f)=>n+(f.k==='pfx'&&f.id==='ember'&&f.t/f.T>.5),0);pfx('ember',e.x,e.y+e.r*.45,R/92*rnd(.92,1.05)*Math.max(.6,1-.15*ns),{sp:rnd(1.15,1.3),al:Math.max(.55,1-.15*ns),gnd:1});shake=Math.max(shake,2.5);}else fx.push({k:'boom',x:e.x,y:e.y,r:R,t:.3,T:.3,c:'#f97316'});
     for(const o of enemies)if(o!==e&&!o.dead&&(o.x-e.x)**2+(o.y-e.y)**2<=R*R){burnOn(o,Math.max(4,e.burnD),2);hit(o,e.max*(e.boss?.03:.15),'cannon',{pure:true,noCrit:true});}}
@@ -2363,7 +2365,7 @@ function buildSummary(){return Object.keys(taken).map(id=>{const c=findCard(id);
 // ======================= v0.3：英雄 =======================
 let HERO=null,zones=[],meteors=[],curses={},craters=[],stuckArrows=[];
 function unitHP(){return ET.norm.hp*hpScale(Math.max(1,step))*(MAP.hpMul||1)*diffHpMul();}
-function diffHpMul(){return (D(1)?1.1:1)*(D(8)?1.15:1);}
+function diffHpMul(){return (D(1)?1.1:1)*(D(8)?1.15:1)*(FEAT.bal2?Math.pow(1.04,DIFF):1);}
 function heroInit(){
   zones=[];meteors=[];HERO=null;
   if(!FEAT.hero)return;
@@ -2510,7 +2512,7 @@ function showLobby(){
   }
   if(META.unlockedDiff>0){
     h+=`<div class="lsec">难度</div><div>`;for(let d=0;d<=META.unlockedDiff;d++)h+=`<button class="chip dchip${META.diff===d?' on':''}" data-d="${d}">${d}</button>`;h+=`</div>`;
-    h+=`<div class="hint" style="text-align:left">${META.diff?DIFFS.slice(1,META.diff+1).map((s,i)=>`${i+1}. ${s}`).join('<br>')+`<br><b style="color:#a5f3fc">符文碎片 +${META.diff*15}%</b>`:'难度 0：标准难度。打通当前最高难度会解锁下一级。'}</div>`;
+    h+=`<div class="hint" style="text-align:left">${META.diff?DIFFS.slice(1,META.diff+1).map((s,i)=>`${i+1}. ${s}`).join('<br>')+(FEAT.bal2?`<br>另外：每级敌人血量 +4%（叠加，当前共 +${Math.round((Math.pow(1.04,META.diff)-1)*100)}%）`:'')+`<br><b style="color:#a5f3fc">符文碎片 +${META.diff*15}%</b>`:'难度 0：标准难度。打通当前最高难度会解锁下一级。'}</div>`;
   }else h+=`<div class="hint" style="text-align:left">打通一次后解锁「难度 1」，每升一级敌人更强，符文碎片也更多。</div>`;
   h+=`</div>${continueBlock()}<button class="big" style="max-width:420px;margin-top:14px" id="lgo">⚔️ ${savedRun()?'开始新的一局（会放弃上一局）':'开始冒险'}</button>
   <div><button class="reroll" id="lart" style="margin-top:10px">🔨 工匠铺（用碎片解锁内容）</button> <button class="reroll" id="lhelp" style="margin-top:10px">📖 玩法说明</button></div>`;
