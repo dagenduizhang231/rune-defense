@@ -107,7 +107,7 @@ button{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}
 <script src="maps.js"></script>
 <script>
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.6t';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.7a';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -171,6 +171,9 @@ function setupMap(i,biome){heroSpot=null;
     return{PP,seg,tot};
   });
 }
+// 飞行：沿入口→城门的直线飞；为了各地图平衡，飞完全程用的时间 = 走完道路的 75%
+function flyLen(pi){return PATHS[pi].tot*.75;}
+function flyAt(pi,d){const P=PATHS[pi],a=P.PP[0],b=P.PP[P.PP.length-1],L=flyLen(pi)||1,t=Math.min(1,d/L);return{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t+Math.sin(t*Math.PI)*0};}
 function posAt(pi,d){
   const P=PATHS[pi];
   for(let k=0;k<P.seg.length;k++){
@@ -197,11 +200,11 @@ const TOPY=(window.RuneArt&&window.RuneArt.TOP_Y)||22;
 function towerSize(t){return CS*(1.22+.05*(t.lvl-1));}
 function towerPivot(t){const s=towerSize(t);return{x:t.x,y:t.y+CS*.5-s*.95+s*TOPY/64,s};}
 function towerTip(t,len){const p=towerPivot(t),a=t.ang||0;return[p.x+Math.sin(a)*p.s*len,p.y-Math.cos(a)*p.s*len];}
-const ARTKEYS=['arrow','cannon','frost','tesla','norm','fast','tank','split','mini','boss1','boss2','boss3'];
+const ARTKEYS=['arrow','cannon','frost','tesla','norm','fast','tank','split','mini','bat','shaman','shieldman','beetle','boss1','boss2','boss3'];
 const TILEKEYS=['highland','runewell','swamp','grass0','grass1','path'];
 function raster(svgStr,px){return new Promise(res=>{if(typeof Image==='undefined'){res(null);return;}const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=c.height=px;c.getContext('2d').drawImage(im,0,0,px,px);res(c);};im.onerror=()=>res(null);im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgStr.replace('<svg ','<svg width="'+px+'" height="'+px+'" '));});}
 // 所有要预先栅格化的贴图：[键名, 生成 SVG 的函数, 像素尺寸]。微信版用 tools/build_wx.py 把它们提前烤成 PNG
-const ENEMYK=['norm','fast','tank','split','mini','boss1','boss2','boss3'];
+const ENEMYK=['norm','fast','tank','split','mini','bat','shaman','shieldman','beetle','boss1','boss2','boss3'];
 function artJobs(){
   const A=window.RuneArt,px=Math.max(96,Math.ceil(72*DPR)),J=[];if(!A)return J;
   for(const k of ARTKEYS)J.push([k,()=>A[k](),px]);
@@ -442,6 +445,10 @@ const ET={
   tank :{hp:110,spd:.72 ,r:12,col:'#94a3b8',gold:10 ,armor:4,dmg:2},
   split:{hp:55 ,spd:1.0 ,r:11,col:'#34d399',gold:6  ,armor:0,dmg:1},
   mini :{hp:16 ,spd:1.5 ,r:6 ,col:'#6ee7b7',gold:2  ,armor:0,dmg:1},
+  bat  :{hp:20 ,spd:.95,r:10,col:'#a78bfa',gold:6  ,armor:0,dmg:1,fly:1},
+  shaman:{hp:48,spd:.9 ,r:10,col:'#2dd4bf',gold:9  ,armor:0,dmg:1},
+  shieldman:{hp:58,spd:.85,r:11,col:'#fb923c',gold:8,armor:2,dmg:1},
+  beetle:{hp:38,spd:1.1 ,r:9 ,col:'#ef4444',gold:6  ,armor:0,dmg:1},
   boss1:{hp:550,spd:.5 ,r:17,col:'#e879f9',gold:100,armor:3,dmg:0},
   boss2:{hp:350,spd:.48,r:17,col:'#a5b4fc',gold:150,armor:5,dmg:0},
   boss3:{hp:700,spd:.45,r:18,col:'#ef4444',gold:200,armor:7,dmg:0},
@@ -456,6 +463,10 @@ const EINFO={
   tank :{name:'石甲兽',desc:'血厚、带护甲：每次受到的伤害先减去护甲值（最少保留 25%）。',tip:'单发伤害越高越好，比如炮塔、升级后的塔。很多次小伤害会被护甲吃掉。'},
   split:{name:'双生史莱姆',desc:'被击败后分裂成两只小史莱姆。',tip:'炮塔的爆炸、电塔的连锁能一次打中分裂出来的小怪。'},
   mini :{name:'小史莱姆',desc:'双生史莱姆或巢母生出来的，血少、跑得快。',tip:'范围伤害最有效。'},
+  bat  :{name:'飞行蝠',desc:'不走路，从入口直线飞向城门，比走路快不少。炮塔的炮弹打不到它。',tip:'靠箭塔、电塔拦截；冰塔能让它减速。'},
+  shaman:{name:'治疗萨满',desc:'每 3 秒给周围的敌人回复 10% 生命。',tip:'优先集火它：射程远的箭塔、狙击分支最合适。'},
+  shieldman:{name:'盾兵',desc:'举着大盾：从正面射来的箭只造成 25% 伤害。炮弹会越过盾牌，闪电能穿透。',tip:'把箭塔放在它走过之后的位置从背后射，或用炮塔、电塔。'},
+  beetle:{name:'自爆甲虫',desc:'被击败时爆炸，让附近一座塔停工 2 秒。',tip:'塔不要全挤在一起，在远处就把它打掉。'},
   boss1:{name:'巢母',desc:'第一幕 Boss。每掉 25% 生命，就生出一群小史莱姆。漏过城门时按剩余生命扣命：剩一半血扣 12 条，剩八成以上直接破城。',tip:'炮塔、电塔清小怪，高伤害的塔集中打 Boss。'},
   boss2:{name:'棱镜守卫',desc:'第二幕 Boss。每 7 秒，对上一阶段伤害最高的那种塔完全免疫。头顶显示当前免疫哪种塔。',tip:'只靠一种塔会被克制，至少准备两种主力塔。'},
   boss3:{name:'暴君',desc:'最终 Boss。生命低于一半后狂暴加速，并且每 6 秒让附近一座塔停工 3 秒。',tip:'冰塔减速对付狂暴；塔分散摆放，别全挤在一处。'},
@@ -642,6 +653,7 @@ function resetRun(mapIdx,biome){
   setupMap(mapIdx,biome);buildBG();
   M={arrowDmg:1,arrowRate:1,arrowMulti:1,cannonDmg:1,cannonSplash:1,burn:0,frostSlow:.4,freeze:0,shatter:0,chain:3,teslaDmg:1,overload:0,interest:0,killGold:0,costMul:1,rangeMul:1,crit:0,allRate:1,execute:0,resonance:0,pierce:0,gale:0,hunter:0,ember:0,kindle:0,burnPlus:0,coldWave:0,shredRune:0,conductor:0,staticF:0,loot:0,greed:0,recycle:0,fifth:0,unstable:0,hourglass:0,resonStone:0,allDmg:1};
   DIFF=FEAT.meta?Math.min(META.diff||0,META.unlockedDiff||0):0;curses={};
+  {const a=['bat','shaman','shieldman','beetle'];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}M.mob=a;}
   gold=170;lives=20;step=0;phase='node';curNode=null;towers=[];enemies=[];projs=[];fx=[];texts=[];parts=[];decals=[];sched=[];queue=[];spawnT=0;sel=null;taken={};grid={};
   stats={kills:0,leaked:0,bounty:0,exec:0,eliteWins:0,bossWins:0};paused=false;introQ=[];tcards={highland:0,runewell:0,swamp:0};placing=null;spawnCount=0;lavas=[];comboSeen=new Set();
   if(FEAT.meta){for(const k of ['gold1','gold2','gold3'])if(META.owned[k])gold+=15;if(META.owned.land)tcards.highland++;}
@@ -660,8 +672,8 @@ function spawn(type,d,pi,elite){
   if(isBoss&&D(5))hp*=1.25;if(type==='boss3'&&D(10))hp*=1.5;
   let armor=(b.armor?b.armor+step*.5:0)+(curseOn('armor')?8:0);
   if(pi===undefined)pi=PATHS.length>1?(MAP.type==='fork'?(Math.random()<.5?0:1):(spawnCount++%PATHS.length)):0;
-  const p=posAt(pi,d||0);
-  const e={type,spr:type,boss:isBoss,elite:!!elite,afx:{},dir:1,hp,max:hp,spd:b.spd,r:b.r*(elite?1.25:1),col:b.col,gold:b.gold*(elite?3:1),armor,dmg:b.dmg,d:d||0,pi,x:p.x,y:p.y,
+  const p=b.fly?flyAt(pi,d||0):posAt(pi,d||0);
+  const e={type,fly:!!b.fly,spr:type,boss:isBoss,elite:!!elite,afx:{},dir:1,hp,max:hp,spd:b.spd,r:b.r*(elite?1.25:1),col:b.col,gold:b.gold*(elite?3:1),armor,dmg:b.dmg,d:d||0,pi,x:p.x,y:p.y,
     slowT:0,slowA:0,frzT:0,burnT:0,burnD:0,hitT:9,shield:0,dead:false,lead:false,revealed:true};
   if(elite)for(const a of elite){e.afx[a]=true;}
   if(e.afx.shield)e.shield=e.max*.4;
@@ -676,18 +688,21 @@ function spawn(type,d,pi,elite){
   for(const k of keys)if(!seen.has(k)&&!introQ.includes(k))introQ.push(k);
   return e;
 }
+// 本局新怪：开局把 4 种新怪打乱，第 1 幕出现 1 种（第 2 站起），第 2 幕 2 种，第 3 幕 3 种
+function mobOf(s){const a=(M.mob||[]);if(s<2)return[];return a.slice(0,Math.min(3,actOf(s)));}
 function buildWave(s,kind){
   const q=[],act=actOf(s);let n=7+Math.floor(s*2);
   if(kind==='boss')n=Math.floor(n*.6);if(kind==='elite')n=Math.floor(n*.7);
   for(let i=0;i<n;i++){
     let t='norm';const r=Math.random();
     if(s>=2&&r<.25)t='fast';else if(s>=4&&r<.42)t='tank';else if(s>=6&&r<.58)t='split';
-    q.push({t,gap:t==='fast'?.35:.65});
+    const nm=mobOf(s);if(nm.length&&Math.random()<.22)t=pick(nm);
+    q.push({t,gap:t==='fast'?.35:t==='bat'?.45:.65});
   }
   if(kind==='normal'&&(s===3||s===8||s===13))for(let i=0;i<10;i++)q.push({t:'fast',gap:.18});
   let ne=kind==='elite'?act+(D(2)?1:0):kind==='normal'?(D(6)?1:0)+(curseOn('elites')?2:0):0;
   for(let k=0;k<ne;k++){
-    const base=pick(s>=6?['norm','tank','fast','split']:['norm','tank','fast']);
+    const base=pick([...(s>=6?['norm','tank','fast','split']:['norm','tank','fast']),...mobOf(s).filter(k=>k!=='bat')]);
     const pool=[...(act===1?AFX_ACT1:AFX_ALL)],af=[];
     for(let j=0;j<(act===1?1:2)+(D(9)?1:0)&&pool.length;j++)af.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
     q.splice(Math.floor((k+1)*q.length/(ne+1)),0,{t:base,elite:af,gap:1});
@@ -762,6 +777,9 @@ function kill(e){
   if(e.burnT>0&&M.ember){const R=CS*1.1;if(FEAT.combo2&&SPS.pf_ember){const ns=fx.reduce((n,f)=>n+(f.k==='pfx'&&f.id==='ember'&&f.t/f.T>.5),0);pfx('ember',e.x,e.y+e.r*.45,R/92*rnd(.92,1.05)*Math.max(.6,1-.15*ns),{sp:rnd(1.15,1.3),al:Math.max(.55,1-.15*ns),gnd:1});shake=Math.max(shake,2.5);}else fx.push({k:'boom',x:e.x,y:e.y,r:R,t:.3,T:.3,c:'#f97316'});
     for(const o of enemies)if(o!==e&&!o.dead&&(o.x-e.x)**2+(o.y-e.y)**2<=R*R){burnOn(o,Math.max(4,e.burnD),2);hit(o,e.max*(e.boss?.03:.15),'cannon',{pure:true,noCrit:true});}}
   if(e.type==='split'){spawn('mini',Math.max(0,e.d-4),e.pi);spawn('mini',Math.max(0,e.d-16),e.pi);}
+  if(e.type==='beetle'){let best=null,bd=(1.5*CS)**2;for(const t of towers){const q=(t.x-e.x)**2+(t.y-e.y)**2;if(q<bd&&!(t.stun>0)){bd=q;best=t;}}
+    if(SPS.pf_cboom)pfx('cboom',e.x,e.y+e.r*.5,.32);shake=Math.max(shake,2.5);sfx('boom');
+    if(best){best.stun=Math.max(best.stun||0,2);txt(best.x,best.y-30,'停工','#fca5a5',1);fx.push({k:'ring',x:e.x,y:e.y,r:Math.sqrt(bd),t:.3,T:.3,c:'#f97316'});}}
   if(e.boss&&FEAT.bossfall&&!FEAT.fx2){bossFall(e);return;}
   if(!e.boss&&FEAT.death2&&!FEAT.fx2){dieFx(e);return;}
   fx.push({k:'boom',x:e.x,y:e.y,r:e.r*1.5,t:.22,T:.22,c:'#fffbeb'});fx.push({k:'ring',x:e.x,y:e.y,r:e.r*1.9,t:.22,T:.22,c:'#ffffff'});
@@ -770,7 +788,7 @@ function kill(e){
   if(e.boss){shake=Math.max(shake,7);sfx('bossdie');}
 }
 const targetable=e=>!e.dead&&(!e.afx.stealth||e.revealed);
-function inRange(t,R){const R2=R*R;return enemies.filter(e=>targetable(e)&&(e.x-t.x)**2+(e.y-t.y)**2<=R2);}
+function inRange(t,R){const R2=R*R,gc=t.type==='cannon';return enemies.filter(e=>targetable(e)&&!(gc&&e.fly)&&(e.x-t.x)**2+(e.y-t.y)**2<=R2);}
 // 闪电链：从 first 开始，连锁 n 个目标
 function chainZap(first,n,dmg,decay,from,o){const lite=o&&o.lite;
   let cur=first,d=dmg;const hs=new Set(),pts=[from||[first.x,first.y-30]],tgs=[];
@@ -842,7 +860,7 @@ function updTower(t,dt){
 function nearest(x,y,R,skip){let best=null,bd=R*R;for(const e of enemies){if(e.dead||skip.has(e))continue;const q=(e.x-x)**2+(e.y-y)**2;if(q<bd){bd=q;best=e;}}return best;}
 function explode(x,y,R,dmg,lvl,o){
   const R2=R*R;
-  for(const e of enemies){if(!e.dead&&(e.x-x)**2+(e.y-y)**2<=R2){if(M.burn)burnOn(e,M.burn*lvl,2);hit(e,dmg,'cannon',o);}}
+  for(const e of enemies){if(!e.dead&&!e.fly&&(e.x-x)**2+(e.y-y)**2<=R2){if(M.burn)burnOn(e,M.burn*lvl,2);hit(e,dmg,'cannon',o);}}
 }
 function updProj(p,dt){
   if(p.tg&&!p.tg.dead){p.tx=p.tg.x;p.ty=p.tg.y;}
@@ -854,6 +872,7 @@ function updProj(p,dt){
   if(p.k==='arrow'){
     if(p.zc&&FEAT.arrow2){const s0=p.tg&&!p.tg.dead?p.tg:nearest(p.tx,p.ty,1.2*CS,new Set());if(s0)chainZap(s0,3,p.dmg,.9,null,{lite:1});}
     const e=p.tg;if(!e||e.dead)return;
+    if(e.type==='shieldman'&&e.mvx!=null){const l=Math.hypot(p.vx,p.vy)||1;if((p.vx*e.mvx+p.vy*e.mvy)/l<-.25){p.dmg*=.25;if(!(e._blkT>fxClock-.35)){e._blkT=fxClock;if(SPS.pf_eBreak)pfx('eBreak',e.x+e.mvx*e.r*.9,e.y+e.r*.1,e.r/22,{sp:1.4});txt(e.x,e.y-e.r-8,'格挡','#fde68a',.6);}}}
     const crit=p.crit||(has('C_icearrow')&&e.frzT>0);
     const A2=FEAT.arrow2;if(A2)e._arw=arwInfo(p,1);
     hit(e,p.dmg,'arrow',{crit,ap:p.ap,evo:p.evo});if(!A2)burst(p.tx,p.ty,'#bbf7d0',4,60,0,.25,1.5);
@@ -899,6 +918,9 @@ function updEnemy(e,dt){
     if(e.dead)return;
   }
   if(e.afx.regen&&e.burnT<=0&&e.hitT>1.5&&e.hp<e.max){e.hp=Math.min(e.max,e.hp+e.max*.04*dt);if(FEAT.elite2&&SPS.pf_eHeal&&!(e._hlT>fxClock-1.3)){e._hlT=fxClock;pfx('eHeal',e.x,e.y+e.r*.8,e.r/13);}}
+  if(e.type==='shaman'){e.hlCd=(e.hlCd??1.5)-dt;if(e.hlCd<=0){e.hlCd=3;const R=1.8*CS;let n=0;
+    for(const o of enemies)if(!o.dead&&!o.boss&&o.hp<o.max&&(o.x-e.x)**2+(o.y-e.y)**2<=R*R){o.hp=Math.min(o.max,o.hp+o.max*.1);if(n<5&&SPS.pf_eHeal)pfx('eHeal',o.x,o.y+o.r*.8,o.r/14);n++;}
+    if(n){fx.push({k:'ring',x:e.x,y:e.y,r:R,t:.45,T:.45,c:'#4ade80'});txt(e.x,e.y-e.r-10,'治疗','#86efac',.7);}}}
   if(e.type==='boss2'){e.cycT-=dt;if(e.cycT<=0){e.cycT=7;const k=Object.keys(e.dmgSrc).sort((a,b)=>e.dmgSrc[b]-e.dmgSrc[a])[0];if(k)e.immune=k;e.dmgSrc={};if(FEAT.elite2&&SPS['pf_bImm_'+e.immune]){pfx('bImm_'+e.immune,e.x,e.y+e.r*.5,e.r/26);sfx('zap');}txt(e.x,e.y-34,'免疫 '+TT[e.immune].name,TT[e.immune].color,1.4);}}
   if(e.type==='boss3'){
     if(!e.enraged&&e.hp<e.max*.5){e.enraged=true;e.spd*=1.6;txt(e.x,e.y-34,'狂暴！','#f87171',1.4);shake=Math.max(shake,5);sfx('boss');if(FEAT.elite2&&SPS.pf_bSlam){pfx('bSlam',e.x,e.y+e.r*.7,e.r/24);stopT=Math.max(stopT,.12);shake=Math.max(shake,7);}}
@@ -908,11 +930,11 @@ function updEnemy(e,dt){
   let f=1;
   if(e.frzT>0){if(FEAT.status2&&!e.icB)e.icB={t:0,seed:Math.random()*99};e.frzT-=dt;f=0;if(e.icB){e.icB.t+=dt;if(e.frzT<=0){if(e.pxI)pxIceBurst(e);else iceBurst(e);e.icB=null;e.pxI=null;}}}
   else if(e.slowT>0){e.slowT-=dt;f=1-e.slowA;}
-  {const tk=tiles[Math.floor(e.x/CS)+','+Math.floor(e.y/CS)];if(tk==='swamp')f*=.7;else if(tk==='ice')f*=1.3;}
+  if(!e.fly){const tk=tiles[Math.floor(e.x/CS)+','+Math.floor(e.y/CS)];if(tk==='swamp')f*=.7;else if(tk==='ice')f*=1.3;}
   if(e.lead)f*=1.25;
   if(e.hsT>0){e.hsT-=dt;f=0;}
   e.d+=e.spd*CS*f*dt;
-  if(e.d>=PATHS[e.pi].tot){
+  if(e.d>=(e.fly?flyLen(e.pi):PATHS[e.pi].tot)){
     e.dead=true;let lost=e.boss?Math.max(1,Math.ceil(e.hp/e.max*24)):e.dmg;
     if(!e.boss&&HERO&&HERO.wallT>0){const g=clampPt(PATHS[e.pi].PP[PATHS[e.pi].PP.length-1]);txt(g.x,g.y-14,'壁垒','#7dd3fc',.8);if(FEAT.hero2){if(HERO.wallP)for(const k in HERO.wallP)HERO.wallP[k].hitT=fxClock;shards(g.x,g.y-8,6,'#bae6fd',110);texP('puff2','#e0f2fe',g.x,g.y-6,{s0:10,s1:24,t:.4,T:.4,a0:.5});sfx('crack');}else burst(g.x,g.y,'#bae6fd',8,80,0,.4,2);return;}
     lives-=lost;stats.leaked++;shake=Math.max(shake,4);sfx('leak');fx.push({k:'flash',t:.3,T:.3});
@@ -921,10 +943,10 @@ function updEnemy(e,dt){
     if(lives<=0){lives=0;endGame(false);}
     return;
   }
-  const p=posAt(e.pi,e.d);if(Math.abs(p.x-e.x)>.01)e.dir=p.x<e.x?-1:1;e.x=p.x;e.y=p.y;
+  const p=e.fly?flyAt(e.pi,e.d):posAt(e.pi,e.d);if(Math.abs(p.x-e.x)>.01)e.dir=p.x<e.x?-1:1;{const dx=p.x-e.x,dy=p.y-e.y,l=Math.hypot(dx,dy);if(l>.01){e.mvx=dx/l;e.mvy=dy/l;}}e.x=p.x;e.y=p.y;
 }
 function updLava(dt){
-  for(const l of lavas){l.t-=dt;if(l.dps>0)for(const e of enemies)if(!e.dead&&(e.x-l.x)**2+(e.y-l.y)**2<=l.r*l.r)hit(e,l.dps*dt,'cannon',{pure:true,noCrit:true});}
+  for(const l of lavas){l.t-=dt;if(l.dps>0)for(const e of enemies)if(!e.dead&&!e.fly&&(e.x-l.x)**2+(e.y-l.y)**2<=l.r*l.r)hit(e,l.dps*dt,'cannon',{pure:true,noCrit:true});}
   lavas=lavas.filter(l=>l.t>0);
 }
 

@@ -277,6 +277,78 @@
       rad(b, "#d9fbe9", "#22b07d", .4, .3, .8));
   };
 
+  // ======================= 新怪（v0.7） =======================
+  // 飞行蝠：圆滚滚的紫色蝙蝠，悬在半空（影子在地面）
+  A.bat = () => {
+    const b = uid("bb"), w = uid("bw");
+    return svg(
+      `<ellipse cx="32" cy="57" rx="11" ry="2.6" fill="#000" opacity=".28"/>` +
+      `<path d="M27 26 Q14 12 3 20 Q8 22 7 27 Q12 25 14 30 Q18 27 21 32 Z" fill="url(#${w})" stroke="${O}" stroke-width="1.6" stroke-linejoin="round"/>` +
+      `<path d="M37 26 Q50 12 61 20 Q56 22 57 27 Q52 25 50 30 Q46 27 43 32 Z" fill="url(#${w})" stroke="${O}" stroke-width="1.6" stroke-linejoin="round"/>` +
+      `<path d="M10 22 L18 27 M54 22 L46 27" stroke="#3b0764" stroke-width="1" opacity=".6"/>` +
+      `<path d="M23 20 L24 11 L29 17 Z M41 20 L40 11 L35 17 Z" fill="url(#${b})" stroke="${O}" stroke-width="1.4" stroke-linejoin="round"/>` +
+      `<ellipse cx="32" cy="29" rx="12" ry="11.5" fill="url(#${b})" stroke="${O}" stroke-width="1.8"/>` +
+      `<path d="M25 22 Q28 19 32 19" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" opacity=".6"/>` +
+      eye(28, 28, 3.4, 1, .25) + eye(37, 28, 3.4, 1, .25) +
+      `<path d="M30 35 Q32.5 37 35 35" fill="none" stroke="${O}" stroke-width="1.3" stroke-linecap="round"/>` +
+      `<path d="M30.6 35.4 l.8 2 l.8 -1.6 M33.4 35.6 l.8 1.8 l.7 -1.8" fill="#fff" stroke="${O}" stroke-width=".6"/>` +
+      `<path d="M29 40 l-1 4 M35 40 l1 4" stroke="${O}" stroke-width="1.6" stroke-linecap="round"/>`,
+      rad(b, "#d8b4fe", "#6d28d9", .4, .3, .8) + lin(w, [[0, "#a78bfa"], [1, "#4c1d95"]]));
+  };
+  // 治疗萨满：戴叶子兜帽的小史莱姆，举着发光的木杖
+  A.shaman = () => {
+    const b = uid("hb"), h = uid("hh"), g = uid("hg");
+    return svg(
+      shadow(16, 55, 4.2) +
+      `<path d="M50 54 L46 14" stroke="${O}" stroke-width="4" stroke-linecap="round"/><path d="M50 54 L46 14" stroke="#a16207" stroke-width="2.2" stroke-linecap="round"/>` +
+      `<path d="M15 50 Q13 32 23 25 Q31 21 39 25 Q48 32 47 50 Q40 55 31 55 Q21 55 15 50Z" fill="url(#${b})" stroke="${O}" stroke-width="1.8" stroke-linejoin="round"/>` +
+      `<path d="M14 33 Q16 16 31 14 Q46 16 48 33 Q40 26 31 26 Q22 26 14 33Z" fill="url(#${h})" stroke="${O}" stroke-width="1.6" stroke-linejoin="round"/>` +
+      `<path d="M31 14 Q33 8 38 6 Q37 12 31 14Z" fill="url(#${h})" stroke="${O}" stroke-width="1.2" stroke-linejoin="round"/>` +
+      `<path d="M20 26 Q31 20 42 26" fill="none" stroke="#bbf7d0" stroke-width="1" opacity=".7"/>` +
+      eye(25.5, 37, 3.8, 1) + eye(35.5, 37, 3.8, 1) +
+      `<path d="M28 46 Q31 48.2 34 46" fill="none" stroke="${O}" stroke-width="1.4" stroke-linecap="round"/>` +
+      `<path d="M23 43 l2 -1 M37 42 l2 1" stroke="#065f46" stroke-width="1.6" stroke-linecap="round"/>` +
+      `<g filter="url(#${g})"><circle cx="46" cy="12" r="4.2" fill="#86efac" stroke="${O}" stroke-width="1.2"/><path d="M46 9.5 v5 M43.5 12 h5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></g>` +
+      `<path d="M41 15 Q44 17 44 20 M51 15 Q48 17 48 20" fill="none" stroke="#4ade80" stroke-width="1.6" stroke-linecap="round"/>` +
+      `<ellipse cx="44" cy="40" rx="3.2" ry="2.8" fill="url(#${b})" stroke="${O}" stroke-width="1.2"/>`,
+      rad(b, "#a7f3d0", "#0d9488", .4, .3, .82) + lin(h, [[0, "#4ade80"], [1, "#15803d"]]) + glow(g, 1.5));
+  };
+  // 盾兵：戴铁盔的橙色史莱姆，右侧（前方）举着一面大圆盾
+  A.shieldman = () => {
+    const b = uid("db"), s = uid("ds"), m = uid("dm");
+    return svg(
+      shadow(19, 56, 4.8) +
+      `<path d="M10 50 Q8 31 19 24 Q28 19 37 24 Q46 31 45 50 Q38 55 27.5 55 Q16 55 10 50Z" fill="url(#${b})" stroke="${O}" stroke-width="1.8" stroke-linejoin="round"/>` +
+      `<path d="M12 31 Q13 16 27.5 15 Q42 16 43 31 Q36 27 27.5 27 Q19 27 12 31Z" fill="url(#${m})" stroke="${O}" stroke-width="1.6" stroke-linejoin="round"/>` +
+      `<path d="M27.5 15 V27" stroke="${O}" stroke-width="1.2"/><path d="M18 22 Q23 18 27 18" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".7"/>` +
+      eye(22, 36, 3.6, 1.2, .35) + eye(31.5, 36, 3.6, 1.2, .35) +
+      `<path d="M23 46 Q27 44.5 31 46" fill="none" stroke="${O}" stroke-width="1.5" stroke-linecap="round"/>` +
+      `<ellipse cx="46" cy="38" rx="11" ry="15" fill="url(#${s})" stroke="${O}" stroke-width="2"/>` +
+      `<ellipse cx="46" cy="38" rx="8" ry="11.5" fill="none" stroke="#fde68a" stroke-width="1.6" opacity=".9"/>` +
+      `<circle cx="46" cy="38" r="3.4" fill="url(#${m})" stroke="${O}" stroke-width="1.2"/>` +
+      `<path d="M39 30 Q41 25 45 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".6"/>` +
+      `<circle cx="40" cy="45" r=".9" fill="#78350f"/><circle cx="52" cy="31" r=".9" fill="#78350f"/><circle cx="52" cy="45" r=".9" fill="#78350f"/>`,
+      rad(b, "#fdba74", "#c2410c", .4, .3, .82) + lin(s, [[0, "#d6a15c"], [.6, "#a16207"], [1, "#713f12"]], 1, 1) + lin(m, [[0, "#e2e8f0"], [1, "#64748b"]]));
+  };
+  // 自爆甲虫：红色圆壳小甲虫，背上一根滋滋冒火星的引信
+  A.beetle = () => {
+    const b = uid("eb"), h = uid("eh"), g = uid("eg");
+    return svg(
+      shadow(17, 55, 4.2) +
+      `<path d="M16 49 l-5 4 M22 52 l-3 5 M42 52 l3 5 M48 49 l5 4" stroke="${O}" stroke-width="2" stroke-linecap="round"/>` +
+      `<ellipse cx="44" cy="40" rx="9" ry="8" fill="url(#${h})" stroke="${O}" stroke-width="1.7"/>` +
+      `<path d="M10 42 Q10 22 29 21 Q46 22 46 42 Q44 52 28 52 Q12 52 10 42Z" fill="url(#${b})" stroke="${O}" stroke-width="1.9" stroke-linejoin="round"/>` +
+      `<path d="M28 21.5 Q27 37 28 51.5" fill="none" stroke="${O}" stroke-width="1.4"/>` +
+      `<circle cx="19" cy="33" r="3" fill="#450a0a" opacity=".55"/><circle cx="37" cy="31" r="2.6" fill="#450a0a" opacity=".55"/><circle cx="20" cy="44" r="2.2" fill="#450a0a" opacity=".55"/><circle cx="37" cy="44" r="2.8" fill="#450a0a" opacity=".55"/>` +
+      `<path d="M15 28 Q20 23 26 23" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".65"/>` +
+      `<path d="M28 21 Q27 14 31 10" fill="none" stroke="${O}" stroke-width="2.6" stroke-linecap="round"/><path d="M28 21 Q27 14 31 10" fill="none" stroke="#d6d3d1" stroke-width="1.2" stroke-linecap="round"/>` +
+      `<g filter="url(#${g})"><path d="M31 10 l1.5 -4 l1 3.2 l3 -2 l-1.6 3.4 l3.6 .6 l-3.4 1.6 l1.4 3 l-3.2 -1.6 l-1 3 l-.8 -3.4 l-3 1Z" fill="#fde047" stroke="#f97316" stroke-width=".8"/></g>` +
+      eye(44, 38, 3.2, 1.1) + eye(50.5, 38.5, 2.6, .9) +
+      `<path d="M45 45 Q47.5 46.6 50 45" fill="none" stroke="${O}" stroke-width="1.3" stroke-linecap="round"/>` +
+      `<path d="M46 32 Q47 27 51 25 M50 33 Q53 29 57 29" fill="none" stroke="${O}" stroke-width="1.4" stroke-linecap="round"/>`,
+      rad(b, "#fca5a5", "#b91c1c", .4, .3, .82) + rad(h, "#57534e", "#1c1917", .4, .3, .8) + glow(g, 1.4));
+  };
+
   // ======================= Boss =======================
   // 巢母：戴王冠的大史莱姆，身边有卵
   A.boss1 = () => {
@@ -462,7 +534,7 @@
 
   A.list = {
     towers: [["arrow", "箭塔"], ["cannon", "炮塔"], ["frost", "冰塔"], ["tesla", "电塔"]],
-    enemies: [["norm", "史莱姆"], ["fast", "风灵"], ["tank", "石甲兽"], ["split", "双生史莱姆"], ["mini", "小史莱姆"]],
+    enemies: [["norm", "史莱姆"], ["fast", "风灵"], ["tank", "石甲兽"], ["split", "双生史莱姆"], ["mini", "小史莱姆"], ["bat", "飞行蝠"], ["shaman", "治疗萨满"], ["shieldman", "盾兵"], ["beetle", "自爆甲虫"]],
     bosses: [["boss1", "巢母"], ["boss2", "棱镜守卫"], ["boss3", "暴君"]],
     tiles: [["grass", "草地"], ["path", "道路"], ["highland", "高地 · 射程+1"], ["runewell", "符文井 · 相邻伤害+20%"], ["swamp", "沼泽 · 敌人减速"]],
   };
