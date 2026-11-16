@@ -86,7 +86,7 @@ window.__qa={
  state(){const vis=el=>el&&el.style.display==='flex';
   const btns=vis(ov)?[...ov.querySelectorAll('button')].filter(b=>b.offsetParent!==null&&!b.disabled).length:0;
   return {phase,step,lives,gold:Math.floor(gold),paused,ov:vis(ov),bp:vis(bp),btns,intro:!!document.getElementById('okIntro')&&vis(ov),
-   q:queue.length,en:enemies.length,kills:stats.kills,node:curNode,towers:towers.length,legs:Object.keys(taken).filter(k=>k.startsWith('L_')).length,
+   q:queue.length,en:enemies.length,kills:stats.kills,node:curNode,towers:towers.length,spent:towers.reduce((a,t)=>a+(t.spent||0),0),legs:Object.keys(taken).filter(k=>k.startsWith('L_')).length,
    combos:Object.keys(taken).filter(k=>k.startsWith('C_')).length,runes:Object.keys(taken).length,
    ehp:Math.round(enemies.reduce((a,e)=>a+(e.dead?0:e.hp),0)),ed:Math.round(enemies.reduce((a,e)=>a+(e.dead?0:e.d),0))};}
 };
@@ -107,7 +107,7 @@ def run_worker(args):
         pg.on('console', lambda m: m.type == 'error' and errs.append('console.error: ' + m.text))
         pg.goto(ROOT); pg.wait_for_timeout(800)
         if wid % 2 == 0:
-            pg.evaluate("localStorage.setItem('"+('wxp_' if WX else '')+"td_meta',JSON.stringify({shards:900,owned:{altar:true,fate:true,h_fire:true,h_ice:true,pk_odd:true},hero:'fire',diff:0,unlockedDiff:3,runs:0,wins:0,auto:true}))")
+            pg.evaluate("localStorage.setItem('"+('wxp_' if WX else '')+"td_meta',JSON.stringify({shards:900,owned:{altar:true,fate:true,h_fire:true,h_ice:true,pk_odd:true},hero:'fire',diff:"+os.environ.get('QA_DIFF','0')+",unlockedDiff:"+str(max(3,int(os.environ.get('QA_DIFF','0'))))+",runs:0,wins:0,auto:true}))")
             pg.reload(); pg.wait_for_timeout(800)
         D = Drv(pg)
         D.inject(BOT_JS)
@@ -170,7 +170,7 @@ def run_worker(args):
                     if s['btns'] == 0:
                         prob(run, '弹窗里没有可点的按钮（死路）'); break
                     if s['phase'] in ('win', 'over'):
-                        results.append({'run': run, 'result': '胜利' if s['phase'] == 'win' else '失败', 'step': s['step'], 'lives': s['lives'],
+                        results.append({'run': run, 'result': '胜利' if s['phase'] == 'win' else '失败', 'step': s['step'], 'lives': s['lives'], 'gold': s['gold'], 'towers': s['towers'], 'spent': s['spent'],
                                         'legs': s['legs'], 'combos': s['combos'], 'runes': s['runes'], 'route': route, 'sec': round(time.time() - t0)})
                         if not click('#again'): prob(run, '结束界面点不了「回到大厅」')
                         pg.wait_for_timeout(200)
