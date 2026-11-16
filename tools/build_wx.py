@@ -50,6 +50,16 @@ def compress(outdir):
         for f in os.listdir(outdir):
             if f.endswith('.png'):
                 subprocess.run(['pngquant', '--force', '--skip-if-larger', '--quality=70-95', '--ext', '.png', os.path.join(outdir, f)], capture_output=True)
+    else:
+        # 没有 pngquant：用 PIL 量化成 256 色（带透明），比原图小就替换
+        from PIL import Image
+        for f in os.listdir(outdir):
+            if not f.endswith('.png'): continue
+            fp = os.path.join(outdir, f); n0 = os.path.getsize(fp)
+            im = Image.open(fp).convert('RGBA'); q = im.quantize(256, method=Image.FASTOCTREE)
+            tmp = fp + '.tmp.png'; q.save(tmp, optimize=True)
+            if os.path.getsize(tmp) < n0: os.replace(tmp, fp)
+            else: os.remove(tmp)
 
 def core(css, body, game, debug):
     maps, music = read('maps.js'), read('music.js')
