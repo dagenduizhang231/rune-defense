@@ -1074,7 +1074,7 @@ window.RUNE_MAPS=[{"type":"snake","paths":[[[-1,1],[1,1],[1,11],[4,11],[4,1],[7,
 var RuneMusic=window.RuneMusic;
 
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.7b';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.7c';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -1470,6 +1470,18 @@ const AFX={
   jammer :{name:'干扰',col:'#c084fc',desc:'身边 2 格内的塔攻速 -30%。',tip:'用射程远的塔在干扰范围外打它。'},
   avenger:{name:'复仇',col:'#fb7185',desc:'被击败时，周围 2 格内的敌人加速 50%，持续 2 秒。',tip:'趁它落单时打死它，或者用冰塔接住加速的敌人。'},
 };
+// 本局特性：开局随机一个，整局生效
+const MODS={
+  fog     :{icon:'🌫️',name:'大雾',desc:'所有塔射程 -10%，敌人移速 -15%。'},
+  goldrush:{icon:'💰',name:'黄金潮',desc:'击败敌人金币 +40%，但每波敌人数量 +15%。'},
+  elites  :{icon:'👑',name:'精英横行',desc:'从第 2 站起，普通战斗也会混入 1 个精英。'},
+  runestorm:{icon:'🔮',name:'符文风暴',desc:'每次选符文，第一次刷新免费；但造塔、升级费用 +15%。'},
+  gale    :{icon:'🌪️',name:'疾风',desc:'敌人移速 +15%，所有塔攻速 +20%。'},
+  poor    :{icon:'🪙',name:'拮据开局',desc:'开局金币 -70，但每站的过关奖励 +50%。'},
+  iceage  :{icon:'🧊',name:'冰河期',desc:'敌人移速 -15%，但生命 +10%。'},
+  darkmoon:{icon:'🌑',name:'暗月',desc:'敌人生命 +20%，结算时符文碎片 +40%。'},
+};
+const modOn=k=>M.mod===k;
 const AFX_ACT1=['shield','armored','swift','regen'],AFX_ALL=Object.keys(AFX);
 const NODES={
   normal:{name:'普通战斗',icon:'⚔️',desc:'普通敌人。奖励：过关金币 + 符文三选一。',combat:true},
@@ -1578,7 +1590,7 @@ const LIVE={
 
 // ======================= v0.3：大厅 / 英雄 / 诅咒 / 难度 =======================
 // 三个模块各有开关：网址加 ?off=meta,hero,curse 可以单独关闭（也方便出问题时直接关掉重发）
-const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true,map2:true,amb:true,ambsnd:true,lava2:true,death2:true,hero2:true,status2:true,combo2:true,tow2:true,frost3:false,evo2:true,misc2:true,upfx:1,elite2:true,bal2:false};
+const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true,map2:true,amb:true,ambsnd:true,lava2:true,death2:true,hero2:true,status2:true,combo2:true,tow2:true,frost3:false,evo2:true,misc2:true,upfx:1,elite2:true,bal2:false,modamb:true};
 function bal2Desc(){if(!FEAT.bal2)return;COMBOS.find(c=>c.id==='C_moltengold').desc='在燃烧中被击败的敌人，掉落的金币 +50%';CARDS.find(c=>c.id==='g6').desc='每持有 100 金，所有伤害 +4%（最多 +30%）';}
 try{const u=new URLSearchParams(location.search),q=u.get('off'),q2=u.get('on');if(q)q.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=false;});if(q2)q2.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=true;});}catch(e){}
 // 局外存档
@@ -1645,15 +1657,17 @@ function resetRun(mapIdx,biome){
   setupMap(mapIdx,biome);buildBG();
   M={arrowDmg:1,arrowRate:1,arrowMulti:1,cannonDmg:1,cannonSplash:1,burn:0,frostSlow:.4,freeze:0,shatter:0,chain:3,teslaDmg:1,overload:0,interest:0,killGold:0,costMul:1,rangeMul:1,crit:0,allRate:1,execute:0,resonance:0,pierce:0,gale:0,hunter:0,ember:0,kindle:0,burnPlus:0,coldWave:0,shredRune:0,conductor:0,staticF:0,loot:0,greed:0,recycle:0,fifth:0,unstable:0,hourglass:0,resonStone:0,allDmg:1};
   bal2Desc();DIFF=FEAT.meta?Math.min(META.diff||0,META.unlockedDiff||0):0;curses={};
+  M.mod=pick(Object.keys(MODS));
   M.boss=[pick(['boss1','boss4','boss7']),pick(['boss2','boss5','boss8']),pick(['boss3','boss6','boss9'])];
   {const a=['bat','shaman','shieldman','beetle','rhino','flame','frostling','caster'];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}M.mob=a;}
   gold=170;lives=20;step=0;phase='node';curNode=null;towers=[];enemies=[];projs=[];fx=[];texts=[];parts=[];decals=[];sched=[];queue=[];spawnT=0;sel=null;taken={};grid={};
   stats={kills:0,leaked:0,bounty:0,exec:0,eliteWins:0,bossWins:0};paused=false;introQ=[];tcards={highland:0,runewell:0,swamp:0};placing=null;spawnCount=0;lavas=[];comboSeen=new Set();
   if(FEAT.meta){for(const k of ['gold1','gold2','gold3'])if(META.owned[k])gold+=15;if(META.owned.land)tcards.highland++;}
   if(D(3))gold-=30;
+  if(modOn('poor'))gold-=70;if(modOn('runestorm'))M.costMul*=1.15;
   heroInit();
   runStage='new';if(!loading){GUIDE=0;if(firstRunPending&&!seen.has('guide'))guideStart();firstRunPending=false;}
-  if(BIOME!=='grass')banner={a:BIO.icon+' '+BIO.name,b:BIO.desc.split('。')[0],boss:false,t:3,T:3};
+  {const m=MODS[M.mod];banner={a:'本局特性：'+m.icon+' '+m.name,b:m.desc,boss:false,t:3.6,T:3.6};}
   renderPanel();
   offerCards('选择开局符文','之后每场战斗结束都能三选一，围绕你的塔叠出流派',0,offerNodes);
 }
@@ -1661,12 +1675,12 @@ function resetRun(mapIdx,biome){
 // ======================= 敌人 =======================
 function spawn(type,d,pi,elite){
   const b=ET[type],isBoss=type.startsWith('boss');
-  let hp=b.hp*hpScale(step)*(MAP.hpMul||1)*diffHpMul()*(BIO.hp||1)*(curseOn('brittle')?1.1:1);if(elite)hp*=2.2;
+  let hp=b.hp*hpScale(step)*(MAP.hpMul||1)*diffHpMul()*(BIO.hp||1)*(curseOn('brittle')?1.1:1)*(modOn('iceage')?1.1:1)*(modOn('darkmoon')?1.2:1);if(elite)hp*=2.2;
   if(isBoss&&D(5))hp*=1.25;if((type==='boss3'||type==='boss6'||type==='boss9')&&D(10))hp*=1.5;
   let armor=(b.armor?b.armor+step*.5:0)+(curseOn('armor')?8:0);
   if(pi===undefined)pi=PATHS.length>1?(MAP.type==='fork'?(Math.random()<.5?0:1):(spawnCount++%PATHS.length)):0;
   const p=b.fly?flyAt(pi,d||0):posAt(pi,d||0);
-  const e={type,fly:!!b.fly,air:!!(b.fly||b.air),fireImm:type==='boss9'||type==='flame',pctImm:type==='boss9',iceImm:type==='boss6'||type==='frostling',spr:type,boss:isBoss,elite:!!elite,afx:{},dir:1,hp,max:hp,spd:b.spd,r:b.r*(elite?1.25:1),col:b.col,gold:b.gold*(elite?3:1),armor,dmg:b.dmg,d:d||0,pi,x:p.x,y:p.y,
+  const e={type,fly:!!b.fly,air:!!(b.fly||b.air),fireImm:type==='boss9'||type==='flame',pctImm:type==='boss9',iceImm:type==='boss6'||type==='frostling',spr:type,boss:isBoss,elite:!!elite,afx:{},dir:1,hp,max:hp,spd:b.spd*(modOn('fog')?.85:1)*(modOn('gale')?1.15:1)*(modOn('iceage')?.85:1),r:b.r*(elite?1.25:1),col:b.col,gold:b.gold*(elite?3:1),armor,dmg:b.dmg,d:d||0,pi,x:p.x,y:p.y,
     slowT:0,slowA:0,frzT:0,burnT:0,burnD:0,hitT:9,shield:0,dead:false,lead:false,revealed:true};
   if(elite)for(const a of elite){e.afx[a]=true;}
   if(e.afx.shield)e.shield=e.max*.4;
@@ -1692,7 +1706,7 @@ function spawn(type,d,pi,elite){
 function bossOf(act){return (M.boss&&M.boss[act-1])||'boss'+act;}
 function mobOf(s){const a=(M.mob||[]);if(s<2)return[];return a.slice(0,Math.min(3,actOf(s)));}
 function buildWave(s,kind){
-  const q=[],act=actOf(s);let n=7+Math.floor(s*2);
+  const q=[],act=actOf(s);let n=7+Math.floor(s*2);if(modOn('goldrush'))n=Math.round(n*1.15);
   if(kind==='boss')n=Math.floor(n*.6);if(kind==='elite')n=Math.floor(n*.7);
   for(let i=0;i<n;i++){
     let t='norm';const r=Math.random();
@@ -1701,7 +1715,7 @@ function buildWave(s,kind){
     q.push({t,gap:t==='fast'?.35:t==='bat'?.45:.65});
   }
   if(kind==='normal'&&(s===3||s===8||s===13))for(let i=0;i<10;i++)q.push({t:'fast',gap:.18});
-  let ne=kind==='elite'?act+(D(2)?1:0):kind==='normal'?(D(6)?1:0)+(curseOn('elites')?2:0):0;
+  let ne=kind==='elite'?act+(D(2)?1:0):kind==='normal'?(D(6)?1:0)+(curseOn('elites')?2:0)+(modOn('elites')&&s>=2?1:0):0;
   for(let k=0;k<ne;k++){
     const base=pick([...(s>=6?['norm','tank','fast','split']:['norm','tank','fast']),...mobOf(s).filter(k=>k!=='bat')]);
     const pool=[...(act===1?AFX_ACT1:AFX_ALL)],af=[];
@@ -1723,8 +1737,9 @@ const has=id=>(taken[id]||0)>0;
 const evolved=t=>t.lvl>=4&&has('L_'+t.type);
 function stat(t){
   const b=TT[t.type],L=t.lvl-1,br=t.branch;
-  let dmg=b.dmg*Math.pow(1.65,L)*resonanceMul()*(1+.2*wellsNear(t.c,t.r)),rate=b.rate*Math.pow(.9,L)/M.allRate,range=(b.range+.25*L)*M.rangeMul*CS;
+  let dmg=b.dmg*Math.pow(1.65,L)*resonanceMul()*(1+.2*wellsNear(t.c,t.r)),rate=b.rate*Math.pow(.9,L)/M.allRate,range=(b.range+.25*L)*M.rangeMul*CS*(modOn('fog')?.9:1);
   if(M.unstable)rate/=1.5;
+  if(modOn('gale'))rate/=1.2;
   if(M.resonStone)dmg*=1+.12*sameNear(t);
   if(tiles[t.c+','+t.r]==='highland')range+=CS;
   if(t.type==='arrow'){dmg*=M.arrowDmg;rate/=M.arrowRate;}
@@ -1778,10 +1793,10 @@ function kill(e){
   e.dead=true;
   if(e.afx.avenger){const R=2*CS;let n=0;for(const o of enemies)if(o!==e&&!o.dead&&(o.x-e.x)**2+(o.y-e.y)**2<=R*R){o.vgT=2;n++;}
     fx.push({k:'ring',x:e.x,y:e.y,r:R,t:.45,T:.45,c:'#fb7185'});if(SPS.pf_bSlam)pfx('bSlam',e.x,e.y+e.r*.6,e.r/30);if(n)txt(e.x,e.y-e.r-14,'复仇！','#fda4af',1);}
-  let g=e.gold+M.killGold;
+  let g=e.gold+M.killGold;if(modOn('goldrush'))g=Math.round(g*1.4);
   if(M.loot&&(e.elite||e.boss))g+=e.gold;
   if(e.burnT>0&&has('C_moltengold')){g=FEAT.bal2?Math.round(g*1.5):g*2;txt(e.x,e.y-12,'熔金','#fbbf24',.7);if(FEAT.combo2&&SPS.pf_gold){const ns=fx.reduce((n,f)=>n+(f.k==='pfx'&&f.id==='gold'&&f.t/f.T>.6),0);pfx('gold',e.x,e.y+e.r*.5,rnd(.62,.7)*Math.max(.6,1-.12*ns),{sp:rnd(1,1.15),al:Math.max(.6,1-.12*ns)});}}
-  gold+=g;stats.bounty+=M.killGold;stats.kills++;
+  gold+=g;stats.bounty+=M.killGold;stats.kills++;if(FEAT.modamb)modKill(e);
   if(e.burnT>0&&M.ember){const R=CS*1.1;if(FEAT.combo2&&SPS.pf_ember){const ns=fx.reduce((n,f)=>n+(f.k==='pfx'&&f.id==='ember'&&f.t/f.T>.5),0);pfx('ember',e.x,e.y+e.r*.45,R/92*rnd(.92,1.05)*Math.max(.6,1-.15*ns),{sp:rnd(1.15,1.3),al:Math.max(.55,1-.15*ns),gnd:1});shake=Math.max(shake,2.5);}else fx.push({k:'boom',x:e.x,y:e.y,r:R,t:.3,T:.3,c:'#f97316'});
     for(const o of enemies)if(o!==e&&!o.dead&&(o.x-e.x)**2+(o.y-e.y)**2<=R*R){burnOn(o,Math.max(4,e.burnD),2);hit(o,e.max*(e.boss?.03:.15),'cannon',{pure:true,noCrit:true,pct:true});}}
   if(e.type==='split'){spawn('mini',Math.max(0,e.d-4),e.pi);spawn('mini',Math.max(0,e.d-16),e.pi);}
@@ -2037,7 +2052,7 @@ function waveDone(){
   else offerCards(`第 ${step} 站完成！`,sub+' · 选择一个符文',0,offerNodes);
 }
 const BOSS_HEAL=5;
-function stepBonus(){let b=20+Math.max(step,1)*4;if(curseOn('tax'))b=Math.round(b*.5);return b;}
+function stepBonus(){let b=20+Math.max(step,1)*4;if(curseOn('tax'))b=Math.round(b*.5);if(modOn('poor'))b=Math.round(b*1.5);return b;}
 // 精英战胜利：符文（稀有以上）或地形卡，二选一
 function offerEliteReward(sub){
   phase='elitepick';eliteSub=sub;snapRun('elitepick',{sub});
@@ -2066,7 +2081,7 @@ function offerNodes(){
   phase='node';sel=null;renderPanel();
   const next=step+1;pendingNodes=genNodes(next);
   const newAct=(next-1)%5===0;
-  let h=`<h2>${newAct?`第 ${actOf(next)} 幕 · `:''}选择第 ${next} 站</h2><div class="sub">${next%5===0?'这一站是 Boss，做好准备':'打普通战斗稳一点，打精英战斗奖励更好'}<br><span style="color:#fca5a5">本幕 Boss：<b>${EINFO[bossOf(actOf(next))].name}</b>（第 ${actOf(next)*5} 站）</span></div><div class="cards">`;
+  let h=`<h2>${newAct?`第 ${actOf(next)} 幕 · `:''}选择第 ${next} 站</h2><div class="sub">${next%5===0?'这一站是 Boss，做好准备':'打普通战斗稳一点，打精英战斗奖励更好'}<br><span style="color:#fca5a5">本幕 Boss：<b>${EINFO[bossOf(actOf(next))].name}</b>（第 ${actOf(next)*5} 站）</span>${M.mod?`<br><span style="color:#a5f3fc">本局特性：${MODS[M.mod].icon} <b>${MODS[M.mod].name}</b> · ${MODS[M.mod].desc}</span>`:''}</div><div class="cards">`;
   pendingNodes.forEach((k,i)=>{
     const n=NODES[k];let d=n.desc;
     if(k==='boss'){const b=bossOf(actOf(next));d=`<b>${EINFO[b].name}</b>：${EINFO[b].desc}`;}
@@ -2082,7 +2097,7 @@ function chooseNode(k){step++;curNode=k;phase='build';renderPanel();snapRun('bui
 
 // ======================= 特效 =======================
 function updFx(dt){
-  fxClock+=dt;if(FEAT.amb)updAmb(dt);
+  fxClock+=dt;if(FEAT.amb)updAmb(dt);if(FEAT.modamb)updModAmb(dt);
   for(const f of fx){f.t-=dt;if(f.k==='bossfall')updBossFall(f,dt);else if(f.k==='pshot'&&f.t>0)updPshot(f,dt);}fx=fx.filter(f=>f.t>0);
   for(const q of parts){if(q.k==='snow2'){const sp=Math.hypot(q.vx,q.vy);q.vy+=Math.max(0,q.fall-q.vy)*Math.min(1,dt*(sp<40?2.5:.6));}if(q.k==='orbit'){q.t-=dt;q.a+=q.w*dt;q.r+=q.vr*dt;q.vr*=Math.exp(-1.2*dt);q.w*=Math.exp(-.8*dt);q.x=q.cx+Math.cos(q.a)*q.r;q.y=q.cy+Math.sin(q.a)*q.r*q.sq+(q.drop?q.drop*(1-q.t/q.T):0);continue;}q.t-=dt;if(q.drag){const d=Math.exp(-q.drag*dt);q.vx*=d;q.vy*=d;}q.x+=q.vx*dt;q.y+=q.vy*dt;q.vy+=q.g*dt;}
   if(sched.length){for(const s of sched)s.t-=dt;const due=sched.filter(s=>s.t<=0);sched=sched.filter(s=>s.t>0);for(const s of due)s.f();}parts=parts.filter(q=>q.t>0);if(parts.length>420)parts.splice(0,parts.length-420);
@@ -3323,6 +3338,7 @@ function closeRunes(){bpOpen=false;bp.style.display='none';paused=!!(ov.style.di
 function renderRunes(){
   const ids=Object.keys(taken);
   let h=`<div class="wrap"><h2>🔮 我的符文（${ids.length}）</h2>`;
+  if(M.mod)h+=`<div class="sub" style="color:#a5f3fc">本局特性：${MODS[M.mod].icon} <b>${MODS[M.mod].name}</b> · ${MODS[M.mod].desc}</div>`;
   h+=`<div class="sum">下场战斗结束预计收入：过关奖励 <b>+${stepBonus()}</b> 金${M.interest?`，利息 <b>+${interestNow()}</b> 金`:''}<br>暴击率 ${Math.round(M.crit*100)}% · 射程 +${pc(M.rangeMul)}% · 攻速 +${pc(M.allRate)}% · 费用 ${M.costMul<=1?'-':'+'}${Math.abs(Math.round((1-M.costMul)*100))}%${M.allDmg>1?` · 全塔伤害 +${pc(M.allDmg)}%`:''}</div>`;
   const cl=Object.keys(curses);h+=`<div class="sum">地图主题：<b style="color:${BIO.col}">${BIO.icon} ${BIO.name}</b> · ${BIO.desc}</div>`;if(cl.length||DIFF||HERO)h+=`<div class="sum">${HERO?`英雄：${HEROES[HERO.id].icon}${HEROES[HERO.id].name}（被动：${HEROES[HERO.id].passive}）<br>`:''}${DIFF?`难度 ${DIFF}<br>`:''}${cl.length?'诅咒：'+cl.map(k=>`<b style="color:#fca5a5">${CURSES[k].name}</b>（${CURSES[k].desc}）`).join('、'):''}</div>`;
   h+=`<div class="sum">${schoolLine()}<br><span style="color:#9aa3c7">两个流派各有 2 个符文（传说符文也算），就会解锁它们的合体：</span><br>${comboLines()}</div>`;
@@ -3377,7 +3393,7 @@ function takeCard(c){c.ap();taken[c.id]=(taken[c.id]||0)+1;if(c.id.startsWith('C
   for(const cb of COMBOS)if(comboReady(cb)&&!comboSeen.has(cb.id)){comboSeen.add(cb.id);banner={a:'解锁合体：'+cb.name,b:SC[cb.a].name+' + '+SC[cb.b].name+' · 下次奖励必定出现',boss:false,t:2.4,T:2.4};}}
 let offerChest=false;
 function offerCards(title,sub,minR,then,chest){
-  cardTitle=[title,sub];rerollCost=25;afterPick=then;offerChest=!!chest;pendingCards=rollOffer(minR,chest);showCards(pendingCards,minR);sfx('card');
+  cardTitle=[title,sub];rerollCost=modOn('runestorm')?0:25;afterPick=then;offerChest=!!chest;pendingCards=rollOffer(minR,chest);showCards(pendingCards,minR);sfx('card');
 }
 let lastMinR=0;
 function snapCards(){snapRun('cards',{ids:pendingCards.map(c=>c.id),title:cardTitle,minR:lastMinR,chest:offerChest,reroll:rerollCost,next:afterPick===offerAltar?'altar':afterPick===offerNodes?'nodes':'cards2'});}
@@ -3391,12 +3407,12 @@ function showCards(cs,minR){
     const sct=c.r===3?scTag(c.a)+scTag(c.b):scTag(c.school);
     h+=`<button class="card r${c.r}" data-i="${i}"><span class="r">${RAR[c.r]}</span><div class="n">${sct}${c.name}${lv}</div><div class="d">${c.desc}</div>${tagNote}</button>`;
   });
-  h+=`</div><div><button class="reroll" id="rr" ${gold<rerollCost?'disabled':''}>🔄 刷新（${rerollCost} 金）</button> <button class="reroll" id="seeRunes">🔮 我的符文</button></div>`;
+  h+=`</div><div><button class="reroll" id="rr" ${gold<rerollCost?'disabled':''}>🔄 刷新（${rerollCost?rerollCost+' 金':'免费'}）</button> <button class="reroll" id="seeRunes">🔮 我的符文</button></div>`;
   const b=buildSummary();if(b)h+=`<div class="build">${schoolLine()}<br>已有：${b}</div>`;
   ov.innerHTML=h;ov.style.display='flex';
   ov.querySelectorAll('.card').forEach(btn=>btn.onclick=()=>pickCard(+btn.dataset.i));
   $('seeRunes').onclick=openRunes;
-  $('rr').onclick=()=>{if(gold<rerollCost)return;gold-=rerollCost;rerollCost+=15;pendingCards=rollOffer(minR,offerChest);showCards(pendingCards,minR);};
+  $('rr').onclick=()=>{if(gold<rerollCost)return;gold-=rerollCost;rerollCost=rerollCost?rerollCost+15:25;pendingCards=rollOffer(minR,offerChest);showCards(pendingCards,minR);};
   snapCards();
 }
 function pickCard(i){const c=pendingCards[i];if(!c)return;takeCard(c);ov.style.display='none';pendingCards=[];renderPanel();const f=afterPick;afterPick=null;if(f)f();}
@@ -3537,7 +3553,7 @@ function takeCurse(k){
 function runShards(win){
   const cleared=win?MAXS:Math.max(0,step-1);
   const base=2*cleared+3*stats.eliteWins+8*stats.bossWins+(win?15:0);
-  return Math.round(base*(1+.15*DIFF));
+  return Math.round(base*(1+.15*DIFF)*(modOn('darkmoon')?1.4:1));
 }
 function showLobby(){
   if(!FEAT.meta){showMapSelect();return;}
@@ -3726,7 +3742,7 @@ function endGame(win){
     shardLine=`<div class="sum" style="text-align:center">💎 获得符文碎片 <b style="color:#a5f3fc">+${sh}</b>（共 ${META.shards}）${DIFF?` · 难度 ${DIFF} 加成 +${DIFF*15}%`:''}${un}</div>`;}
   ov.innerHTML=`<h2>${win?'🏆 守住了！':'💥 城门失守'}</h2>
   <div class="sub">地图：${mapTitle(MAP)} · ${win?'15 站全部通过':'倒在第 '+step+' 站'} · 击杀 ${stats.kills} · 最佳 第 ${Math.max(best,step)} 站</div>
-  <div class="build" style="margin-top:14px">本局流派：${buildSummary()||'无'}</div>${shardLine}
+  <div class="build" style="margin-top:14px">${M.mod?'本局特性：'+MODS[M.mod].icon+' '+MODS[M.mod].name+'<br>':''}本局流派：${buildSummary()||'无'}</div>${shardLine}
   <button class="big" style="max-width:300px;margin-top:18px" id="again">${FEAT.meta?'回到大厅':'再来一局'}</button>`;
   ov.style.display='flex';
   $('again').onclick=()=>{ov.style.display='none';showLobby();};
@@ -3830,6 +3846,86 @@ function drawGate(p){
   ctx.fillStyle='#ef4444';ctx.fillRect(-2,-24,2,10);ctx.beginPath();ctx.moveTo(0,-24);ctx.lineTo(9,-21);ctx.lineTo(0,-18);ctx.fill();
   ctx.restore();
 }
+
+// ======================= 本局特性的氛围画面（跟特性效果挂钩，不挡战场）=======================
+let MA=[],maMod=null,MAV=null,MAVk='',FOGC=null;
+function modVig(k){if(MAVk===k+W+'x'+H&&MAV)return MAV;MAVk=k+W+'x'+H;const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+  const V={fog:['rgba(226,232,240,0)','rgba(226,232,240,.35)',.35],iceage:['rgba(186,230,253,0)','rgba(219,234,254,.38)',.42],darkmoon:['rgba(20,8,40,0)','rgba(20,8,40,.5)',.3],
+    elites:['rgba(153,27,27,0)','rgba(153,27,27,.32)',.42],goldrush:['rgba(253,224,71,0)','rgba(217,119,6,.24)',.45],poor:['rgba(68,48,30,0)','rgba(52,38,24,.42)',.38],
+    runestorm:['rgba(88,28,135,0)','rgba(107,33,168,.34)',.4],gale:['rgba(240,253,250,0)','rgba(204,251,241,.26)',.42]}[k];
+  if(!V){MAV=null;return null;}
+  const rg=g.createRadialGradient(W/2,H/2,Math.min(W,H)*V[2],W/2,H/2,Math.hypot(W,H)*.55);rg.addColorStop(0,V[0]);rg.addColorStop(1,V[1]);g.fillStyle=rg;g.fillRect(0,0,W,H);
+  const T={iceage:'rgba(165,215,250,.13)',poor:'rgba(120,100,70,.2)',runestorm:'rgba(126,34,206,.06)',darkmoon:'rgba(30,12,60,.12)'}[k];
+  if(T){g.fillStyle=T;g.fillRect(0,0,W,H);}
+  if(k==='iceage'){const B=22;for(const [x0,y0,x1,y1,rx,ry,rw,rh] of [[0,0,0,B,0,0,W,B],[0,H,0,H-B,0,H-B,W,B],[0,0,B,0,0,0,B,H],[W,0,W-B,0,W-B,0,B,H]]){const lg=g.createLinearGradient(x0,y0,x1,y1);lg.addColorStop(0,'rgba(240,249,255,.5)');lg.addColorStop(1,'rgba(240,249,255,0)');g.fillStyle=lg;g.fillRect(rx,ry,rw,rh);}
+    g.strokeStyle='rgba(240,249,255,.55)';g.lineWidth=1;for(let i=0;i<46;i++){const e=i%4,t=Math.random(),dd=Math.random()*14;const x=e<2?t*W:(e===2?dd:W-dd),y=e<2?(e===0?dd:H-dd):t*H,r=2+Math.random()*3.5;g.beginPath();for(let q=0;q<3;q++){const an=q*Math.PI/3;g.moveTo(x-Math.cos(an)*r,y-Math.sin(an)*r);g.lineTo(x+Math.cos(an)*r,y+Math.sin(an)*r);}g.stroke();}}
+  if(k==='poor'){g.strokeStyle='rgba(60,42,24,.45)';g.lineWidth=1.2;for(let i=0;i<22;i++){let x=Math.random()*W,y=Math.random()*H;const c0=Math.floor(x/CS)+','+Math.floor(y/CS);if(pathSet.has(c0))continue;
+      for(let b=0;b<4;b++){let px=x,py=y,an=Math.random()*6.28;g.beginPath();g.moveTo(px,py);for(let j=0;j<3;j++){an+=rnd(-.6,.6);px+=Math.cos(an)*rnd(3,7);py+=Math.sin(an)*rnd(3,7);g.lineTo(px,py);}g.stroke();}}}
+  MAV=c;return c;}
+function modKill(e){const m=M&&M.mod;if(!m)return;
+  if(m==='goldrush'){coins(e.x,e.y-e.r*.5,e.elite||e.boss?6:2);}
+  if(m==='darkmoon')MA.push({k:'shard',x:e.x,y:e.y-e.r*.4,vx:rnd(-10,10),vy:rnd(-34,-24),t:0,life:1.3,r:rnd(2.4,3.2),a:Math.random()*6});}
+function updModAmb(dt){const m=M&&M.mod;if(m!==maMod){MA=[];maMod=m;for(const t of towers)t._ml=t.lvl;}if(!m)return;const n=k=>{let c=0;for(const a of MA)if(a.k===k)c++;return c;};
+  if(m==='fog'&&n('wisp')<14&&Math.random()<dt*3)MA.push({k:'wisp',x:rnd(-80,W),y:rnd(0,H),vx:rnd(5,11),r:rnd(55,110),t:0,life:rnd(14,24)});
+  if(m==='iceage'&&n('snow')<40&&Math.random()<dt*12)MA.push({k:'snow',x:rnd(-20,W),y:-5,vx:rnd(3,8),vy:rnd(12,22),r:rnd(.7,1.6),t:Math.random()*9,life:60});
+  if(m==='gale'){if(n('wind')<12&&Math.random()<dt*9)MA.push({k:'wind',x:rnd(-80,W*.5),y:rnd(0,H),vx:rnd(300,400),L:rnd(50,110),t:0,life:2.2});
+    if(n('leaf')<10&&Math.random()<dt*3.5)MA.push({k:'leaf',x:-10,y:rnd(0,H*.8),vx:rnd(90,130),vy:rnd(10,25),r:Math.random()*6.28,vr:rnd(-6,6),t:0,life:8,c:['#65a30d','#ca8a04','#84cc16'][Math.floor(Math.random()*3)]});}
+  if(m==='goldrush'){if(n('tide')<90&&Math.random()<dt*40&&PATHS.length){const pi=Math.floor(Math.random()*PATHS.length);MA.push({k:'tide',pi,d:rnd(0,PATHS[pi].tot),o:rnd(-.34,.34)*CS,sp:rnd(34,50),t:0,life:99,r:rnd(1.5,2.6),ph:Math.random()*6});}
+    if(Math.random()<dt*16){const al=enemies.filter(e=>!e.dead);if(al.length){const e=al[Math.floor(Math.random()*al.length)];MA.push({k:'gold',x:e.x+rnd(-e.r,e.r),y:e.y-e.r*rnd(.3,1.2),t:0,life:.7,r:rnd(1.2,2)});}}}
+  if(m==='darkmoon'){if(n('mote')<12&&Math.random()<dt*3)MA.push({k:'mote',x:rnd(0,W),y:H+4,vx:rnd(-4,4),vy:rnd(-18,-9),t:0,life:rnd(6,10),r:rnd(.8,1.5)});
+    if(Math.random()<dt*14){const al=enemies.filter(e=>!e.dead);if(al.length){const e=al[Math.floor(Math.random()*al.length)];MA.push({k:'smoke',x:e.x+rnd(-e.r,e.r)*.8,y:e.y+e.r*.6,vx:rnd(-6,6),vy:rnd(-22,-12),t:0,life:rnd(.7,1.1),r:rnd(2.5,4.5)});}}}
+  if(m==='runestorm'){if(n('rune')<8&&Math.random()<dt*2)MA.push({k:'rune',an:Math.random()*6.28,R:rnd(.18,.48)*Math.min(W,H)*1.2,w:rnd(.12,.22),t:0,life:rnd(6,9),s:Math.floor(Math.random()*4),r:rnd(7,11),a:Math.random()*6});
+    if(n('spk')<22&&Math.random()<dt*9)MA.push({k:'spk',an:Math.random()*6.28,R:rnd(.1,.55)*Math.min(W,H)*1.2,w:rnd(.25,.45),t:0,life:rnd(2,4),r:rnd(.8,1.4)});
+    for(const t of towers){if(t._ml===undefined){t._ml=t.lvl;MA.push({k:'rcirc',x:t.x,y:t.y+CS*.3,t:0,life:.9});}else if(t._ml!==t.lvl){t._ml=t.lvl;MA.push({k:'rcirc',x:t.x,y:t.y+CS*.3,t:0,life:.9});}}}
+  if(m==='elites'){if(n('ember')<10&&Math.random()<dt*3)MA.push({k:'ember',x:rnd(0,W),y:H+4,vx:rnd(-5,5),vy:rnd(-22,-12),t:0,life:rnd(5,8),r:rnd(.8,1.3)});
+    for(const e of enemies)if(e.elite&&!e.dead&&Math.random()<dt*10)MA.push({k:'ember',x:e.x+rnd(-e.r,e.r),y:e.y+e.r*.5,vx:rnd(-6,6),vy:rnd(-40,-25),t:0,life:rnd(.5,.9),r:rnd(.9,1.5)});}
+  if(m==='poor'){if(n('dust')<16&&Math.random()<dt*4)MA.push({k:'dust',x:rnd(0,W),y:rnd(0,H),vx:rnd(6,14),vy:rnd(-2,2),t:0,life:rnd(5,9),r:rnd(.6,1.2)});
+    if(n('tumble')<3&&Math.random()<dt*.7)MA.push({k:'tumble',x:-14,y0:rnd(H*.1,H*.9),y:0,vx:rnd(45,70),t:0,life:20,r:rnd(7,10),a:0,s:Math.random()*99});}
+  for(const a of MA){a.t+=dt;if(a.vx)a.x+=a.vx*dt;if(a.vy)a.y+=a.vy*dt;
+    if(a.k==='snow')a.x+=Math.sin(a.t*1.3+a.r*5)*6*dt;if(a.k==='leaf'){a.r+=a.vr*dt;a.y+=Math.sin(a.t*5)*20*dt;}if(a.k==='mote'||a.k==='ember')a.x+=Math.sin(a.t*2+a.r*7)*8*dt;
+    if(a.k==='rune'||a.k==='spk'){a.an+=a.w*dt;a.R*=1-dt*.04;a.x=W/2+Math.cos(a.an)*a.R;a.y=H/2+Math.sin(a.an)*a.R*.8;if(a.k==='rune')a.a+=dt*.8;}
+    if(a.k==='tide'){a.d+=a.sp*dt;const P0=PATHS[a.pi];if(!P0||a.d>=P0.tot)a.t=a.life;else{const p=posAt(a.pi,a.d),q=posAt(a.pi,Math.min(P0.tot,a.d+2)),L=Math.hypot(q.x-p.x,q.y-p.y)||1;a.x=p.x-(q.y-p.y)/L*a.o;a.y=p.y+(q.x-p.x)/L*a.o;}}
+    if(a.k==='tumble'){a.a+=a.vx/a.r*dt;a.y=a.y0-Math.abs(Math.sin(a.t*3.2))*7;}
+    if(a.k==='shard'){a.vy*=1-dt*1.5;a.a+=dt*3;}
+    if(a.k==='smoke')a.r+=dt*3;}
+  MA=MA.filter(a=>a.t<a.life&&(a.k==='tide'||a.k==='rune'||a.k==='spk'||(a.y<H+20&&a.y>-30&&a.x<W+120)));}
+// 地面层：画在敌人下面
+function drawModGnd(){const m=M&&M.mod;if(!m)return;ctx.save();ctx.globalAlpha=1;
+  if(m==='elites'){for(const e of enemies)if(e.elite&&!e.dead){const p=.5+.5*Math.sin(fxClock*4+e.x*.1);const g=ctx.createRadialGradient(e.x,e.y+e.r*.8,0,e.x,e.y+e.r*.8,e.r*2);g.addColorStop(0,'rgba(220,38,38,'+(.35+.15*p)+')');g.addColorStop(1,'rgba(220,38,38,0)');ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(e.x,e.y+e.r*.8,e.r*2,e.r*.8,0,0,7);ctx.fill();}
+    for(let pi=0;pi<PATHS.length;pi++){const p=posAt(pi,0),pu=.5+.5*Math.sin(fxClock*2.2+pi);const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,CS*1.3);g.addColorStop(0,'rgba(239,68,68,'+(.32+.14*pu)+')');g.addColorStop(1,'rgba(239,68,68,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,CS*1.3,0,7);ctx.fill();}}
+  if(m==='darkmoon'){for(const e of enemies)if(!e.dead){const g=ctx.createRadialGradient(e.x,e.y+e.r*.8,0,e.x,e.y+e.r*.8,e.r*1.6);g.addColorStop(0,'rgba(167,139,250,.55)');g.addColorStop(.5,'rgba(109,40,217,.35)');g.addColorStop(1,'rgba(76,29,149,0)');ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(e.x,e.y+e.r*.8,e.r*1.6,e.r*.65,0,0,7);ctx.fill();}}
+  if(m==='goldrush'){for(const a of MA)if(a.k==='tide'){const tw=.5+.5*Math.sin(fxClock*6+a.ph);const fd=Math.min(1,a.t/.6,a.d/30,(PATHS[a.pi].tot-a.d)/30);ctx.globalAlpha=(.3+.6*tw)*fd;ctx.fillStyle='#facc15';ctx.fillRect(a.x-a.r/2,a.y-a.r/2,a.r,a.r);if(tw>.8){const r=a.r*1.6*(tw-.8)/.2+.5;ctx.fillStyle='#fef9c3';ctx.fillRect(a.x-r*1.5,a.y-.5,r*3,1);ctx.fillRect(a.x-.5,a.y-r*1.5,1,r*3);}}}
+  if(m==='runestorm'){for(const a of MA)if(a.k==='rcirc'){const k=a.t/a.life,R=CS*(.45+.35*k);ctx.globalAlpha=.8*(1-k);ctx.strokeStyle='#c084fc';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(a.x,a.y,R,R*.45,0,0,7);ctx.stroke();ctx.beginPath();ctx.ellipse(a.x,a.y,R*.7,R*.32,0,0,7);ctx.stroke();
+      for(let i=0;i<6;i++){const an=i*1.047+k*2;ctx.fillStyle='#e9d5ff';ctx.fillRect(a.x+Math.cos(an)*R*.85-1,a.y+Math.sin(an)*R*.38-1,2,2);}}}
+  ctx.restore();}
+function drawFogLayer(){const w=Math.ceil(W/2),h=Math.ceil(H/2);if(!FOGC){FOGC=document.createElement('canvas');}if(FOGC.width!==w||FOGC.height!==h){FOGC.width=w;FOGC.height=h;}
+  const g=FOGC.getContext('2d');g.globalCompositeOperation='source-over';g.clearRect(0,0,w,h);g.fillStyle='rgba(226,232,240,.3)';g.fillRect(0,0,w,h);
+  g.fillStyle='#f1f5f9';for(const a of MA)if(a.k==='wisp'){const fade=Math.min(1,a.t/2,(a.life-a.t)/2);g.globalAlpha=.3*fade;g.beginPath();g.ellipse(a.x/2,a.y/2,a.r/2,a.r*.19,0,0,7);g.fill();g.beginPath();g.ellipse(a.x/2+a.r*.25,a.y/2-a.r*.07,a.r*.3,a.r*.14,0,0,7);g.fill();}
+  g.globalAlpha=1;g.globalCompositeOperation='destination-out';
+  for(const t of towers){const tg=stat(t).range/2;t._fogR=t._fogR==null?0:t._fogR+(tg-t._fogR)*.04;const R=t._fogR,x=t.x/2,y=t.y/2;if(R<2)continue;const rg=g.createRadialGradient(x,y,0,x,y,R);rg.addColorStop(0,'rgba(0,0,0,.6)');rg.addColorStop(.7,'rgba(0,0,0,.35)');rg.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=rg;g.beginPath();g.arc(x,y,R,0,7);g.fill();}
+  g.globalCompositeOperation='source-over';ctx.drawImage(FOGC,0,0,W,H);}
+const RUNEG=[[[-1,-1],[1,1],[1,-1],[-1,1]],[[0,-1],[0,1],[-1,0],[1,0]],[[-1,1],[0,-1],[1,1]],[[-1,-1],[1,-1],[-1,1],[1,1]]];
+function drawModAmb(){const m=M&&M.mod;if(!m)return;ctx.save();ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
+  if(m==='fog')drawFogLayer();
+  for(const a of MA){const fade=Math.min(1,a.t/1,(a.life-a.t)/1.2);
+    if(a.k==='snow'){ctx.globalAlpha=.8*fade;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(a.x,a.y,a.r,0,7);ctx.fill();}
+    else if(a.k==='wind'){ctx.globalAlpha=.55*Math.sin(Math.min(1,a.t/.6)*Math.PI);ctx.strokeStyle='#f0fdfa';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.quadraticCurveTo(a.x+a.L*.5,a.y-4,a.x+a.L,a.y+1);ctx.stroke();}
+    else if(a.k==='leaf'){ctx.globalAlpha=.85*fade;ctx.save();ctx.translate(a.x,a.y);ctx.rotate(a.r);ctx.scale(1,.5+.5*Math.abs(Math.cos(a.t*6)));ctx.fillStyle=a.c;ctx.beginPath();ctx.ellipse(0,0,3.2,1.8,0,0,7);ctx.fill();ctx.restore();}
+    else if(a.k==='gold'){const tw=Math.sin(a.t/a.life*Math.PI);ctx.globalAlpha=.9*tw;ctx.fillStyle='#fde047';const r=a.r*(.6+tw);ctx.fillRect(a.x-r*2,a.y-.5,r*4,1);ctx.fillRect(a.x-.5,a.y-r*2,1,r*4);ctx.fillStyle='#fff';ctx.fillRect(a.x-.5,a.y-.5,1,1);}
+    else if(a.k==='mote'){ctx.globalAlpha=.6*fade;ctx.fillStyle='#c4b5fd';ctx.beginPath();ctx.arc(a.x,a.y,a.r,0,7);ctx.fill();}
+    else if(a.k==='smoke'){const k=a.t/a.life;ctx.globalAlpha=.4*(1-k);ctx.fillStyle='#6d28d9';ctx.beginPath();ctx.arc(a.x,a.y,a.r,0,7);ctx.fill();}
+    else if(a.k==='shard'){const k=a.t/a.life;ctx.globalAlpha=k<.7?1:(1-k)/.3;ctx.save();ctx.translate(a.x,a.y);ctx.rotate(Math.sin(a.a)*.5);ctx.fillStyle='#a78bfa';ctx.beginPath();ctx.moveTo(0,-a.r*1.6);ctx.lineTo(a.r,0);ctx.lineTo(0,a.r*1.6);ctx.lineTo(-a.r,0);ctx.closePath();ctx.fill();ctx.fillStyle='#ede9fe';ctx.beginPath();ctx.moveTo(0,-a.r*1.6);ctx.lineTo(a.r*.45,-a.r*.2);ctx.lineTo(0,0);ctx.closePath();ctx.fill();ctx.restore();}
+    else if(a.k==='ember'){ctx.globalAlpha=.85*Math.min(1,a.t/.2,(a.life-a.t)/.4);ctx.fillStyle='#f87171';ctx.beginPath();ctx.arc(a.x,a.y,a.r,0,7);ctx.fill();}
+    else if(a.k==='dust'){ctx.globalAlpha=.5*fade;ctx.fillStyle='#c8b48a';ctx.beginPath();ctx.arc(a.x,a.y,a.r,0,7);ctx.fill();}
+    else if(a.k==='tumble'){ctx.globalAlpha=.85*Math.min(1,(a.life-a.t)/1);ctx.fillStyle='rgba(60,40,20,.25)';ctx.beginPath();ctx.ellipse(a.x,a.y0+a.r,a.r*.9,a.r*.3,0,0,7);ctx.fill();
+      ctx.save();ctx.translate(a.x,a.y);ctx.rotate(a.a);ctx.strokeStyle='#a16207';ctx.lineWidth=1;let sd=a.s;const R=()=>{sd=(sd*9301+49297)%233280;return sd/233280;};ctx.beginPath();for(let i=0;i<9;i++){const a1=R()*6.28,a2=a1+rnd(1.2,2.4);ctx.moveTo(Math.cos(a1)*a.r,Math.sin(a1)*a.r);ctx.quadraticCurveTo(0,0,Math.cos(a2)*a.r*.9,Math.sin(a2)*a.r*.9);}ctx.stroke();ctx.strokeStyle='#ca8a04';ctx.beginPath();ctx.arc(0,0,a.r*.85,0,7);ctx.stroke();ctx.restore();}
+    else if(a.k==='spk'){ctx.globalAlpha=.75*Math.min(1,a.t/.4,(a.life-a.t)/.6);ctx.fillStyle='#e9d5ff';ctx.fillRect(a.x-a.r/2,a.y-a.r/2,a.r,a.r);}
+    else if(a.k==='rune'){ctx.save();ctx.translate(a.x,a.y);ctx.rotate(a.a);ctx.globalAlpha=.16*fade;ctx.fillStyle='#c084fc';ctx.beginPath();ctx.arc(0,0,a.r*1.5,0,7);ctx.fill();ctx.globalAlpha=.6*fade;ctx.strokeStyle='#e9d5ff';ctx.lineWidth=1.3;ctx.beginPath();ctx.arc(0,0,a.r,0,7);ctx.stroke();const g=RUNEG[a.s];ctx.beginPath();for(let i=0;i<g.length;i+=2){ctx.moveTo(g[i][0]*a.r*.55,g[i][1]*a.r*.55);if(g[i+1])ctx.lineTo(g[i+1][0]*a.r*.55,g[i+1][1]*a.r*.55);}ctx.stroke();ctx.restore();}}
+  if(m==='elites')for(const e of enemies)if(e.elite&&!e.dead){const y=e.y-e.r-10+Math.sin(fxClock*3+e.x)*1.5;ctx.globalAlpha=.95;ctx.fillStyle='#facc15';ctx.strokeStyle='#7c2d12';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(e.x-5,y+3);ctx.lineTo(e.x-5,y-2);ctx.lineTo(e.x-2.5,y+.5);ctx.lineTo(e.x,y-3.5);ctx.lineTo(e.x+2.5,y+.5);ctx.lineTo(e.x+5,y-2);ctx.lineTo(e.x+5,y+3);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#ef4444';ctx.fillRect(e.x-.8,y,1.6,1.6);}
+  ctx.globalAlpha=1;const v=modVig(m);if(v)ctx.drawImage(v,0,0,W,H);
+  if(m==='darkmoon'){const mx=W-34,my=34;ctx.globalAlpha=.35;const g=ctx.createRadialGradient(mx,my,4,mx,my,30);g.addColorStop(0,'rgba(221,214,254,.9)');g.addColorStop(1,'rgba(221,214,254,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(mx,my,30,0,7);ctx.fill();
+    ctx.globalAlpha=.55;ctx.fillStyle='#ede9fe';ctx.beginPath();ctx.arc(mx,my,11,0,7);ctx.fill();ctx.fillStyle='rgba(30,12,60,1)';ctx.globalAlpha=.6;ctx.beginPath();ctx.arc(mx+5,my-3,10,0,7);ctx.fill();}
+  ctx.restore();}
 function draw(){
   ctx.clearRect(0,0,W,H);
   if(!MAP)return;
@@ -3897,6 +3993,7 @@ function draw(){
   if(craters.length)drawCraters();
   for(const f of fx){if(f.k==='pfx'&&f.gnd)drawPfx(f);else if(f.k==='pring')drawPring(f);}
   if(stuckArrows.length)drawStuck();
+  if(FEAT.modamb)drawModGnd();
   for(const e of [...enemies].sort((a,b)=>a.y-b.y)){
     const sp=SPR[e.spr+'_'+BIOME]||SPR[e.spr],hidden=e.afx.stealth&&!e.revealed;
     if(e.elite){ctx.strokeStyle='rgba(251,191,36,.9)';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(e.x,e.y+e.r*.8,e.r*1.25,e.r*.48,0,0,7);ctx.stroke();}
@@ -4001,6 +4098,7 @@ function draw(){
   for(const q of parts)if(q.k==='puff')puffOutline(q);
   for(const q of parts)drawPart(q);
   if(FEAT.amb)drawAmb();
+  if(FEAT.modamb)drawModAmb();
   ctx.globalAlpha=1;for(const e of enemies)if(!e.dead&&e._bar){const[x,y,w,p]=e._bar;ctx.fillStyle='#000a';ctx.fillRect(x,y,w,3);ctx.fillStyle=p>.5?'#4ade80':p>.25?'#facc15':'#ef4444';ctx.fillRect(x,y,w*p,3);}
   ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.font='bold 13px sans-serif';
   for(const t of texts){ctx.globalAlpha=Math.min(1,t.t/t.T*1.5);ctx.fillStyle=t.c;ctx.fillText(t.s,t.x,t.y);}
