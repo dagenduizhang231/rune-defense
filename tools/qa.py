@@ -170,8 +170,9 @@ def run_worker(args):
                     if s['btns'] == 0:
                         prob(run, '弹窗里没有可点的按钮（死路）'); break
                     if s['phase'] in ('win', 'over'):
+                        ex = ev("JSON.stringify({diff:DIFF,mod:M.mod,rel:M.relics||[],boss:M.boss,ext:M.ext||null,epi:M.epiWon||0,won:M.won||0,evn:(M.evActs||[]).length,leg:Object.keys(taken).filter(k=>k.startsWith('L_')),cmb:Object.keys(taken).filter(k=>k.startsWith('C_')),tw:towers.map(t=>t.type).join(''),map:MAPI,bio:BIOME,hero:HERO?HERO.id:null,ew:stats.eliteWins,pt:Math.round(M.playT||0)})")
                         results.append({'run': run, 'result': '胜利' if s['phase'] == 'win' else '失败', 'step': s['step'], 'lives': s['lives'], 'gold': s['gold'], 'towers': s['towers'], 'spent': s['spent'],
-                                        'legs': s['legs'], 'combos': s['combos'], 'runes': s['runes'], 'route': route, 'sec': round(time.time() - t0)})
+                                        'legs': s['legs'], 'combos': s['combos'], 'runes': s['runes'], 'route': route, 'sec': round(time.time() - t0), 'x': json.loads(ex)})
                         if not click('#again'): prob(run, '结束界面点不了「回到大厅」')
                         pg.wait_for_timeout(200)
                         if ev('phase') != 'map' or not D.vis('#lgo'): prob(run, '结束后没有回到大厅')
@@ -207,6 +208,12 @@ def run_worker(args):
                         i = nodes.index(want) if want in nodes else 0
                         if len(nodes) > 2 and rnd.random() < .45: i = 2; C('奇遇站:' + nodes[2])
                         click(f'#ov .card.node[data-i="{i}"]')
+                    elif D.vis('#awEnd'):
+                        aw = os.environ.get('QA_AFTER', 'rnd'); C('通关后选择')
+                        if aw == 'rnd': aw = rnd.choice(['end', 'epi', 'inf'])
+                        if aw == 'epi' and D.vis('#awEpi'): C('进入终章'); click('#awEpi')
+                        elif aw == 'inf' and D.vis('#awInf'): C('进入无尽'); click('#awInf')
+                        else: click('#awEnd')
                     elif D.vis('#ov .card.evopt') or D.vis('#evLeave'):
                         en = [i for i, v, e in D.all('#ov .card.evopt') if v and e]
                         sh = [i for i, v, e in D.all('#ov .card.shop') if v and e]

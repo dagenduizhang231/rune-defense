@@ -519,6 +519,24 @@
       lin(b, [[0, "#57534e"], [.6, "#292524"], [1, "#0c0a09"]]) + lin(l, [[0, "#fde047"], [.5, "#f97316"], [1, "#dc2626"]]) + glow(g, 1.4));
   };
 
+  // 噬符魔像（终章最终 Boss）：吞下了风火冰雷四颗符文宝石的黑曜石魔像，胸口一颗紫色核心
+  A.boss10 = () => {
+    const b = uid("z1"), c = uid("z2"), g = uid("z3"), cr = uid("z4");
+    const gem = (x, y, col, hi) => `<g filter="url(#${g})"><path d="M${x} ${y - 4.2} L${x + 3.4} ${y} L${x} ${y + 4.2} L${x - 3.4} ${y} Z" fill="${col}" stroke="${O}" stroke-width="1.1" stroke-linejoin="round"/></g><path d="M${x} ${y - 2.6} L${x + 1.3} ${y - .6} L${x} ${y - .2} Z" fill="${hi}" opacity=".9"/>`;
+    return svg(
+      shadow(24, 59, 5) +
+      `<path d="M3 34 Q1 22 10 18 L16 30 L11 42 Z M61 34 Q63 22 54 18 L48 30 L53 42 Z" fill="url(#${b})" stroke="${O}" stroke-width="1.7" stroke-linejoin="round"/>` +
+      `<path d="M9 44 L8 24 L18 12 L46 12 L56 24 L55 44 L44 53 L20 53 Z" fill="url(#${b})" stroke="${O}" stroke-width="2" stroke-linejoin="round"/>` +
+      `<path d="M18 12 L21 4 L26 10 L29 2 L32 8 L35 2 L38 10 L43 4 L46 12" fill="url(#${cr})" stroke="${O}" stroke-width="1.4" stroke-linejoin="round"/>` +
+      `<g filter="url(#${g})"><path d="M14 22 L20 27 L17 33 M50 22 L44 27 L47 33 M24 47 L28 43 M40 47 L36 43" fill="none" stroke="#e879f9" stroke-width="1.5" stroke-linecap="round" opacity=".85"/></g>` +
+      `<path d="M14 18 Q20 13 28 13" fill="none" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" opacity=".7"/>` +
+      `<g filter="url(#${g})"><circle cx="32" cy="33" r="8.2" fill="url(#${c})" stroke="${O}" stroke-width="1.6"/></g>` +
+      `<circle cx="32" cy="33" r="3.4" fill="#fdf4ff"/><circle cx="33.2" cy="31.8" r="1.2" fill="#fff"/>` +
+      `<g filter="url(#${g})"><path d="M20 23.5 l6.5 1.6 l-1 2.6 Z" fill="#f0abfc"/><path d="M44 23.5 l-6.5 1.6 l1 2.6 Z" fill="#f0abfc"/></g>` +
+      gem(17, 39, "#4ade80", "#dcfce7") + gem(47, 39, "#fb923c", "#ffedd5") + gem(23, 48, "#60a5fa", "#dbeafe") + gem(41, 48, "#c084fc", "#f3e8ff"),
+      lin(b, [[0, "#64748b"], [.55, "#334155"], [1, "#0f172a"]]) + rad(c, "#f5d0fe", "#7e22ce", .4, .35, .9) + lin(cr, [[0, "#e9d5ff"], [1, "#7c3aed"]]) + glow(g, 1.5));
+  };
+
   A.boss1 = () => {
     const b = uid("b1"), c = uid("b1c"), e = uid("b1e"), sh = uid("b1s"), g = uid("b1g");
     return svg(
@@ -703,7 +721,7 @@
   A.list = {
     towers: [["arrow", "箭塔"], ["cannon", "炮塔"], ["frost", "冰塔"], ["tesla", "电塔"]],
     enemies: [["norm", "史莱姆"], ["fast", "风灵"], ["tank", "石甲兽"], ["split", "双生史莱姆"], ["mini", "小史莱姆"], ["bat", "飞行蝠"], ["shaman", "治疗萨满"], ["shieldman", "盾兵"], ["beetle", "自爆甲虫"], ["rhino", "冲锋犀牛"], ["flame", "炎灵"], ["frostling", "霜灵"], ["caster", "护盾术士"]],
-    bosses: [["boss1", "巢母"], ["boss2", "棱镜守卫"], ["boss3", "暴君"], ["boss4", "掘地巨虫"], ["boss5", "蝠群女王"], ["boss6", "冰霜巨像"], ["boss7", "盗金鼠王"], ["boss8", "镜影狐"], ["boss9", "熔岩巨兽"]],
+    bosses: [["boss1", "巢母"], ["boss2", "棱镜守卫"], ["boss3", "暴君"], ["boss4", "掘地巨虫"], ["boss5", "蝠群女王"], ["boss6", "冰霜巨像"], ["boss7", "盗金鼠王"], ["boss8", "镜影狐"], ["boss9", "熔岩巨兽"], ["boss10", "噬符魔像"]],
     tiles: [["grass", "草地"], ["path", "道路"], ["highland", "高地 · 射程+1"], ["runewell", "符文井 · 相邻伤害+20%"], ["swamp", "沼泽 · 敌人减速"]],
   };
   root.RuneArt = A;

@@ -1,4 +1,4 @@
-// 符文塔防 v0.7g · 微信小游戏版（由 tools/build_wx.py 生成，不要手改）
+// 符文塔防 v0.8 · 微信小游戏版（由 tools/build_wx.py 生成，不要手改）
 // 符文塔防 · 微信小游戏宿主：屏幕画布、触摸、存储、音频、图片。
 // 注意：微信里第一次 wx.createCanvas() 得到的是上屏画布，之后创建的都是离屏画布。
 var __HOST = (function () {
@@ -1131,7 +1131,7 @@ window.RUNE_MAPS=[{"type":"snake","paths":[[[-1,1],[1,1],[1,11],[4,11],[4,1],[7,
 var RuneMusic=window.RuneMusic;
 
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.7g';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.8';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -1224,11 +1224,11 @@ const TOPY=(window.RuneArt&&window.RuneArt.TOP_Y)||22;
 function towerSize(t){return CS*(1.22+.05*(t.lvl-1));}
 function towerPivot(t){const s=towerSize(t);return{x:t.x,y:t.y+CS*.5-s*.95+s*TOPY/64,s};}
 function towerTip(t,len){const p=towerPivot(t),a=t.ang||0;return[p.x+Math.sin(a)*p.s*len,p.y-Math.cos(a)*p.s*len];}
-const ARTKEYS=['arrow','cannon','frost','tesla','norm','fast','tank','split','mini','bat','shaman','shieldman','beetle','rhino','flame','frostling','caster','boss1','boss2','boss3','boss4','boss5','boss6','boss7','boss8','boss9'];
+const ARTKEYS=['arrow','cannon','frost','tesla','norm','fast','tank','split','mini','bat','shaman','shieldman','beetle','rhino','flame','frostling','caster','boss1','boss2','boss3','boss4','boss5','boss6','boss7','boss8','boss9','boss10'];
 const TILEKEYS=['highland','runewell','swamp','grass0','grass1','path'];
 function raster(svgStr,px){return new Promise(res=>{if(typeof Image==='undefined'){res(null);return;}const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=c.height=px;c.getContext('2d').drawImage(im,0,0,px,px);res(c);};im.onerror=()=>res(null);im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgStr.replace('<svg ','<svg width="'+px+'" height="'+px+'" '));});}
 // 所有要预先栅格化的贴图：[键名, 生成 SVG 的函数, 像素尺寸]。微信版用 tools/build_wx.py 把它们提前烤成 PNG
-const ENEMYK=['norm','fast','tank','split','mini','bat','shaman','shieldman','beetle','rhino','flame','frostling','caster','boss1','boss2','boss3','boss4','boss5','boss6','boss7','boss8','boss9'];
+const ENEMYK=['norm','fast','tank','split','mini','bat','shaman','shieldman','beetle','rhino','flame','frostling','caster','boss1','boss2','boss3','boss4','boss5','boss6','boss7','boss8','boss9','boss10'];
 function artJobs(){
   const A=window.RuneArt,px=Math.max(96,Math.ceil(72*DPR)),J=[];if(!A)return J;
   for(const k of ARTKEYS)J.push([k,()=>A[k](),px]);
@@ -1485,12 +1485,13 @@ const ET={
   boss7:{hp:500,spd:.6 ,r:17,col:'#a8a29e',gold:100,armor:3,dmg:0},
   boss8:{hp:540,spd:.5 ,r:16,col:'#a5b4fc',gold:150,armor:3,dmg:0},
   boss9:{hp:740,spd:.42,r:18,col:'#f97316',gold:200,armor:7,dmg:0},
+  boss10:{hp:320,spd:.36,r:22,col:'#a855f7',gold:400,armor:9,dmg:0},
   boss3:{hp:700,spd:.45,r:18,col:'#ef4444',gold:200,armor:7,dmg:0},
 };
 // 数值曲线（v0.2a）：前期更有压力，Boss 降血量、靠机制
 // 敌人血量：按幕分段增长（v0.2c：前松后紧）
 const HPBASE=3.25,HPG=[1.2,1.33,1.62];
-const hpScale=s=>{let v=HPBASE;for(let k=2;k<=s;k++)v*=HPG[Math.min(3,Math.ceil(k/5))-1];return v;};
+const hpScale=s=>{let v=HPBASE;for(let k=2;k<=s;k++)v*=k>15?1.2:HPG[Math.min(3,Math.ceil(k/5))-1];return v;};
 const EINFO={
   norm :{name:'史莱姆',desc:'最普通的敌人，血量和速度都一般。',tip:'点击场上任何敌人、地块，都能查看它的信息。'},
   fast :{name:'风灵',desc:'速度很快、血量少，容易冲过防线。',tip:'用冰塔减速，或者用攻速快的箭塔拦截。'},
@@ -1512,6 +1513,7 @@ const EINFO={
   boss6:{name:'冰霜巨像',desc:'最终 Boss。免疫冰冻和减速；每 8 秒把身边 2 座塔冻住 1.6 秒；生命越低走得越快（残血时快 40%）。',tip:'只靠冰塔控场会被它克制，要有足够的输出。'},
   boss7:{name:'盗金鼠王',desc:'第一幕 Boss。每 4 秒偷走你 5% 的金币（单次最多 30）；被击败时全部吐回来，再额外 +50%。',tip:'别囤钱，早点花掉；集中火力尽快打死它。'},
   boss8:{name:'镜影狐',desc:'第二幕 Boss。每 8 秒在身边变出 2 个一模一样的分身（血很少，打死没有奖励）。',tip:'炮塔、电塔这类范围伤害能一次清掉分身。'},
+  boss10:{name:'噬符魔像',desc:'终章最终 Boss，吞下了风火冰雷四颗符文。分三个阶段：①每 7 秒封印身边 2 座塔 2.5 秒；②（2/3 血以下）再每 9 秒召出 3 只精英；③（1/3 血以下）免疫最近对它伤害最高的那种塔，并且移速 +30%。',tip:'塔要分散摆，别全挤在路边一处；第三阶段必须多种塔一起打，只堆一种塔会被它完全克制。'},
   boss9:{name:'熔岩巨兽',desc:'最终 Boss。免疫燃烧、熔岩，也免疫蒸汽爆炸、余烬这类按最大生命扣血的伤害；每 10 秒喷火，让身边的塔攻速减半 3 秒。',tip:'只靠火系会打不动它，要有冰、雷、风的直接伤害。'},
   boss3:{name:'暴君',desc:'最终 Boss。生命低于一半后狂暴加速，并且每 6 秒让附近一座塔停工 3 秒。',tip:'冰塔减速对付狂暴；塔分散摆放，别全挤在一处。'},
 };
@@ -1554,7 +1556,7 @@ const MODS={
   fog     :{icon:'🌫️',name:'大雾',desc:'所有塔射程 -10%，敌人移速 -15%。',look:'地图会起雾，每座塔只能看清自己射程内的一圈。'},
   goldrush:{icon:'💰',name:'黄金潮',desc:'击败敌人金币 +40%，但每波敌人数量 +15%。',look:'路上会流动着金光，打死怪会多蹦金币。'},
   elites  :{icon:'👑',name:'精英横行',desc:'从第 2 站起，普通战斗也会混入 1 个精英。',look:'精英头顶有小金冠、脚下有红光，刷怪口会亮红光。'},
-  runestorm:{icon:'🔮',name:'符文风暴',desc:'每次选符文，第一次刷新免费；但造塔、升级费用 +15%。',look:'符文会绕着地图旋转，造塔或升级时脚下会亮起法阵。'},
+  runestorm:{icon:'🔮',name:'符文风暴',desc:'每次选符文，前两次刷新免费；但造塔、升级费用 +10%。',look:'符文会绕着地图旋转，造塔或升级时脚下会亮起法阵。'},
   gale    :{icon:'🌪️',name:'疾风',desc:'敌人移速 +15%，所有塔攻速 +20%。',look:'风线和落叶会一直从画面吹过。'},
   poor    :{icon:'🪙',name:'拮据开局',desc:'开局金币 -70，但每站的过关奖励 +50%。',look:'草地会发灰干裂，偶尔有风滚草滚过。'},
   iceage  :{icon:'🧊',name:'冰河期',desc:'敌人移速 -15%，但生命 +10%。',look:'画面边缘结霜，会一直下雪。'},
@@ -1679,7 +1681,7 @@ const LIVE={
 
 // ======================= v0.3：大厅 / 英雄 / 诅咒 / 难度 =======================
 // 三个模块各有开关：网址加 ?off=meta,hero,curse 可以单独关闭（也方便出问题时直接关掉重发）
-const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true,map2:true,amb:true,ambsnd:true,lava2:true,death2:true,hero2:true,status2:true,combo2:true,tow2:true,frost3:false,evo2:true,misc2:true,upfx:1,elite2:true,bal2:false,modamb:true,relic:true,events:true,ftxt:true};
+const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true,map2:true,amb:true,ambsnd:true,lava2:true,death2:true,hero2:true,status2:true,combo2:true,tow2:true,frost3:false,evo2:true,misc2:true,upfx:1,elite2:true,bal2:true,modamb:true,relic:true,events:true,ftxt:true,epi:true,endless:true,pctcap:true};
 function bal2Desc(){if(!FEAT.bal2)return;COMBOS.find(c=>c.id==='C_moltengold').desc='在燃烧中被击败的敌人，掉落的金币 +50%';CARDS.find(c=>c.id==='g6').desc='每持有 100 金，所有伤害 +4%（最多 +30%）';}
 try{const u=new URLSearchParams(location.search),q=u.get('off'),q2=u.get('on');if(q)q.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=false;});if(q2)q2.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=true;});}catch(e){}
 // 局外存档
@@ -1757,7 +1759,7 @@ function resetRun(mapIdx,biome){
   stats={kills:0,leaked:0,bounty:0,exec:0,eliteWins:0,bossWins:0};paused=false;introQ=[];tcards={highland:0,runewell:0,swamp:0};placing=null;spawnCount=0;lavas=[];comboSeen=new Set();
   if(FEAT.meta){for(const k of ['gold1','gold2','gold3'])if(META.owned[k])gold+=15;if(META.owned.land)tcards.highland++;}
   if(D(3))gold-=30;
-  if(modOn('poor'))gold-=70;if(modOn('runestorm'))M.costMul*=1.15;
+  if(modOn('poor'))gold-=70;gold=Math.max(gold,110);   // 开局至少 110 金，保证能放两座塔if(modOn('runestorm'))M.costMul*=1.1;
   heroInit();
   runStage='new';if(!loading){GUIDE=0;if(firstRunPending&&!seen.has('guide'))guideStart();firstRunPending=false;}
   renderPanel();
@@ -1790,6 +1792,7 @@ function spawn(type,d,pi,elite){
   if(type==='boss7'){e.stealT=3;e.stolen=0;}
   if(type==='boss8')e.cloneT=4;
   if(type==='boss9')e.breathT=6;
+  if(type==='boss10'){e.sealT=4;e.sumT=6;e.ph=1;e.dmgSrc={};e.cycT=0;e.immune=null;e.spd0=e.spd;}
   enemies.push(e);
   const keys=[type,...Object.keys(e.afx).map(a=>'afx_'+a)];
   for(const k of keys)if(!seen.has(k)&&!introQ.includes(k))introQ.push(k);
@@ -1797,6 +1800,16 @@ function spawn(type,d,pi,elite){
 }
 // 本局新怪：开局把 4 种新怪打乱，第 1 幕出现 1 种（第 2 站起），第 2 幕 2 种，第 3 幕 3 种
 function bossOf(act){return (M.boss&&M.boss[act-1])||'boss'+act;}
+// ---- 终章 / 无尽 ----
+const lastStep=()=>M.ext==='epi'?18:M.ext==='endless'?1e9:MAXS;
+const ALLBOSS=['boss1','boss2','boss3','boss4','boss5','boss6','boss7','boss8','boss9'];
+function bossAt(s){if(s<=MAXS)return bossOf(actOf(s));
+  if(M.ext==='epi')return s===17?'duo':'boss10';
+  M.eb=M.eb||{};if(!M.eb[s])M.eb[s]=s>=30&&s%10===0?'boss10':pick(ALLBOSS);return M.eb[s];}
+function bossName(s){const b=bossAt(s);return b==='duo'?`双王：${EINFO[bossOf(1)].name} + ${EINFO[bossOf(2)].name}`:EINFO[b].name;}
+function bossDesc(s){const b=bossAt(s);return b==='duo'?'本局第一、第二幕的两个 Boss 一起来，技能全都保留。':EINFO[b].desc;}
+const actKey=s=>Math.ceil(s/5);
+const extLabel=s=>s<=MAXS?`第 ${actOf(s)} 幕`:M.ext==='epi'?'终章':'无尽';
 function mobOf(s){const a=(M.mob||[]);if(s<2)return[];return a.slice(0,Math.min(3,actOf(s)));}
 function buildWave(s,kind){
   const q=[],act=actOf(s);let n=7+Math.floor(s*2);if(modOn('goldrush'))n=Math.round(n*1.15);if(M.caravan){n=Math.round(n*1.25);M.caravan=0;}if(M.guards&&kind!=='boss'){n=Math.round(n*1.3);M.guards=0;}
@@ -1808,14 +1821,14 @@ function buildWave(s,kind){
     q.push({t,gap:t==='fast'?.35:t==='bat'?.45:.65});
   }
   if(kind==='normal'&&(s===3||s===8||s===13))for(let i=0;i<10;i++)q.push({t:'fast',gap:.18});
-  let ne=kind==='elite'?act+(D(2)?1:0):kind==='normal'?(D(6)?1:0)+(curseOn('elites')?2:0)+(modOn('elites')&&s>=2?1:0):0;
+  let ne=kind==='elite'?act+(D(2)?1:0)+(s>MAXS?(M.ext==='epi'?2:Math.floor((s-MAXS)/4)):0):kind==='normal'?(D(6)?1:0)+(curseOn('elites')?2:0)+(modOn('elites')&&s>=2?1:0):0;
   for(let k=0;k<ne;k++){
     const base=pick([...(s>=6?['norm','tank','fast','split']:['norm','tank','fast']),...mobOf(s).filter(k=>k!=='bat')]);
     const pool=[...(act===1?AFX_ACT1:AFX_ALL)],af=[];
-    for(let j=0;j<(act===1?1:2)+(D(9)?1:0)&&pool.length;j++)af.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
+    for(let j=0;j<(act===1?1:2)+(D(9)?1:0)+(s>MAXS+5?1:0)&&pool.length;j++)af.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
     q.splice(Math.floor((k+1)*q.length/(ne+1)),0,{t:base,elite:af,gap:1});
   }
-  if(kind==='boss')q.push({t:bossOf(act),gap:1.5});
+  if(kind==='boss'){const b=bossAt(s);if(b==='duo'){q.push({t:bossOf(1),gap:3,mul:.75});q.push({t:bossOf(2),gap:1.5,mul:.75});}else q.push({t:b,gap:1.5,mul:s>MAXS&&M.ext==='endless'?1+.08*(s-20):1});}
   return q;
 }
 
@@ -1851,8 +1864,13 @@ function stat(t){
   dmg*=M.allDmg;if(HERO&&HERO.hasteT>0)rate/=1.3;
   return{dmg,rate,range};
 }
+// 按最大生命扣血的伤害（蒸汽爆炸、余烬）设上限：最多 = 场上最强那座塔单发伤害的 6 倍，
+// 防止敌人血量再高也被按比例秒掉（无尽模式会无限变强）
+let _pcT=-9,_pcV=50;
+function pctCap(){if(fxClock-_pcT>.5||fxClock<_pcT){_pcT=fxClock;let m=0;for(const t of towers){const d=stat(t).dmg;if(d>m)m=d;}_pcV=Math.max(50,m*6);}return _pcV;}
 function hit(e,dmg,src,o){
   o=o||{};if(e.dead||e.under>0)return;
+  if(o.pct&&FEAT.pctcap)dmg=Math.min(dmg,pctCap());
   if((e.fireImm&&o.fire)||(e.pctImm&&o.pct)){if(Math.random()<.05)txt(e.x+(Math.random()-.5)*20,e.y-30,'免疫','#fdba74',.6);return;}
   let crit=!!o.crit;
   if(!crit&&!o.noCrit){const cc=M.crit+(src==='arrow'&&o.evo?.2:0);if(cc&&Math.random()<cc)crit=true;}
@@ -1868,7 +1886,7 @@ function hit(e,dmg,src,o){
   if(src==='arrow'&&M.hunter&&(e.elite||e.boss))dmg*=1.4;
   if(src==='arrow'&&M.gale&&(e.spd>=1.6))dmg*=1.6;
   if(src==='tesla'&&ctrl){if(M.conductor)dmg*=2;if(has('C_supercond'))dmg*=1.5;}
-  if(e.type==='boss2'&&src){e.dmgSrc[src]=(e.dmgSrc[src]||0)+dmg;if(src===e.immune){if(Math.random()<.08)txt(e.x+(Math.random()-.5)*20,e.y-30,'免疫','#cbd5e1',.6);return;}}
+  if((e.type==='boss2'||e.type==='boss10')&&src){e.dmgSrc[src]=(e.dmgSrc[src]||0)+dmg;if(src===e.immune){if(Math.random()<.08)txt(e.x+(Math.random()-.5)*20,e.y-30,'免疫','#cbd5e1',.6);return;}}
   const arm=Math.max(0,e.armor-(e.shredT>0?e.shredV:0));
   if(FEAT.elite2&&e.afx.armored&&arm>0&&!(e._armT>fxClock-.45)&&SPS.pf_eBreak&&fx.reduce((n,f)=>n+(f.k==='pfx'&&f.id==='eBreak'),0)<4){e._armT=fxClock;pfx('eBreak',e.x+rnd(-.3,.3)*e.r,e.y-e.r*.1,e.r/26,{sp:1.3});}
   if(!o.pure&&!o.ap)dmg=Math.max(dmg*.25,dmg-arm);
@@ -2073,6 +2091,19 @@ function updEnemy(e,dt){
   if(e.type==='boss9'){e.breathT-=dt;if(e.breathT<=0){e.breathT=10;const R=2.6*CS;let n=0;
       for(const t of towers)if((t.x-e.x)**2+(t.y-e.y)**2<=R*R){t.meltT=3;n++;}
       if(SPS.pf_ember)pfx('ember',e.x,e.y+e.r*.4,R/92,{sp:1.1,gnd:1});shake=Math.max(shake,4);sfx('boom');txt(e.x,e.y-e.r-12,'熔火吐息！','#fdba74',1.1);}}
+  if(e.type==='boss10'){
+    const ph=e.hp>e.max*2/3?1:e.hp>e.max/3?2:3;
+    if(ph>e.ph){e.ph=ph;// 碎掉一颗宝石，进入下一阶段
+      if(SPS.pf_bSplit)pfx('bSplit',e.x,e.y+e.r*.6,e.r/20);shards(e.x,e.y-e.r*.2,12,ph===2?'#4ade80':'#fb923c',170);shake=Math.max(shake,6);stopT=Math.max(stopT,.15);sfx('boom');
+      txt(e.x,e.y-e.r-16,ph===2?'第二阶段：召唤！':'第三阶段：吞噬！','#f0abfc',1.6);
+      if(ph===3){e.spd=e.spd0*1.3;e.cycT=0;e.dmgSrc={};}}
+    e.sealT-=dt;if(e.sealT<=0){e.sealT=7;const L=towers.filter(t=>!(t.stun>0)&&(t.x-e.x)**2+(t.y-e.y)**2<=(3*CS)**2).sort((a,b)=>((a.x-e.x)**2+(a.y-e.y)**2)-((b.x-e.x)**2+(b.y-e.y)**2)).slice(0,2);
+      for(const t of L){t.stun=Math.max(t.stun||0,2.5);fx.push({k:'ring',x:t.x,y:t.y,r:CS*.7,t:.45,T:.45,c:'#d946ef'});}
+      if(L.length){if(SPS.pf_eLead)pfx('eLead',e.x,e.y+e.r*.6,e.r/18,{sp:1.4});txt(e.x,e.y-e.r-12,'符文封印！','#f0abfc',1.1);sfx('zap');}}
+    if(e.ph>=2){e.sumT-=dt;if(e.sumT<=0){e.sumT=9;for(let k=0;k<3;k++){const o=spawn(pick(['norm','tank','fast']),Math.max(0,e.d-14-k*12),e.pi,[pick(AFX_ALL)]);o.max*=.5;o.hp=o.max;o.gold=Math.round(o.gold*.3);if(SPS.pf_poof)pfx('poof',o.x,o.y+o.r*.6,.6);}txt(e.x,e.y-e.r-12,'召唤！','#c4b5fd',1);sfx('card');}}
+    if(e.ph>=3){e.cycT-=dt;if(e.cycT<=0){e.cycT=6;const k=Object.keys(e.dmgSrc).sort((a,b)=>e.dmgSrc[b]-e.dmgSrc[a])[0]||towers.map(t=>t.type).sort()[0]||'arrow';e.immune=k;e.dmgSrc={};
+      if(FEAT.elite2&&SPS['pf_bImm_'+k]){pfx('bImm_'+k,e.x,e.y+e.r*.5,e.r/26);sfx('zap');}txt(e.x,e.y-34,'吞噬：免疫'+TT[k].name,TT[k].color,1.4);}}
+  }
   if(e.type==='boss3'){
     if(!e.enraged&&e.hp<e.max*.5){e.enraged=true;e.spd*=1.6;txt(e.x,e.y-34,'狂暴！','#f87171',1.4);shake=Math.max(shake,5);sfx('boss');if(FEAT.elite2&&SPS.pf_bSlam){pfx('bSlam',e.x,e.y+e.r*.7,e.r/24);stopT=Math.max(stopT,.12);shake=Math.max(shake,7);}}
     if(e.enraged){e.stunT-=dt;if(e.stunT<=0){e.stunT=6;let best=null,bd=(3.5*CS)**2;for(const t of towers){const q=(t.x-e.x)**2+(t.y-e.y)**2;if(q<bd&&!(t.stun>0)){bd=q;best=t;}}
@@ -2112,11 +2143,11 @@ function startWave(){
   if(phase!=='build')return;
   queue=buildWave(step,curNode);spawnT=.9;phase='wave';wClock=0;if(M.loan&&step>=M.loan.at){gold+=M.loan.amt;txt(W/2,H*.28,'💰 流浪商人还钱 +'+M.loan.amt+' 金','#fde047',1.8);M.loan=null;}if(M.rlCat){gold+=20;txt(W/2,H*.32,'🐱 招财猫 +20 金','#fde047',1.4);}if(M.rlWatch)txt(W/2,H*.36,'⏱️ 停摆怀表：敌人减速 6 秒','#a5f3fc',1.6);paused=false;bpOpen=false;bp.style.display='none';hourglassUsed=false;if(sel&&sel.enemy)sel=null;placing=null;renderPanel();
   const isB=curNode==='boss';
-  banner={a:isB?'Boss 来袭':`第 ${step} 站 · ${NODES[curNode].name}`,b:isB?EINFO[bossOf(actOf(step))].name:`第 ${actOf(step)} 幕`,boss:isB||curNode==='elite',t:2,T:2};sfx(isB?'boss':'wave');
+  banner={a:isB?(step===18&&M.ext==='epi'?'最终决战':'Boss 来袭'):`第 ${step} 站 · ${step===16&&M.ext==='epi'?'精英围城':NODES[curNode].name}`,b:isB?bossName(step):extLabel(step),boss:isB||curNode==='elite',t:2,T:2};sfx(isB?'boss':'wave');
 }
 function step_(dt){
   if(phase==='wave')wClock+=dt;
-  if(queue.length){spawnT-=dt;if(spawnT<=0){const q=queue.shift();spawn(q.t,0,undefined,q.elite);spawnT=q.gap;}}
+  if(queue.length){spawnT-=dt;if(spawnT<=0){const q=queue.shift();const e=spawn(q.t,0,undefined,q.elite);if(q.mul&&q.mul!==1){e.max*=q.mul;e.hp=e.max;}spawnT=q.gap;}}
   // 显形、领袖
   const frosts=towers.filter(t=>t.type==='frost'&&!(t.stun>0)).map(t=>[t,stat(t).range]);
   for(const e of enemies){
@@ -2143,24 +2174,40 @@ function waveDone(){
   let bonus=stepBonus();if(elite){bonus=Math.round(bonus*1.5);stats.eliteWins++;}if(boss)stats.bossWins++;
   zones=[];meteors=[];craters=[];stuckArrows=[];if(HERO){HERO.hasteT=0;HERO.wallT=0;}
   const it=interestNow();gold+=bonus+it;
-  if(step>=MAXS){endGame(true);return;}
+  if(!M.ext&&step>=MAXS){M.won=1;offerAfterWin('main',sub0(bonus,it));return;}
+  if(M.ext==='epi'&&step>=18){M.epiWon=1;offerAfterWin('epi',sub0(bonus,it));return;}
   projs=[];lavas=[];
   if(M.unstable&&Math.random()<.5){const c=towers.filter(t=>t.lvl>1);if(c.length){const t=pick(c);t.lvl--;if(t.lvl<3)t.branch=null;txt(t.x,t.y-30,'不稳定：降级','#fca5a5',1.6);}}
   phase='reward';renderPanel();
   let sub=`奖励 +${bonus} 金${it?`，利息 +${it}`:''}`;
-  if(boss){const heal=curseOn('brittle')?0:D(7)?2:BOSS_HEAL;lives+=heal;if(heal)sub+=`，城墙修复 +${heal} ❤️`;if(FEAT.relic&&relicPool().length){offerRelic(sub);return;}bossCards(sub);}
+  if(boss){const heal=curseOn('brittle')?0:D(7)?2:BOSS_HEAL;lives+=heal;if(heal)sub+=`，城墙修复 +${heal} ❤️`;if(FEAT.relic&&relicPool().length&&(step<MAXS||(M.ext==='endless'&&step%10===0))){offerRelic(sub);return;}bossCards(sub);}
   else if(elite)offerEliteReward(sub);
   else offerCards(`第 ${step} 站完成！`,sub+' · 选择一个符文',0,offerNodes);
 }
-function bossCards(sub){offerCards(`击败 ${EINFO[bossOf(actOf(step))].name}！`,sub+' · Boss 宝箱：必出史诗或传说符文',2,altarAvailable()?offerAltar:offerNodes,true);}
+function bossCards(sub){offerCards(`击败 ${bossName(step)}！`,sub+' · Boss 宝箱：必出史诗或传说符文',2,altarAvailable()?offerAltar:offerNodes,true);}
 const BOSS_HEAL=5;
+const sub0=(b,i)=>`奖励 +${b} 金${i?`，利息 +${i}`:''}`;
+// 通关（或打完终章）后：结算 / 进入终章 / 继续无尽
+function offerAfterWin(stage,sub){
+  phase='afterwin';snapRun('afterwin',{stage,sub});
+  const epiOK=stage==='main'&&FEAT.epi&&D(6),endOK=FEAT.endless;
+  let h=`<h2>${stage==='epi'?'👑 终章通关！':'🏆 守住了！'}</h2><div class="sub">${stage==='epi'?'你击败了噬符魔像。':'15 站全部通过。'}接下来：</div><div class="cards">`;
+  h+=`<button class="card" id="awEnd"><div class="n">🏁 结算</div><div class="d">本局到此结束，领取碎片。</div></button>`;
+  if(epiOK)h+=`<button class="card r2" id="awEpi"><div class="n">👑 进入终章</div><div class="d">再打 3 站：精英围城 → 双王 → 最终 Boss「噬符魔像」。先给一次遗物三选一。<b>输了也照样算通关</b>，只是拿不到终章奖励（碎片 +60%、终章记录）。</div></button>`;
+  else if(stage==='main'&&FEAT.epi)h+=`<div class="sum" style="color:#9aa3c7">👑 终章：难度 6 及以上通关后开放。</div>`;
+  if(endOK)h+=`<button class="card r1" id="awInf"><div class="n">♾️ 继续无尽</div><div class="d">一直打下去，越来越难；每 5 站一个随机 Boss，每 10 站一次遗物。<b>输了也照样算通关</b>，记录你能走多远。</div></button>`;
+  ov.innerHTML=h+'</div>';ov.style.display='flex';sfx('up');
+  $('awEnd').onclick=()=>{ov.style.display='none';endGame(true);};
+  if($('awEpi'))$('awEpi').onclick=()=>{M.ext='epi';lives+=5;ov.style.display='none';phase='reward';renderPanel();if(FEAT.relic&&relicPool().length)offerRelic(sub+' · 进入终章，城墙修复 +5 ❤️');else bossCards(sub);};
+  if($('awInf'))$('awInf').onclick=()=>{M.ext='endless';M.endFrom=step;lives+=5;ov.style.display='none';phase='reward';renderPanel();bossCards(sub+' · 进入无尽，城墙修复 +5 ❤️');};
+}
 function stepBonus(){let b=20+Math.max(step,1)*4;if(curseOn('tax'))b=Math.round(b*.5);if(modOn('poor'))b=Math.round(b*1.5);return b;}
 // 击败第 1、2 个 Boss：先拿一个遗物（三选一），再开 Boss 宝箱
 function offerRelic(sub,ids){
   phase='relicpick';const pool=relicPool();if(!pool.length){bossCards(sub);return;}
   ids=(ids||[]).filter(id=>pool.some(r=>r.id===id));if(!ids.length)ids=shuffleA(pool).slice(0,3).map(r=>r.id);
   snapRun('relicpick',{sub,ids});
-  let h=`<h2>Boss 掉落了遗物！</h2><div class="sub">选一个遗物，整局都有效（每局只有前两个 Boss 掉落）· 之后照常开 Boss 宝箱</div><div class="cards">`;
+  let h=`<h2>${step>=MAXS&&M.ext==='epi'?'👑 终章 · 遗物三选一':'Boss 掉落了遗物！'}</h2><div class="sub">选一个遗物，整局都有效（每局只有前两个 Boss 掉落）· 之后照常开 Boss 宝箱</div><div class="cards">`;
   ids.forEach((id,i)=>{const r=relicOf(id);h+=`<button class="card relic r1" data-i="${i}"><span class="r" style="color:#fdba74">遗物</span><div class="ricon">${r.icon}</div><div class="n">${r.name}</div><div class="d">${r.desc}</div></button>`;});
   h+=`</div><button class="reroll" id="seeRunes">🔮 我的符文 / 遗物</button>`;
   ov.innerHTML=h;ov.style.display='flex';sfx('card');
@@ -2189,20 +2236,22 @@ function eliteTile(){
 }
 function takeTile(k){tcards[k]++;sfx('card');ov.style.display='none';offerNodes();}
 function genNodes(next){
+  if(next>MAXS&&M.ext==='epi')return next===16?['elite']:['boss'];
   if(next%5===0)return['boss'];
   if(next===1)return['normal'];
   const o=['normal','elite'];
-  if(FEAT.events&&next>=2&&!EVK.includes(curNode)&&!(M.evActs||[]).includes(actOf(next))&&Math.random()<.55){const r=Math.random();o.push(r<.4?'event':r<.65?'shop':r<.83?'smith':'treasure');}
+  if(FEAT.events&&next>=2&&!EVK.includes(curNode)&&!(M.evActs||[]).includes(actKey(next))&&Math.random()<.55){const r=Math.random();o.push(r<.4?'event':r<.65?'shop':r<.83?'smith':'treasure');}
   return o;
 }
 function offerNodes(){
   phase='node';sel=null;renderPanel();
   const next=step+1;pendingNodes=genNodes(next);
   const newAct=(next-1)%5===0;
-  let h=`<h2>${newAct?`第 ${actOf(next)} 幕 · `:''}选择第 ${next} 站</h2><div class="sub">${next%5===0?'这一站是 Boss，做好准备':'打普通战斗稳一点，打精英战斗奖励更好'}<br><span style="color:#fca5a5">本幕 Boss：<b>${EINFO[bossOf(actOf(next))].name}</b>（第 ${actOf(next)*5} 站）</span>${M.mod?`<br><span style="color:#a5f3fc">本局特性：${MODS[M.mod].icon} <b>${MODS[M.mod].name}</b> · ${MODS[M.mod].desc}</span>`:''}</div><div class="cards">`;
+  let h=`<h2>${next>MAXS?(M.ext==='epi'?'终章 · ':'无尽 · '):newAct?`第 ${actOf(next)} 幕 · `:''}选择第 ${next} 站</h2><div class="sub">${next%5===0?'这一站是 Boss，做好准备':'打普通战斗稳一点，打精英战斗奖励更好'}<br><span style="color:#fca5a5">本幕 Boss：<b>${EINFO[bossOf(actOf(next))].name}</b>（第 ${actOf(next)*5} 站）</span>${M.mod?`<br><span style="color:#a5f3fc">本局特性：${MODS[M.mod].icon} <b>${MODS[M.mod].name}</b> · ${MODS[M.mod].desc}</span>`:''}</div><div class="cards">`;
   pendingNodes.forEach((k,i)=>{
     const n=NODES[k];let d=n.desc;
-    if(k==='boss'){const b=bossOf(actOf(next));d=`<b>${EINFO[b].name}</b>：${EINFO[b].desc}`;}
+    if(k==='boss'){d=`<b>${bossName(next)}</b>：${bossDesc(next)}`;}
+    if(k==='elite'&&next===16&&M.ext==='epi')d='<b>精英围城</b>：全是精英，每只至少 2 个词缀。';
     h+=`<button class="card node" data-i="${i}"><div class="ic">${n.icon}</div><div><div class="n">${n.name}</div><div class="d">${d}</div></div></button>`;
   });
   h+=`</div><button class="reroll" id="seeRunes">🔮 我的符文</button>`;
@@ -2240,7 +2289,7 @@ const EVENTS=[
    {t:'变卖器械',d:'获得 70 金',f:()=>{gold+=70;return 0;}}]},
 ];
 function startEvent(k){
-  phase='event';sel=null;renderPanel();(M.evActs=M.evActs||[]).push(actOf(step));
+  phase='event';sel=null;renderPanel();(M.evActs=M.evActs||[]).push(actKey(step));
   if(k==='shop'){const c=rollCards(0).filter(x=>x.r<3);M.ev={k,items:[...c.map(x=>({c:x.id})),{tile:pick(TCARDS)},{heal:1}],sold:[]};}
   else if(k==='event'){M.ev={k,id:pick(EVENTS.filter(e=>e.id!==(M.lastEv||''))).id};M.lastEv=M.ev.id;}
   else M.ev={k};
@@ -3659,7 +3708,7 @@ function takeCard(c){c.ap();taken[c.id]=(taken[c.id]||0)+1;if(c.id.startsWith('C
   for(const cb of COMBOS)if(comboReady(cb)&&!comboSeen.has(cb.id)){comboSeen.add(cb.id);banner={a:'解锁合体：'+cb.name,b:SC[cb.a].name+' + '+SC[cb.b].name+' · 下次奖励必定出现',boss:false,t:2.4,T:2.4};}}
 let offerChest=false,rrFree=0;
 function offerCards(title,sub,minR,then,chest){
-  cardTitle=[title,sub];rrFree=(modOn('runestorm')?1:0)+(M.rlDice||0);rerollCost=rrFree?0:25;afterPick=then;offerChest=!!chest;pendingCards=rollOffer(minR,chest);showCards(pendingCards,minR);sfx('card');
+  cardTitle=[title,sub];rrFree=(modOn('runestorm')?2:0)+(M.rlDice||0);rerollCost=rrFree?0:25;afterPick=then;offerChest=!!chest;pendingCards=rollOffer(minR,chest);showCards(pendingCards,minR);sfx('card');
 }
 let lastMinR=0;
 function snapCards(){snapRun('cards',{ids:pendingCards.map(c=>c.id),title:cardTitle,minR:lastMinR,chest:offerChest,reroll:rerollCost,next:afterPick===offerAltar?'altar':afterPick===offerNodes?'nodes':'cards2'});}
@@ -3687,7 +3736,7 @@ function buildSummary(){return Object.keys(taken).map(id=>{const c=findCard(id);
 // ======================= v0.3：英雄 =======================
 let HERO=null,zones=[],meteors=[],curses={},craters=[],stuckArrows=[];
 function unitHP(){return ET.norm.hp*hpScale(Math.max(1,step))*(MAP.hpMul||1)*diffHpMul();}
-function diffHpMul(){return (D(1)?1.1:1)*(D(8)?1.15:1)*(FEAT.bal2?Math.pow(1.04,DIFF):1);}
+function diffHpMul(){return (D(1)?1.1:1)*(D(8)?1.15:1)*(FEAT.bal2?Math.pow(step>5?1.04:1.015,DIFF):1);}   // 第一幕只加一点，第二幕起每级 +4%
 function heroInit(){
   zones=[];meteors=[];HERO=null;
   if(!FEAT.hero)return;
@@ -3817,15 +3866,17 @@ function takeCurse(k){
 
 // ======================= v0.3：大厅 / 工匠 =======================
 function runShards(win){
-  const cleared=win?MAXS:Math.max(0,step-1);
-  const base=2*cleared+3*stats.eliteWins+8*stats.bossWins+(win?15:0);
+  const cleared=Math.min(MAXS,win?MAXS:Math.max(0,step-1));
+  let base=2*cleared+3*Math.min(6,stats.eliteWins)+8*Math.min(3,stats.bossWins)+(win?15:0);
+  if(M.epiWon)base*=1.6;
+  if(M.ext==='endless'){const n=Math.max(0,step-1-(M.endFrom||MAXS));base+=Math.min(40,n*2);}
   return Math.round(base*(1+.15*DIFF)*(modOn('darkmoon')?1.4:1)*(M.rlShard?1.5:1));
 }
 function showLobby(){
   if(!FEAT.meta){showMapSelect();return;}
   phase='map';sel=null;renderPanel();
   let best=0;try{best=+localStorage.getItem('td_best2')||0;}catch(e){}
-  let h=`<h2>符文塔防 ${VERSION}</h2><div class="sub">💎 符文碎片 <b style="color:#a5f3fc">${META.shards}</b>${best?` · 最佳纪录 第 ${best} 站`:''}${META.wins?` · 通关 ${META.wins} 次`:''}${(()=>{const L=(META.log||[]).filter(x=>x.t>60);if(!L.length)return'';const a=L.reduce((s,x)=>s+x.t,0)/L.length;return ` · 平均一局 ${Math.round(a/60)} 分钟`;})()}</div><div class="wrap">`;
+  let h=`<h2>符文塔防 ${VERSION}</h2><div class="sub">💎 符文碎片 <b style="color:#a5f3fc">${META.shards}</b>${best?` · 最佳纪录 第 ${best} 站`:''}${META.wins?` · 通关 ${META.wins} 次`:''}${META.epiBest!=null&&META.epiBest>=0?` · 👑 终章通关（最高难度 ${META.epiBest}）`:''}${META.endBest?` · ♾️ 无尽最远第 ${META.endBest} 站`:''}${(()=>{const L=(META.log||[]).filter(x=>x.t>60);if(!L.length)return'';const a=L.reduce((s,x)=>s+x.t,0)/L.length;return ` · 平均一局 ${Math.round(a/60)} 分钟`;})()}</div><div class="wrap">`;
   if(FEAT.hero){
     h+=`<div class="lsec">英雄</div><div class="hrow">`;
     for(const k in HEROES){const H=HEROES[k],ok=heroOK(k);
@@ -3834,7 +3885,7 @@ function showLobby(){
   }
   if(META.unlockedDiff>0){
     h+=`<div class="lsec">难度</div><div>`;for(let d=0;d<=META.unlockedDiff;d++)h+=`<button class="chip dchip${META.diff===d?' on':''}" data-d="${d}">${d}</button>`;h+=`</div>`;
-    h+=`<div class="hint" style="text-align:left">${META.diff?DIFFS.slice(1,META.diff+1).map((s,i)=>`${i+1}. ${s}`).join('<br>')+(FEAT.bal2?`<br>另外：每级敌人血量 +4%（叠加，当前共 +${Math.round((Math.pow(1.04,META.diff)-1)*100)}%）`:'')+`<br><b style="color:#a5f3fc">符文碎片 +${META.diff*15}%</b>`:'难度 0：标准难度。打通当前最高难度会解锁下一级。'}</div>`;
+    h+=`<div class="hint" style="text-align:left">${META.diff?DIFFS.slice(1,META.diff+1).map((s,i)=>`${i+1}. ${s}`).join('<br>')+(FEAT.bal2?`<br>另外：从第二幕起，每级敌人血量 +4%（叠加，当前共 +${Math.round((Math.pow(1.04,META.diff)-1)*100)}%）`:'')+`<br><b style="color:#a5f3fc">符文碎片 +${META.diff*15}%</b>`:'难度 0：标准难度。打通当前最高难度会解锁下一级。'}</div>`;
   }else h+=`<div class="hint" style="text-align:left">打通一次后解锁「难度 1」，每升一级敌人更强，符文碎片也更多。</div>`;
   h+=`</div>${continueBlock()}<button class="big" style="max-width:420px;margin-top:14px" id="lgo">⚔️ ${savedRun()?'开始新的一局（会放弃上一局）':'开始冒险'}</button>
   <div><button class="reroll" id="lart" style="margin-top:10px">🔨 工匠铺（用碎片解锁内容）</button> <button class="reroll" id="lhelp" style="margin-top:10px">📖 玩法说明</button> <button class="reroll" id="lset" style="margin-top:10px">⚙️ 设置</button></div>`;
@@ -3890,6 +3941,7 @@ function resumeRun(){
     renderPanel();showCards(pendingCards,x.minR||0);}
   else if(s.stage==='elitepick'){renderPanel();offerEliteReward(x.sub||'');}
   else if(s.stage==='event'){renderPanel();showEvent();}
+  else if(s.stage==='afterwin'){renderPanel();offerAfterWin(x.stage,x.sub||'');}
   else if(s.stage==='relicpick'){renderPanel();offerRelic(x.sub||'',x.ids);}
   else if(s.stage==='tilepick'){renderPanel();eliteTile();}
   else if(s.stage==='altar'){renderPanel();offerAltar(x.offers);}
@@ -3998,12 +4050,18 @@ function showTutorial(then){
   6. 英雄的两个技能在面板最上面，默认「自动」释放；关掉自动可以自己掌握时机。<br>
   7. 每局结束得到「符文碎片」，回大厅在工匠铺解锁新符文、遗物、英雄和诅咒祭坛。<br>
   8. 地图有草原、雪原、火山三种主题：雪原的敌人怕火、火山的敌人怕冰，选地图时就能看到。<br>
-  9. 看不懂的东西就点它：敌人、地块都有说明。</div>
+  9. 看不懂的东西就点它：敌人、地块都有说明。<br>
+  10. 通关后可以「继续无尽」挑战最远站数；难度 6 及以上通关后还能进入「终章」，挑战最终 Boss。</div>
   <button class="big" style="max-width:260px;margin-top:16px" id="tutok">知道了</button>`;
   ov.style.display='flex';$('tutok').onclick=()=>{ov.style.display='none';then();};
 }
 const fmtT=t=>{t=Math.round(t||0);return Math.floor(t/60)+' 分 '+String(t%60).padStart(2,'0')+' 秒';};
 function endGame(win){
+  const lost=!win;if(!win&&M.won)win=true;   // 通关后进入终章/无尽再输，也算通关
+  let extLine='';
+  if(M.ext==='epi')extLine=M.epiWon?'👑 终章通关！':`终章止步第 ${step} 站`;
+  if(M.ext==='endless'){const far=lost?step:step;extLine=(M.epiWon?'👑 终章通关 · ':'')+`♾️ 无尽走到第 ${far} 站`;}
+  if(FEAT.meta){if(M.epiWon)META.epiBest=Math.max(META.epiBest??-1,DIFF);if(M.ext==='endless')META.endBest=Math.max(META.endBest||0,step);}
   clearRun();if(guideOn())guideEnd();
   phase=win?'win':'over';sel=null;bpOpen=false;bp.style.display='none';paused=false;
   let best=0;try{best=+localStorage.getItem('td_best2')||0;if(step>best)localStorage.setItem('td_best2',step);}catch(e){}
@@ -4011,7 +4069,7 @@ function endGame(win){
   if(FEAT.meta){const sh=runShards(win);META.shards+=sh;META.runs++;(META.log=META.log||[]).push({t:Math.round(M.playT||0),s:step,w:win?1:0,d:DIFF,ev:(M.evActs||[]).length});if(META.log.length>50)META.log.shift();let un='';if(win){META.wins++;if(DIFF>=META.unlockedDiff&&META.unlockedDiff<10){META.unlockedDiff=DIFF+1;META.diff=DIFF+1;un=`<br><b style="color:#fde68a">解锁难度 ${DIFF+1}！</b>`;}}saveMeta();
     shardLine=`<div class="sum" style="text-align:center">💎 获得符文碎片 <b style="color:#a5f3fc">+${sh}</b>（共 ${META.shards}）${DIFF?` · 难度 ${DIFF} 加成 +${DIFF*15}%`:''}${un}</div>`;}
   ov.innerHTML=`<h2>${win?'🏆 守住了！':'💥 城门失守'}</h2>
-  <div class="sub">地图：${mapTitle(MAP)} · ${win?'15 站全部通过':'倒在第 '+step+' 站'} · 击杀 ${stats.kills} · 最佳 第 ${Math.max(best,step)} 站<br>⏱️ 本局用时 <b>${fmtT(M.playT)}</b></div>
+  <div class="sub">地图：${mapTitle(MAP)} · ${win?(extLine||'15 站全部通过'):'倒在第 '+step+' 站'} · 击杀 ${stats.kills} · 最佳 第 ${Math.max(best,step)} 站<br>⏱️ 本局用时 <b>${fmtT(M.playT)}</b></div>
   <div class="build" style="margin-top:14px">${M.mod?'本局特性：'+MODS[M.mod].icon+' '+MODS[M.mod].name+'<br>':''}本局流派：${buildSummary()||'无'}</div>${shardLine}
   <button class="big" style="max-width:300px;margin-top:18px" id="again">${FEAT.meta?'回到大厅':'再来一局'}</button>`;
   ov.style.display='flex';
@@ -4071,7 +4129,7 @@ panel.addEventListener('click',ev=>{
 function tileLine(k){const t=tiles[k];return t?`<div class="tinfo"><span class="tag" style="background:${t==='highland'?'#86c46a':t==='runewell'?'#818cf8':t==='ice'?'#7cc0ea':t==='lava'?'#f97316':'#a3b18a'}">${TILEINFO[t].name}</span>${TILEINFO[t].desc}</div>`:'';}
 function renderPanel(){
   let h='';
-  if(phase==='build')h+=`<button class="big${curNode==='boss'?' red':''}" id="go">▶ 开始：第 ${step} 站 · ${NODES[curNode].name}${curNode==='boss'?' '+EINFO[bossOf(actOf(step))].name:''}</button>`;
+  if(phase==='build')h+=`<button class="big${curNode==='boss'?' red':''}" id="go">▶ 开始：第 ${step} 站 · ${NODES[curNode].name}${curNode==='boss'?' '+bossName(step):''}</button>`;
   else if(phase==='wave')h+=`<div class="wv">第 ${step} 站 · ${NODES[curNode].name}进行中</div>`;
   const live=phase==='build'||phase==='wave';
   if(live&&placing){
@@ -4274,6 +4332,8 @@ function draw(){
     if(e.afx.leader){ctx.strokeStyle='rgba(248,113,113,.35)';ctx.setLineDash([4,4]);ctx.beginPath();ctx.arc(e.x,e.y,2*CS,0,7);ctx.stroke();ctx.setLineDash([]);}
     if(FEAT.status2)statusGround(e);
     else if(e.frzT>0||e.slowT>0){ctx.fillStyle=e.frzT>0?'rgba(186,230,253,.6)':'rgba(96,165,250,.4)';ctx.beginPath();ctx.ellipse(e.x,e.y+e.r*.8,e.r*1.3,e.r*.5,0,0,7);ctx.fill();}
+    if(e.type==='boss10'&&e.immune){const c=TT[e.immune].color;ctx.strokeStyle=c;ctx.globalAlpha=.6;ctx.lineWidth=3;ctx.beginPath();ctx.arc(e.x,e.y-4,e.r*1.5,0,7);ctx.stroke();ctx.globalAlpha=1;}
+    if(e.type==='boss10'&&e.ph>=3&&FEAT.elite2)pfxLoop('bRage',e.x,e.y+e.r*.55,e.r/26,(e.x|0)%7,.55);
     if(e.type==='boss2'){const c=TT[e.immune].color;ctx.strokeStyle=c;ctx.globalAlpha=.6;ctx.lineWidth=3;ctx.beginPath();ctx.arc(e.x,e.y-4,e.r*1.5,0,7);ctx.stroke();ctx.globalAlpha=1;}
     if(e.type==='boss3'&&e.enraged&&!(FEAT.elite2&&pfxLoop('bRage',e.x-e.r*.5,e.y+e.r*.8,e.r/16,0,.9)&&pfxLoop('bRage',e.x+e.r*.5,e.y+e.r*.8,e.r/17,9,.9)&&pfxLoop('bRage',e.x,e.y+e.r*.9,e.r/13,5,.95))){ctx.fillStyle='rgba(239,68,68,.22)';ctx.beginPath();ctx.arc(e.x,e.y-4,e.r*1.6,0,7);ctx.fill();}
     let top=e.y-e.r-4;
@@ -4304,6 +4364,7 @@ function draw(){
     if(e.shield>0){ctx.fillStyle='#93c5fd';ctx.fillRect(e.x-w/2,top-8,w*Math.min(1,e.shield/(e.max*.4)),2);}
     const ks=Object.keys(e.afx);ks.forEach((a,i)=>{ctx.fillStyle=AFX[a].col;ctx.beginPath();ctx.arc(e.x-(ks.length-1)*3.5+i*7,top-12,2.6,0,7);ctx.fill();});
     if(e.type==='boss2'){ctx.font='bold 11px sans-serif';ctx.fillStyle=TT[e.immune].color;ctx.fillText('免疫 '+TT[e.immune].name,e.x,top-15);}
+    if(e.type==='boss10'&&e.immune){ctx.font='bold 11px sans-serif';ctx.fillStyle=TT[e.immune].color;ctx.fillText('免疫 '+TT[e.immune].name,e.x,top-15);}
   }
   drawHero();drawGuide();
   if(!FEAT.lava2)for(const l of lavas){const a=Math.min(1,l.t/l.T*2);ctx.globalAlpha=a*(.35+.1*Math.sin(performance.now()/120));ctx.fillStyle='#f97316';ctx.beginPath();ctx.arc(l.x,l.y,l.r,0,7);ctx.fill();ctx.globalAlpha=a*.5;ctx.fillStyle='#fde047';ctx.beginPath();ctx.arc(l.x,l.y,l.r*.45,0,7);ctx.fill();ctx.globalAlpha=1;}
@@ -4401,7 +4462,7 @@ function loop(now){
   try{if(FEAT.ambsnd)ambSndTick(dt);}catch(e){}
   try{draw();}catch(err){console.error(err);}
   uiT-=dt;
-  if(uiT<=0){uiT=.15;hW.textContent=`第${actOf(step)}幕 ${step}/${MAXS}`;hG.textContent=`💰 ${Math.floor(gold||0)}`;const icy=FEAT.hero2&&HERO&&HERO.wallT>0;hL.textContent=(icy?'🧊 ':'❤️ ')+(lives??20);if(hL.classList){if(icy)hL.classList.add('icy');else hL.classList.remove('icy');}syncButtons();syncHero();
+  if(uiT<=0){uiT=.15;hW.textContent=step>MAXS?`${M.ext==='epi'?'终章':'无尽'} ${step}${M.ext==='epi'?'/18':''}`:`第${actOf(step)}幕 ${step}/${MAXS}`;hG.textContent=`💰 ${Math.floor(gold||0)}`;const icy=FEAT.hero2&&HERO&&HERO.wallT>0;hL.textContent=(icy?'🧊 ':'❤️ ')+(lives??20);if(hL.classList){if(icy)hL.classList.add('icy');else hL.classList.remove('icy');}syncButtons();syncHero();
     if(sel&&sel.enemy){const el=$('ehp');if(el)el.textContent=ehpText(sel.enemy);}}
   requestAnimationFrame(loop);
 }
@@ -4414,5 +4475,5 @@ requestAnimationFrame(loop);
 return __E;
 }
 
-__HOST.pngKeys=["arrow", "arrowBase", "arrowBase1", "arrowBase2", "arrowBase3", "arrowBase4", "arrowTop", "arrowTop1", "arrowTop2", "arrowTop3", "arrowTop4", "ashroad", "basalt0", "basalt1", "bat", "bat_snow", "bat_volcano", "beetle", "beetle_snow", "beetle_volcano", "boss1", "boss1_snow", "boss1_volcano", "boss2", "boss2_snow", "boss2_volcano", "boss3", "boss3_snow", "boss3_volcano", "boss4", "boss4_snow", "boss4_volcano", "boss5", "boss5_snow", "boss5_volcano", "boss6", "boss6_snow", "boss6_volcano", "boss7", "boss7_snow", "boss7_volcano", "boss8", "boss8_snow", "boss8_volcano", "boss9", "boss9_snow", "boss9_volcano", "cannon", "cannonBase", "cannonBase1", "cannonBase2", "cannonBase3", "cannonBase4", "cannonTop", "cannonTop1", "cannonTop2", "cannonTop3", "cannonTop4", "caster", "caster_snow", "caster_volcano", "fast", "fast_snow", "fast_volcano", "flame", "flame_snow", "flame_volcano", "frost", "frostBase", "frostBase1", "frostBase2", "frostBase3", "frostBase4", "frostTop", "frostTop1", "frostTop2", "frostTop3", "frostTop4", "frostling", "frostling_snow", "frostling_volcano", "grass0", "grass1", "highland", "highland_snow", "highland_volcano", "ice", "lava", "mini", "mini_snow", "mini_volcano", "norm", "norm_snow", "norm_volcano", "path", "rhino", "rhino_snow", "rhino_volcano", "runewell", "runewell_snow", "runewell_volcano", "shaman", "shaman_snow", "shaman_volcano", "shieldman", "shieldman_snow", "shieldman_volcano", "snow0", "snow1", "snowroad", "split", "split_snow", "split_volcano", "swamp", "tank", "tank_snow", "tank_volcano", "tesla", "teslaBase", "teslaBase1", "teslaBase2", "teslaBase3", "teslaBase4", "teslaTop", "teslaTop1", "teslaTop2", "teslaTop3", "teslaTop4"];
+__HOST.pngKeys=["arrow", "arrowBase", "arrowBase1", "arrowBase2", "arrowBase3", "arrowBase4", "arrowTop", "arrowTop1", "arrowTop2", "arrowTop3", "arrowTop4", "ashroad", "basalt0", "basalt1", "bat", "bat_snow", "bat_volcano", "beetle", "beetle_snow", "beetle_volcano", "boss1", "boss10", "boss10_snow", "boss10_volcano", "boss1_snow", "boss1_volcano", "boss2", "boss2_snow", "boss2_volcano", "boss3", "boss3_snow", "boss3_volcano", "boss4", "boss4_snow", "boss4_volcano", "boss5", "boss5_snow", "boss5_volcano", "boss6", "boss6_snow", "boss6_volcano", "boss7", "boss7_snow", "boss7_volcano", "boss8", "boss8_snow", "boss8_volcano", "boss9", "boss9_snow", "boss9_volcano", "cannon", "cannonBase", "cannonBase1", "cannonBase2", "cannonBase3", "cannonBase4", "cannonTop", "cannonTop1", "cannonTop2", "cannonTop3", "cannonTop4", "caster", "caster_snow", "caster_volcano", "fast", "fast_snow", "fast_volcano", "flame", "flame_snow", "flame_volcano", "frost", "frostBase", "frostBase1", "frostBase2", "frostBase3", "frostBase4", "frostTop", "frostTop1", "frostTop2", "frostTop3", "frostTop4", "frostling", "frostling_snow", "frostling_volcano", "grass0", "grass1", "highland", "highland_snow", "highland_volcano", "ice", "lava", "mini", "mini_snow", "mini_volcano", "norm", "norm_snow", "norm_volcano", "path", "rhino", "rhino_snow", "rhino_volcano", "runewell", "runewell_snow", "runewell_volcano", "shaman", "shaman_snow", "shaman_volcano", "shieldman", "shieldman_snow", "shieldman_volcano", "snow0", "snow1", "snowroad", "split", "split_snow", "split_volcano", "swamp", "tank", "tank_snow", "tank_volcano", "tesla", "teslaBase", "teslaBase1", "teslaBase2", "teslaBase3", "teslaBase4", "teslaTop", "teslaTop1", "teslaTop2", "teslaTop3", "teslaTop4"];
 __BOOT(__HOST);
