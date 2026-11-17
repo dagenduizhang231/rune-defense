@@ -889,7 +889,7 @@ G.RuneEnv = RuneEnv;
 })(typeof GameGlobal !== 'undefined' ? GameGlobal : (typeof window !== 'undefined' ? window : globalThis));
 
 function __BOOT(__HOST){
-var __E=RuneEnv(__HOST,"\n*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}\nhtml,body{margin:0;background:#0d1020;color:#e5e7eb;font-family:-apple-system,\"PingFang SC\",\"Noto Sans SC\",\"Microsoft YaHei\",sans-serif;height:100%;overflow:hidden;touch-action:manipulation}\n#app{display:flex;flex-direction:column;align-items:center;height:100vh;height:100dvh}\n#hud{width:100%;max-width:480px;display:flex;gap:5px;justify-content:space-between;align-items:center;padding:8px 8px;font-size:13.5px;font-weight:600}\n.pill{background:#1b2040;padding:5px 8px;border-radius:999px;white-space:nowrap}\n.pill.icy{background:linear-gradient(180deg,#bae6fd,#38bdf8);color:#0c4a6e;border:2px solid #e0f2fe;box-shadow:0 0 8px #7dd3fc;font-weight:700}\n#spd,#runes,#snd{background:#334155;padding:5px 10px;border-radius:999px;font-weight:700;font-size:14px}\n#runes{background:#4c1d95}#snd{padding:5px 8px}\n#cv{display:block;width:min(100vw,480px,calc((100vh - 190px) * 0.6429));width:min(100vw,480px,calc((100dvh - 190px) * 0.6429));aspect-ratio:360/560;border-radius:10px;background:#141a33;touch-action:none}\n#panel{width:100%;max-width:480px;padding:8px 10px;flex:1;min-height:140px;overflow-y:auto}\nbutton{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}\n.big{width:100%;padding:12px;font-size:16px;font-weight:700;background:linear-gradient(#3b82f6,#2563eb)}\n.big.red{background:linear-gradient(#ef4444,#b91c1c)}\n.wv{text-align:center;padding:12px;font-weight:700;color:#fca5a5;background:#1b2040;border-radius:10px}\n.row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}\n.row2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}\n.tb{background:#1b2040;padding:8px 2px;font-size:13px;line-height:1.35;border:2px solid #2a3158}\n.tb b{display:block;font-size:20px}\n.tb img{width:36px;height:36px;display:block;margin:0 auto 2px}\n.tb:disabled{opacity:.38}\n.chip{background:#1b2040;border:2px solid #475080;border-radius:999px;padding:6px 12px;font-size:13px;margin:8px 6px 0 0}\n.hint{color:#9aa3c7;font-size:12.5px;margin-top:8px;line-height:1.55}\n.tinfo{margin-top:8px;font-size:13.5px;color:#cbd5e1;line-height:1.5}\n#ov,#bp{position:fixed;inset:0;background:rgba(5,7,15,.88);display:none;flex-direction:column;align-items:center;justify-content:center;padding:16px;z-index:9;text-align:center;overflow-y:auto}\n#bp{z-index:10;justify-content:flex-start}\n#ov{justify-content:flex-start}#ov>:first-child{margin-top:auto}#ov>:last-child{margin-bottom:auto}\n#ov h2,#bp h2{margin:0 0 4px;font-size:20px}\n.sub{color:#9aa3c7;font-size:13px;line-height:1.5}\n.cards{display:flex;flex-direction:column;gap:10px;width:100%;max-width:420px;margin-top:14px}\n.card{background:#1b2040;border:2px solid #475080;border-radius:14px;padding:12px 14px;text-align:left;width:100%}\n.card .n{font-size:17px;font-weight:700}\n.card .d{font-size:14px;color:#c7cbe0;margin-top:4px;line-height:1.5}\n.card .r{float:right;font-size:12px;opacity:.85;margin-top:3px}\n.card.r1{border-color:#8b5cf6}.card.r1 .r{color:#c4b5fd}\n.card.r2{border-color:#f59e0b;box-shadow:0 0 16px rgba(245,158,11,.35)}.card.r2 .r{color:#fcd34d}\n.card.r3{border-color:#22d3ee;box-shadow:0 0 18px rgba(34,211,238,.4)}.card.r3 .r{color:#67e8f9}\n.card.r4{border-color:#f43f5e;box-shadow:0 0 22px rgba(244,63,94,.5)}.card.r4 .r{color:#fda4af}\n.rl.r3{border-color:#22d3ee}.rl.r4{border-color:#f43f5e}\n.sc{display:inline-block;border-radius:6px;padding:0 5px;margin-right:4px;font-size:11.5px;font-weight:700;color:#0d1020;vertical-align:1px}\n.tb.br{text-align:left;padding:8px 10px;font-size:12.5px;line-height:1.45}.tb.br b{font-size:15px;display:inline}\n.card:disabled{opacity:.45}\n.card.node{display:flex;gap:12px;align-items:center}\n.card.node .ic{font-size:30px;width:40px;text-align:center}\n.card.map{display:flex;gap:12px;align-items:center}\n.card.map svg{flex:none;width:54px;height:84px;border-radius:6px}\n.reroll{margin-top:12px;background:#334155;padding:9px 16px;font-size:14px}\n.reroll:disabled{opacity:.4}\n.build{margin-top:10px;font-size:13px;color:#c7cbe0;max-width:420px;line-height:1.6}\n.wrap{width:100%;max-width:420px}\n.sum{background:#1b2040;border-radius:12px;padding:10px 12px;font-size:13.5px;line-height:1.7;margin:8px 0 12px;text-align:left}\n.sum b{color:#86efac}\n.rl{background:#1b2040;border:2px solid #475080;border-radius:12px;padding:10px 12px;margin-bottom:8px;text-align:left}\n.rl.r1{border-color:#8b5cf6}.rl.r2{border-color:#f59e0b}\n.rl .n{font-weight:700;font-size:15px}.rl .d{font-size:13px;color:#c7cbe0;margin-top:2px}\n.rl .lv{font-size:13px;color:#fde68a;margin-top:4px}.rl .off{font-size:12px;color:#94a3b8;margin-top:2px}\n.close{margin:10px auto 0;display:block;background:#2563eb;padding:11px 40px;font-size:15px;font-weight:700}\n.intro img{width:96px;height:96px}\n.tip{background:#1b2040;border-radius:12px;padding:10px 12px;margin-top:12px;font-size:13.5px;line-height:1.6;text-align:left;max-width:380px}\n.einfo{display:flex;gap:10px;align-items:center;margin-top:8px}\n.einfo img{width:52px;height:52px;flex:none}\n.einfo .t{font-size:13px;line-height:1.55;color:#cbd5e1}\n #stage{position:relative}\n#hfloat{position:absolute;display:none;flex-direction:column;pointer-events:none}\n#hfloat button{pointer-events:auto;flex:1;margin:2px;border-radius:12px;background:rgba(15,20,40,.82);border:2px solid #475569;position:relative;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;overflow:hidden}\n#hfloat .ic{font-size:20px}#hfloat .cd{font-size:10.5px;color:#a5f3fc;margin-top:2px;font-weight:700}\n#hfloat button.ready{border-color:#fde047;box-shadow:0 0 10px rgba(253,224,71,.55)}\n#hfloat button:disabled .ic{opacity:.45}\n#hfloat .ha{font-size:11px;font-weight:700;color:#cbd5e1}#hfloat .ha.on{border-color:#22c55e;color:#bbf7d0}\n.hbar{display:flex;gap:6px;align-items:center;margin-bottom:8px}.hbar .hn{font-size:13px;font-weight:700;white-space:nowrap}\n.hs{flex:1;background:#1e293b;border:2px solid #475569;padding:7px 4px;font-size:13px;font-weight:700;line-height:1.2}.hs small{font-weight:400;color:#a5f3fc}.hs:disabled{opacity:.5}\n.hs.ha{flex:none;font-size:12px;padding:7px 8px}.hs.ha.on{border-color:#22c55e;color:#bbf7d0}\n.lsec{text-align:left;font-weight:700;font-size:15px;margin:14px 0 6px}\n.hrow{display:flex;flex-direction:column;gap:8px}.card.hero{padding:10px 12px}.card.hero.on{border-color:#22c55e;box-shadow:0 0 14px rgba(34,197,94,.35)}.card.hero .d{font-size:12.5px}\n.chip.on{border-color:#22c55e;background:#14532d}\n.rl.art{display:flex;align-items:center;gap:10px}.buy{background:#0e7490;padding:8px 12px;font-weight:700;white-space:nowrap}.buy:disabled{opacity:.4}.own{color:#86efac;font-size:13px;white-space:nowrap}\n.card.curse{border-color:#be123c}\n#guide{position:fixed;left:50%;transform:translateX(-50%);top:54px;z-index:40;width:min(92vw,420px);background:#fde68a;color:#1a1528;border-radius:12px;padding:9px 12px;font-weight:700;font-size:14px;line-height:1.45;box-shadow:0 6px 20px rgba(0,0,0,.45);display:none;pointer-events:none}\n#guide button{pointer-events:auto;float:right;margin-left:8px;background:#1a1528;color:#fde68a;border:none;border-radius:8px;padding:3px 8px;font-size:12px}\n.gpulse{animation:gp 1s infinite;outline:3px solid #fde047;outline-offset:1px}@keyframes gp{0%,100%{box-shadow:0 0 0 0 rgba(253,224,71,.9)}50%{box-shadow:0 0 0 8px rgba(253,224,71,0)}}\n.tag{display:inline-block;border-radius:6px;padding:0 6px;margin-right:4px;font-size:12px;font-weight:700;color:#0d1020}\n","\n<div id=\"app\">\n  <div id=\"hud\">\n    <span class=\"pill\" id=\"hW\">第1幕 0/15</span>\n    <span class=\"pill\" id=\"hG\">💰 0</span>\n    <span class=\"pill\" id=\"hL\">❤️ 20</span>\n    <button id=\"runes\">🔮符文</button>\n    <button id=\"spd\">1×</button>\n    <button id=\"snd\">🔊</button>\n  </div>\n  <div id=\"stage\"><canvas id=\"cv\"></canvas><div id=\"hfloat\"></div></div>\n  <div id=\"panel\"></div>\n</div>\n<div id=\"ov\"></div><div id=\"guide\"></div>\n<div id=\"bp\"></div>\n");
+var __E=RuneEnv(__HOST,"\n*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}\nhtml,body{margin:0;background:#0d1020;color:#e5e7eb;font-family:-apple-system,\"PingFang SC\",\"Noto Sans SC\",\"Microsoft YaHei\",sans-serif;height:100%;overflow:hidden;touch-action:manipulation}\n#app{display:flex;flex-direction:column;align-items:center;height:100vh;height:100dvh}\n#hud{width:100%;max-width:480px;display:flex;gap:5px;justify-content:space-between;align-items:center;padding:8px 8px;font-size:13.5px;font-weight:600}\n.pill{background:#1b2040;padding:5px 8px;border-radius:999px;white-space:nowrap}\n.pill.icy{background:linear-gradient(180deg,#bae6fd,#38bdf8);color:#0c4a6e;border:2px solid #e0f2fe;box-shadow:0 0 8px #7dd3fc;font-weight:700}\n#spd,#runes,#snd{background:#334155;padding:5px 10px;border-radius:999px;font-weight:700;font-size:14px}\n#runes{background:#4c1d95}#snd{padding:5px 8px}\n#cv{display:block;width:min(100vw,480px,calc((100vh - 190px) * 0.6429));width:min(100vw,480px,calc((100dvh - 190px) * 0.6429));aspect-ratio:360/560;border-radius:10px;background:#141a33;touch-action:none}\n#panel{width:100%;max-width:480px;padding:8px 10px;flex:1;min-height:140px;overflow-y:auto}\nbutton{font:inherit;border:0;border-radius:10px;color:#fff;cursor:pointer}\n.big{width:100%;padding:12px;font-size:16px;font-weight:700;background:linear-gradient(#3b82f6,#2563eb)}\n.big.red{background:linear-gradient(#ef4444,#b91c1c)}\n.wv{text-align:center;padding:12px;font-weight:700;color:#fca5a5;background:#1b2040;border-radius:10px}\n.row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}\n.row2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}\n.tb{background:#1b2040;padding:8px 2px;font-size:13px;line-height:1.35;border:2px solid #2a3158}\n.tb b{display:block;font-size:20px}\n.tb img{width:36px;height:36px;display:block;margin:0 auto 2px}\n.tb:disabled{opacity:.38}\n.chip{background:#1b2040;border:2px solid #475080;border-radius:999px;padding:6px 12px;font-size:13px;margin:8px 6px 0 0}\n.hint{color:#9aa3c7;font-size:12.5px;margin-top:8px;line-height:1.55}\n.tinfo{margin-top:8px;font-size:13.5px;color:#cbd5e1;line-height:1.5}\n#ov,#bp{position:fixed;inset:0;background:rgba(5,7,15,.88);display:none;flex-direction:column;align-items:center;justify-content:center;padding:16px;z-index:9;text-align:center;overflow-y:auto}\n#bp{z-index:10;justify-content:flex-start}\n#ov{justify-content:flex-start}#ov>:first-child{margin-top:auto}#ov>:last-child{margin-bottom:auto}\n#ov h2,#bp h2{margin:0 0 4px;font-size:20px}\n.sub{color:#9aa3c7;font-size:13px;line-height:1.5}\n.cards{display:flex;flex-direction:column;gap:10px;width:100%;max-width:420px;margin-top:14px}\n.card{background:#1b2040;border:2px solid #475080;border-radius:14px;padding:12px 14px;text-align:left;width:100%}\n.card .n{font-size:17px;font-weight:700}\n.card .d{font-size:14px;color:#c7cbe0;margin-top:4px;line-height:1.5}\n.card .r{float:right;font-size:12px;opacity:.85;margin-top:3px}\n.card.r1{border-color:#8b5cf6}.card.r1 .r{color:#c4b5fd}\n.card.relic{border-color:#f59e0b;background:linear-gradient(135deg,#2a1d12,#1b2040 70%)}.card.relic .ricon{float:right;font-size:30px;line-height:1;margin:2px 0 0 8px}\n.card.r2{border-color:#f59e0b;box-shadow:0 0 16px rgba(245,158,11,.35)}.card.r2 .r{color:#fcd34d}\n.card.r3{border-color:#22d3ee;box-shadow:0 0 18px rgba(34,211,238,.4)}.card.r3 .r{color:#67e8f9}\n.card.r4{border-color:#f43f5e;box-shadow:0 0 22px rgba(244,63,94,.5)}.card.r4 .r{color:#fda4af}\n.rl.r3{border-color:#22d3ee}.rl.r4{border-color:#f43f5e}\n.sc{display:inline-block;border-radius:6px;padding:0 5px;margin-right:4px;font-size:11.5px;font-weight:700;color:#0d1020;vertical-align:1px}\n.tb.br{text-align:left;padding:8px 10px;font-size:12.5px;line-height:1.45}.tb.br b{font-size:15px;display:inline}\n.card:disabled{opacity:.45}\n.card.node{display:flex;gap:12px;align-items:center}\n.card.node .ic{font-size:30px;width:40px;text-align:center}\n.card.map{display:flex;gap:12px;align-items:center}\n.card.map svg{flex:none;width:54px;height:84px;border-radius:6px}\n.reroll{margin-top:12px;background:#334155;padding:9px 16px;font-size:14px}\n.reroll:disabled{opacity:.4}\n.build{margin-top:10px;font-size:13px;color:#c7cbe0;max-width:420px;line-height:1.6}\n.wrap{width:100%;max-width:420px}\n.sum{background:#1b2040;border-radius:12px;padding:10px 12px;font-size:13.5px;line-height:1.7;margin:8px 0 12px;text-align:left}\n.sum b{color:#86efac}\n.rl{background:#1b2040;border:2px solid #475080;border-radius:12px;padding:10px 12px;margin-bottom:8px;text-align:left}\n.rl.r1{border-color:#8b5cf6}.rl.r2{border-color:#f59e0b}\n.rl .n{font-weight:700;font-size:15px}.rl .d{font-size:13px;color:#c7cbe0;margin-top:2px}\n.rl .lv{font-size:13px;color:#fde68a;margin-top:4px}.rl .off{font-size:12px;color:#94a3b8;margin-top:2px}\n.close{margin:10px auto 0;display:block;background:#2563eb;padding:11px 40px;font-size:15px;font-weight:700}\n.intro img{width:96px;height:96px}\n.tip{background:#1b2040;border-radius:12px;padding:10px 12px;margin-top:12px;font-size:13.5px;line-height:1.6;text-align:left;max-width:380px}\n.einfo{display:flex;gap:10px;align-items:center;margin-top:8px}\n.einfo img{width:52px;height:52px;flex:none}\n.einfo .t{font-size:13px;line-height:1.55;color:#cbd5e1}\n #stage{position:relative}\n#hfloat{position:absolute;display:none;flex-direction:column;pointer-events:none}\n#hfloat button{pointer-events:auto;flex:1;margin:2px;border-radius:12px;background:rgba(15,20,40,.82);border:2px solid #475569;position:relative;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;overflow:hidden}\n#hfloat .ic{font-size:20px}#hfloat .cd{font-size:10.5px;color:#a5f3fc;margin-top:2px;font-weight:700}\n#hfloat button.ready{border-color:#fde047;box-shadow:0 0 10px rgba(253,224,71,.55)}\n#hfloat button:disabled .ic{opacity:.45}\n#hfloat .ha{font-size:11px;font-weight:700;color:#cbd5e1}#hfloat .ha.on{border-color:#22c55e;color:#bbf7d0}\n.hbar{display:flex;gap:6px;align-items:center;margin-bottom:8px}.hbar .hn{font-size:13px;font-weight:700;white-space:nowrap}\n.hs{flex:1;background:#1e293b;border:2px solid #475569;padding:7px 4px;font-size:13px;font-weight:700;line-height:1.2}.hs small{font-weight:400;color:#a5f3fc}.hs:disabled{opacity:.5}\n.hs.ha{flex:none;font-size:12px;padding:7px 8px}.hs.ha.on{border-color:#22c55e;color:#bbf7d0}\n.lsec{text-align:left;font-weight:700;font-size:15px;margin:14px 0 6px}\n.hrow{display:flex;flex-direction:column;gap:8px}.card.hero{padding:10px 12px}.card.hero.on{border-color:#22c55e;box-shadow:0 0 14px rgba(34,197,94,.35)}.card.hero .d{font-size:12.5px}\n.chip.on{border-color:#22c55e;background:#14532d}\n.rl.art{display:flex;align-items:center;gap:10px}.buy{background:#0e7490;padding:8px 12px;font-weight:700;white-space:nowrap}.buy:disabled{opacity:.4}.own{color:#86efac;font-size:13px;white-space:nowrap}\n.card.curse{border-color:#be123c}\n#guide{position:fixed;left:50%;transform:translateX(-50%);top:54px;z-index:40;width:min(92vw,420px);background:#fde68a;color:#1a1528;border-radius:12px;padding:9px 12px;font-weight:700;font-size:14px;line-height:1.45;box-shadow:0 6px 20px rgba(0,0,0,.45);display:none;pointer-events:none}\n#guide button{pointer-events:auto;float:right;margin-left:8px;background:#1a1528;color:#fde68a;border:none;border-radius:8px;padding:3px 8px;font-size:12px}\n.gpulse{animation:gp 1s infinite;outline:3px solid #fde047;outline-offset:1px}@keyframes gp{0%,100%{box-shadow:0 0 0 0 rgba(253,224,71,.9)}50%{box-shadow:0 0 0 8px rgba(253,224,71,0)}}\n.tag{display:inline-block;border-radius:6px;padding:0 6px;margin-right:4px;font-size:12px;font-weight:700;color:#0d1020}\n","\n<div id=\"app\">\n  <div id=\"hud\">\n    <span class=\"pill\" id=\"hW\">第1幕 0/15</span>\n    <span class=\"pill\" id=\"hG\">💰 0</span>\n    <span class=\"pill\" id=\"hL\">❤️ 20</span>\n    <button id=\"runes\">🔮符文</button>\n    <button id=\"spd\">1×</button>\n    <button id=\"snd\">🔊</button>\n  </div>\n  <div id=\"stage\"><canvas id=\"cv\"></canvas><div id=\"hfloat\"></div></div>\n  <div id=\"panel\"></div>\n</div>\n<div id=\"ov\"></div><div id=\"guide\"></div>\n<div id=\"bp\"></div>\n");
 (function(window,document,localStorage,Image,requestAnimationFrame,performance,location,AudioContext,webkitAudioContext,navigator,URLSearchParams){
 // 自动生成：地图生成器 + 模拟筛选。每张图都和其它图（包括镜像、翻转版本）比较过，路线重合度不超过 50%。
 window.RUNE_MAPS=[{"type":"snake","paths":[[[-1,1],[1,1],[1,11],[4,11],[4,1],[7,1],[7,11],[9,11]]],"tiles":{"6,4":"highland","6,2":"highland","3,8":"runewell","4,6":"swamp"},"gateInside":false,"stars":3,"simWin":0.31,"id":"snake-00","place":"晨露坡","hpMul":0.774},{"type":"snake","paths":[[[9,0],[7,0],[7,3],[4,3],[4,0],[1,0],[1,9],[4,9],[4,6],[7,6],[7,12],[1,12],[1,14]]],"tiles":{"3,10":"highland","5,8":"highland","6,5":"runewell","1,9":"swamp","7,9":"swamp"},"gateInside":false,"stars":1,"simWin":0.88,"id":"snake-01","place":"橡木桥","hpMul":0.746},{"type":"snake","paths":[[[0,14],[0,1],[7,1],[7,4],[3,4],[3,14]]],"tiles":{"2,10":"highland","6,3":"highland","4,3":"runewell","6,1":"swamp"},"gateInside":false,"stars":2,"simWin":0.75,"id":"snake-02","place":"云杉坡","hpMul":0.735},{"type":"snake","paths":[[[4,14],[4,11],[1,11],[1,4],[4,4],[4,8],[8,8],[8,0],[1,0],[1,-1]]],"tiles":{"7,1":"highland","7,7":"highland","3,9":"runewell","4,8":"swamp"},"gateInside":false,"stars":3,"simWin":0.44,"id":"snake-03","place":"青铜堡","hpMul":0.737},{"type":"snake","paths":[[[5,-1],[5,1],[1,1],[1,5],[8,5],[8,12],[5,12],[5,9],[-1,9]]],"tiles":{"4,7":"highland","3,11":"highland","3,3":"runewell","8,6":"swamp","5,10":"swamp"},"gateInside":false,"hpMul":0.635,"stars":2,"simWin":0.69,"id":"snake-04","place":"霜叶林"},{"type":"snake","paths":[[[9,6],[7,6],[7,12],[0,12],[0,9],[3,9],[3,6],[0,6],[0,2],[7,2],[7,-1]]],"tiles":{"1,10":"highland","2,5":"highland","6,0":"runewell","1,9":"swamp","1,2":"swamp"},"gateInside":false,"stars":1,"simWin":0.81,"id":"snake-05","place":"烛火巷","hpMul":0.692},{"type":"snake","paths":[[[-1,10],[0,10],[0,7],[4,7],[4,10],[7,10],[7,0],[4,0],[4,4],[0,4],[0,0],[-1,0]]],"tiles":{"3,2":"highland","2,9":"highland","2,5":"runewell","7,5":"swamp","2,4":"swamp"},"gateInside":false,"stars":1,"simWin":0.88,"id":"snake-06","place":"飞瀑崖","hpMul":0.735},{"type":"snake","paths":[[[9,13],[7,13],[7,6],[4,6],[4,13],[0,13],[0,0],[4,0],[4,3],[9,3]]],"tiles":{"5,12":"highland","6,9":"highland","3,12":"runewell","0,11":"swamp"},"gateInside":false,"stars":2,"simWin":0.75,"id":"snake-07","place":"萤火原","hpMul":0.7},{"type":"snake","paths":[[[9,5],[5,5],[5,8],[8,8],[8,11],[1,11],[1,2],[8,2],[8,-1]]],"tiles":{"4,3":"highland","6,4":"highland","4,1":"runewell","3,11":"swamp","2,2":"swamp"},"gateInside":false,"stars":2,"simWin":0.62,"id":"snake-08","place":"龙脊梁","hpMul":0.694},{"type":"snake","paths":[[[9,12],[1,12],[1,6],[8,6],[8,0],[5,0],[5,3],[1,3],[1,-1]]],"tiles":{"3,5":"highland","6,1":"highland","4,7":"runewell","8,5":"swamp","5,2":"swamp"},"gateInside":false,"stars":2,"simWin":0.56,"id":"snake-09","place":"蜂蜜谷","hpMul":0.786},{"type":"twin","paths":[[[3,-1],[3,0],[6,0],[6,6],[0,6],[0,13],[6,13],[6,14]],[[9,10],[3,10],[3,6],[0,6],[0,13],[6,13],[6,14]]],"tiles":{"5,7":"highland","2,11":"highland","5,4":"runewell","0,6":"swamp"},"gateInside":false,"hpMul":0.583,"stars":2,"simWin":0.56,"id":"twin-10","place":"落日坡"},{"type":"twin","paths":[[[4,14],[4,10],[0,10],[0,4],[8,4],[8,1],[0,1],[0,-1]],[[8,14],[8,7],[4,7],[4,4],[8,4],[8,1],[0,1],[0,-1]]],"tiles":{"2,6":"highland","1,2":"highland","6,2":"runewell","3,4":"swamp","7,1":"swamp"},"gateInside":false,"stars":2,"simWin":0.75,"id":"twin-11","place":"晴川渡","hpMul":0.704},{"type":"twin","paths":[[[9,1],[8,1],[8,8],[5,8],[5,1],[1,1],[1,8],[-1,8]],[[-1,11],[5,11],[5,1],[1,1],[1,8],[-1,8]]],"tiles":{"4,7":"highland","3,10":"highland","6,3":"runewell","5,3":"swamp"},"gateInside":false,"hpMul":0.592,"stars":2,"simWin":0.62,"id":"twin-12","place":"青苔谷"},{"type":"twin","paths":[[[9,13],[8,13],[8,10],[4,10],[4,1],[8,1],[8,7],[9,7]],[[-1,13],[1,13],[1,4],[4,4],[4,1],[8,1],[8,7],[9,7]]],"tiles":{"2,3":"highland","2,5":"highland","5,8":"runewell","4,3":"swamp"},"gateInside":false,"hpMul":0.524,"stars":2,"simWin":0.75,"id":"twin-13","place":"狐狸窝"},{"type":"twin","paths":[[[-1,1],[0,1],[0,7],[3,7],[3,10],[6,10],[6,13],[0,13],[0,10],[-1,10]],[[9,4],[3,4],[3,10],[6,10],[6,13],[0,13],[0,10],[-1,10]]],"tiles":{"1,9":"highland","2,3":"highland","5,9":"runewell","6,10":"swamp"},"gateInside":false,"hpMul":0.62,"stars":2,"simWin":0.56,"id":"twin-14","place":"冰川口"},{"type":"twin","paths":[[[4,14],[4,13],[7,13],[7,10],[4,10],[4,6],[7,6],[7,3],[4,3],[4,0],[7,0],[7,-1]],[[-1,13],[1,13],[1,6],[7,6],[7,3],[4,3],[4,0],[7,0],[7,-1]]],"tiles":{"6,12":"highland","5,9":"highland","3,8":"runewell","5,6":"swamp"},"gateInside":false,"hpMul":0.484,"stars":2,"simWin":0.75,"id":"twin-15","place":"回音洞"},{"type":"twin","paths":[[[8,-1],[8,1],[4,1],[4,4],[1,4],[1,11],[9,11]],[[9,8],[8,8],[8,4],[1,4],[1,11],[9,11]]],"tiles":{"3,9":"highland","6,0":"highland","3,2":"runewell","1,5":"swamp","2,11":"swamp"},"gateInside":false,"hpMul":0.456,"stars":2,"simWin":0.62,"id":"twin-16","place":"琥珀湖"},{"type":"twin","paths":[[[3,-1],[3,0],[7,0],[7,6],[3,6],[3,13],[7,13],[7,10],[9,10]],[[-1,10],[0,10],[0,3],[3,3],[3,13],[7,13],[7,10],[9,10]]],"tiles":{"4,8":"highland","6,5":"highland","1,4":"runewell","4,6":"swamp"},"gateInside":false,"hpMul":0.549,"stars":2,"simWin":0.69,"id":"twin-17","place":"铃兰坡"},{"type":"twin","paths":[[[9,3],[7,3],[7,6],[0,6],[0,0],[7,0],[7,-1]],[[-1,13],[0,13],[0,10],[3,10],[3,6],[0,6],[0,0],[7,0],[7,-1]]],"tiles":{"1,4":"highland","1,9":"highland","2,1":"runewell","0,5":"swamp"},"gateInside":false,"hpMul":0.553,"stars":2,"simWin":0.56,"id":"twin-18","place":"落樱道"},{"type":"twin","paths":[[[9,1],[4,1],[4,5],[1,5],[1,13],[9,13]],[[9,9],[7,9],[7,5],[1,5],[1,13],[9,13]]],"tiles":{"8,6":"highland","5,6":"highland","2,7":"runewell","1,7":"swamp","4,13":"swamp"},"gateInside":false,"hpMul":0.426,"stars":2,"simWin":0.62,"id":"twin-19","place":"金穗田"},{"type":"triple","paths":[[[6,14],[6,13],[3,13],[3,7],[6,7],[6,1],[3,1],[3,4],[-1,4]],[[9,10],[3,10],[3,7],[6,7],[6,1],[3,1],[3,4],[-1,4]],[[-1,7],[0,7],[0,10],[3,10],[3,7],[6,7],[6,1],[3,1],[3,4],[-1,4]]],"tiles":{"1,2":"highland","5,8":"highland","2,6":"runewell","6,6":"swamp","3,2":"swamp"},"gateInside":false,"hpMul":0.513,"stars":2,"simWin":0.62,"id":"triple-20","place":"柳絮堤"},{"type":"triple","paths":[[[9,13],[1,13],[1,0],[9,0]],[[9,10],[4,10],[4,3],[1,3],[1,0],[9,0]],[[9,6],[8,6],[8,3],[1,3],[1,0],[9,0]]],"tiles":{"3,8":"highland","3,11":"highland","5,2":"runewell","1,7":"swamp","4,0":"swamp"},"gateInside":false,"hpMul":0.546,"stars":2,"simWin":0.5,"id":"triple-21","place":"蘑菇林"},{"type":"triple","paths":[[[0,14],[0,5],[7,5],[7,8],[3,8],[3,14]],[[0,-1],[0,5],[7,5],[7,8],[3,8],[3,14]],[[3,-1],[3,2],[7,2],[7,8],[3,8],[3,14]]],"tiles":{"2,7":"highland","4,7":"highland","4,4":"runewell","6,5":"swamp"},"gateInside":false,"hpMul":0.521,"stars":2,"simWin":0.75,"id":"triple-22","place":"芦花荡"},{"type":"triple","paths":[[[-1,11],[0,11],[0,8],[8,8],[8,5],[-1,5]],[[4,14],[4,11],[8,11],[8,5],[-1,5]],[[0,-1],[0,1],[8,1],[8,5],[-1,5]]],"tiles":{"4,6":"highland","2,7":"highland","3,3":"runewell","8,7":"swamp"},"gateInside":false,"hpMul":0.456,"stars":2,"simWin":0.62,"id":"triple-23","place":"海雾岬"},{"type":"triple","paths":[[[0,14],[0,7],[6,7],[6,11],[3,11],[3,14]],[[9,1],[6,1],[6,4],[3,4],[3,7],[6,7],[6,11],[3,11],[3,14]],[[3,-1],[3,1],[0,1],[0,4],[3,4],[3,7],[6,7],[6,11],[3,11],[3,14]]],"tiles":{"1,9":"highland","5,8":"highland","1,12":"runewell","5,7":"swamp","5,11":"swamp"},"gateInside":false,"hpMul":0.429,"stars":2,"simWin":0.75,"id":"triple-24","place":"赤枫渡"},{"type":"triple","paths":[[[9,2],[6,2],[6,6],[3,6],[3,9],[6,9],[6,12],[0,12],[0,14]],[[-1,2],[3,2],[3,9],[6,9],[6,12],[0,12],[0,14]],[[-1,9],[0,9],[0,6],[3,6],[3,9],[6,9],[6,12],[0,12],[0,14]]],"tiles":{"4,11":"highland","7,3":"highland","1,9":"runewell","3,9":"swamp"},"gateInside":false,"hpMul":0.488,"stars":3,"simWin":0.44,"id":"triple-25","place":"鹿鸣谷"},{"type":"triple","paths":[[[-1,1],[1,1],[1,5],[5,5],[5,12],[1,12],[1,8],[-1,8]],[[5,-1],[5,12],[1,12],[1,8],[-1,8]],[[8,-1],[8,5],[5,5],[5,12],[1,12],[1,8],[-1,8]]],"tiles":{"4,4":"highland","4,7":"highland","3,1":"runewell","5,8":"swamp"},"gateInside":false,"hpMul":0.404,"stars":2,"simWin":0.69,"id":"triple-26","place":"松涛峡"},{"type":"triple","paths":[[[-1,7],[1,7],[1,4],[7,4],[7,1],[1,1],[1,-1]],[[9,10],[7,10],[7,7],[4,7],[4,4],[7,4],[7,1],[1,1],[1,-1]],[[-1,10],[4,10],[4,4],[7,4],[7,1],[1,1],[1,-1]]],"tiles":{"6,9":"highland","3,3":"highland","5,2":"runewell","7,4":"swamp"},"gateInside":false,"hpMul":0.64,"stars":3,"simWin":0.31,"id":"triple-27","place":"雾隐沼"},{"type":"triple","paths":[[[9,10],[3,10],[3,13],[0,13],[0,4],[-1,4]],[[9,4],[6,4],[6,7],[3,7],[3,13],[0,13],[0,4],[-1,4]],[[-1,0],[3,0],[3,13],[0,13],[0,4],[-1,4]]],"tiles":{"1,7":"highland","2,5":"highland","4,8":"runewell","2,13":"swamp"},"gateInside":false,"hpMul":0.513,"stars":2,"simWin":0.62,"id":"triple-28","place":"野莓林"},{"type":"triple","paths":[[[-1,2],[0,2],[0,5],[3,5],[3,8],[0,8],[0,11],[3,11],[3,14]],[[9,11],[6,11],[6,5],[3,5],[3,8],[0,8],[0,11],[3,11],[3,14]],[[9,2],[3,2],[3,8],[0,8],[0,11],[3,11],[3,14]]],"tiles":{"4,10":"highland","1,9":"highland","0,6":"runewell","3,8":"swamp","2,11":"swamp"},"gateInside":false,"hpMul":0.486,"stars":2,"simWin":0.75,"id":"triple-29","place":"星坠丘"},{"type":"fork","paths":[[[9,13],[4,13],[4,10],[0,10],[0,6],[4,6],[4,3],[8,3],[8,10],[9,10]],[[9,13],[4,13],[4,10],[0,10],[0,3],[8,3],[8,10],[9,10]]],"tiles":{"2,7":"highland","3,12":"highland","2,9":"runewell","3,6":"swamp","7,3":"swamp"},"gateInside":false,"hpMul":0.597,"stars":2,"simWin":0.5,"id":"fork-30","place":"寒鸦渡"},{"type":"fork","paths":[[[-1,9],[0,9],[0,12],[6,12],[6,6],[0,6],[0,3],[6,3],[6,0],[9,0]],[[-1,9],[0,9],[0,12],[6,12],[6,9],[3,9],[3,6],[0,6],[0,3],[6,3],[6,0],[9,0]]],"tiles":{"2,4":"highland","1,8":"highland","6,5":"runewell","2,6":"swamp"},"gateInside":false,"stars":1,"simWin":0.88,"id":"fork-31","place":"雪松林","hpMul":0.608},{"type":"fork","paths":[[[-1,1],[8,1],[8,5],[4,5],[4,12],[1,12],[1,5],[-1,5]],[[-1,1],[8,1],[8,9],[4,9],[4,12],[1,12],[1,5],[-1,5]]],"tiles":{"5,11":"highland","6,2":"highland","3,8":"runewell","4,5":"swamp"},"gateInside":false,"stars":3,"simWin":0.44,"id":"fork-32","place":"玉带河","hpMul":0.729},{"type":"fork","paths":[[[4,-1],[4,1],[7,1],[7,5],[4,5],[4,11],[0,11],[0,1],[-1,1]],[[4,-1],[4,1],[7,1],[7,11],[0,11],[0,1],[-1,1]]],"tiles":{"3,12":"highland","6,3":"highland","6,8":"runewell","4,8":"swamp"},"gateInside":false,"hpMul":0.464,"stars":2,"simWin":0.75,"id":"fork-33","place":"银杏道"},{"type":"fork","paths":[[[9,9],[6,9],[6,5],[3,5],[3,2],[0,2],[0,9],[3,9],[3,12],[9,12]],[[9,9],[6,9],[6,2],[0,2],[0,9],[3,9],[3,12],[9,12]]],"tiles":{"4,4":"highland","4,7":"highland","3,1":"runewell","0,2":"swamp"},"gateInside":false,"hpMul":0.566,"stars":2,"simWin":0.56,"id":"fork-34","place":"苍狼岗"},{"type":"fork","paths":[[[-1,7],[1,7],[1,13],[5,13],[5,7],[8,7],[8,4],[5,4],[5,1],[1,1],[1,-1]],[[-1,7],[1,7],[1,13],[5,13],[5,7],[8,7],[8,1],[1,1],[1,-1]]],"tiles":{"7,9":"highland","3,12":"highland","3,10":"runewell","5,9":"swamp","5,1":"swamp"},"gateInside":false,"hpMul":0.561,"stars":2,"simWin":0.75,"id":"fork-35","place":"黄沙驿"},{"type":"fork","paths":[[[9,0],[0,0],[0,8],[3,8],[3,11],[6,11],[6,4],[9,4]],[[9,0],[0,0],[0,11],[6,11],[6,4],[9,4]]],"tiles":{"4,12":"highland","1,7":"highland","3,1":"runewell","0,8":"swamp","6,7":"swamp"},"gateInside":false,"hpMul":0.597,"stars":2,"simWin":0.69,"id":"fork-36","place":"磨坊村"},{"type":"fork","paths":[[[3,14],[3,10],[0,10],[0,4],[7,4],[7,0],[-1,0]],[[3,14],[3,10],[0,10],[0,7],[3,7],[3,4],[7,4],[7,0],[-1,0]]],"tiles":{"4,2":"highland","5,5":"highland","2,5":"runewell","4,4":"swamp","6,0":"swamp"},"gateInside":false,"hpMul":0.594,"stars":3,"simWin":0.44,"id":"fork-37","place":"碧泉村"},{"type":"fork","paths":[[[9,5],[6,5],[6,9],[3,9],[3,13],[0,13],[0,2],[3,2],[3,-1]],[[9,5],[6,5],[6,13],[0,13],[0,2],[3,2],[3,-1]]],"tiles":{"5,7":"highland","7,8":"highland","5,10":"runewell","2,13":"swamp","0,4":"swamp"},"gateInside":false,"hpMul":0.501,"stars":2,"simWin":0.75,"id":"fork-38","place":"古井镇"},{"type":"fork","paths":[[[6,-1],[6,0],[0,0],[0,3],[6,3],[6,13],[0,13],[0,10],[-1,10]],[[6,-1],[6,0],[0,0],[0,3],[6,3],[6,10],[3,10],[3,13],[0,13],[0,10],[-1,10]]],"tiles":{"4,1":"highland","5,4":"highland","1,11":"runewell","6,4":"swamp"},"gateInside":false,"hpMul":0.535,"stars":1,"simWin":0.81,"id":"fork-39","place":"枫红谷"},{"type":"citadel","paths":[[[-1,0],[8,0],[8,3],[5,3],[5,7],[8,7],[8,13],[5,13],[5,10]]],"tiles":{"7,1":"highland","6,9":"highland","5,2":"runewell","5,6":"swamp"},"gateInside":true,"hpMul":0.62,"stars":2,"simWin":0.62,"id":"citadel-40","place":"铁杉岭"},{"type":"citadel","paths":[[[8,14],[8,13],[5,13],[5,10],[1,10],[1,7],[8,7],[8,1],[5,1],[5,4]]],"tiles":{"3,12":"highland","7,4":"highland","2,8":"runewell","5,7":"swamp","8,2":"swamp"},"gateInside":true,"hpMul":0.684,"stars":2,"simWin":0.69,"id":"citadel-41","place":"灰烬原"},{"type":"citadel","paths":[[[9,5],[8,5],[8,2],[5,2],[5,5],[1,5],[1,13],[8,13],[8,9],[5,9]]],"tiles":{"4,3":"highland","2,11":"highland","4,6":"runewell","1,8":"swamp","8,11":"swamp"},"gateInside":true,"hpMul":0.503,"stars":1,"simWin":0.94,"id":"citadel-42","place":"断桥渡"},{"type":"citadel","paths":[[[4,14],[4,13],[1,13],[1,10],[4,10],[4,7],[8,7],[8,1],[1,1],[1,4],[4,4]]],"tiles":{"7,2":"highland","7,5":"highland","2,11":"runewell","8,7":"swamp","1,2":"swamp"},"gateInside":true,"hpMul":0.598,"stars":2,"simWin":0.56,"id":"citadel-43","place":"鸢尾坡"},{"type":"citadel","paths":[[[3,-1],[3,1],[0,1],[0,4],[3,4],[3,7],[6,7],[6,13],[0,13],[0,10],[3,10]]],"tiles":{"4,11":"highland","1,3":"highland","2,12":"runewell","6,10":"swamp","0,12":"swamp"},"gateInside":true,"hpMul":0.568,"stars":1,"simWin":0.88,"id":"citadel-44","place":"碎岩滩"},{"type":"citadel","paths":[[[9,1],[4,1],[4,4],[7,4],[7,10],[4,10],[4,13],[1,13],[1,7],[4,7]]],"tiles":{"3,5":"highland","6,5":"highland","3,12":"runewell","6,10":"swamp"},"gateInside":true,"stars":2,"simWin":0.62,"id":"citadel-45","place":"赤土关","hpMul":0.573},{"type":"citadel","paths":[[[5,14],[5,13],[8,13],[8,6],[5,6],[5,10],[1,10],[1,3],[5,3]]],"tiles":{"7,11":"highland","4,8":"highland","5,4":"runewell","4,10":"swamp"},"gateInside":true,"hpMul":0.732,"stars":3,"simWin":0.44,"id":"citadel-46","place":"白石滩"},{"type":"citadel","paths":[[[7,-1],[7,5],[1,5],[1,12],[7,12],[7,8],[4,8]]],"tiles":{"2,11":"highland","5,3":"highland","4,6":"runewell","1,10":"swamp"},"gateInside":true,"hpMul":0.684,"stars":2,"simWin":0.5,"id":"citadel-47","place":"紫藤园"},{"type":"citadel","paths":[[[4,14],[4,12],[1,12],[1,9],[8,9],[8,0],[1,0],[1,3],[4,3]]],"tiles":{"5,10":"highland","2,13":"highland","7,6":"runewell","8,7":"swamp","1,0":"swamp"},"gateInside":true,"hpMul":0.563,"stars":1,"simWin":0.81,"id":"citadel-48","place":"熔岩口"},{"type":"citadel","paths":[[[3,-1],[3,1],[7,1],[7,12],[3,12],[3,8],[0,8],[0,5],[3,5]]],"tiles":{"1,10":"highland","8,6":"highland","3,6":"runewell","7,11":"swamp"},"gateInside":true,"hpMul":0.64,"stars":3,"simWin":0.44,"id":"citadel-49","place":"渔火湾"}];
@@ -1074,7 +1074,7 @@ window.RUNE_MAPS=[{"type":"snake","paths":[[[-1,1],[1,1],[1,11],[4,11],[4,1],[7,
 var RuneMusic=window.RuneMusic;
 
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.7c';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.7d';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -1471,6 +1471,28 @@ const AFX={
   avenger:{name:'复仇',col:'#fb7185',desc:'被击败时，周围 2 格内的敌人加速 50%，持续 2 秒。',tip:'趁它落单时打死它，或者用冰塔接住加速的敌人。'},
 };
 // 本局特性：开局随机一个，整局生效
+// ======================= 遗物：击败第 1、2 个 Boss 掉落，三选一，每局最多 2 个 =======================
+const RELICS=[
+ {id:'cat',icon:'🐱',name:'招财猫',desc:'每场战斗开始时 +20 金',ap:()=>{M.rlCat=1}},
+ {id:'wall',icon:'🧱',name:'城门石',desc:'生命 +8',ap:()=>{lives+=8}},
+ {id:'feather',icon:'🪶',name:'鹰羽',desc:'箭塔射程 +1 格',ap:()=>{M.rlArrowR=1}},
+ {id:'powder',icon:'🛢️',name:'火药桶',desc:'炮塔爆炸范围 +30%',ap:()=>{M.cannonSplash*=1.3}},
+ {id:'icecore',icon:'🧊',name:'寒冰核',desc:'冰塔减速效果 +12%',ap:()=>{M.frostSlow+=.12}},
+ {id:'coil',icon:'🌀',name:'铜线圈',desc:'电塔多连锁 2 个敌人',ap:()=>{M.chain+=2}},
+ {id:'hammer',icon:'🔨',name:'工匠锤',desc:'升级费用 -25%',ap:()=>{M.rlUp=.25}},
+ {id:'dice',icon:'🎲',name:'幸运骰',desc:'每次选符文，多 2 次免费刷新',ap:()=>{M.rlDice=2}},
+ {id:'compass',icon:'🧭',name:'碎片罗盘',desc:'结算时符文碎片 +50%',ap:()=>{M.rlShard=1}},
+ {id:'badge',icon:'🎯',name:'猎人徽章',desc:'对精英和 Boss 伤害 +25%',ap:()=>{M.rlHunt=.25}},
+ {id:'watch',icon:'⏱️',name:'停摆怀表',desc:'每场战斗开始后 6 秒内，敌人移速 -50%',pack:'rl_a',ap:()=>{M.rlWatch=1}},
+ {id:'ember',icon:'🔥',name:'余烬炉心',desc:'燃烧伤害 +50%',pack:'rl_a',ap:()=>{M.rlBurn=.5}},
+ {id:'scale',icon:'⚖️',name:'商人天平',desc:'卖塔多返还 15%',pack:'rl_a',ap:()=>{M.rlSell=.15}},
+ {id:'crown',icon:'👑',name:'财宝王冠',desc:'每站过关，额外得到当前金币 8% 的利息（最多 40）',pack:'rl_a',ap:()=>{M.rlCrown=1}},
+ {id:'horn',icon:'📯',name:'狂战号角',desc:'所有塔伤害 +30%；拿到时失去 8 条命',pack:'rl_b',ap:()=>{M.rlDmg=.3;lives=Math.max(1,lives-8);}},
+ {id:'mirror',icon:'🌘',name:'暗之镜',desc:'敌人生命 +15%；击败敌人金币 +40%',pack:'rl_b',ap:()=>{M.rlMirror=1}},
+];
+const relicOf=id=>RELICS.find(r=>r.id===id);
+const relicOK=r=>!r.pack||!FEAT.meta||owns(r.pack);
+const relicPool=()=>RELICS.filter(r=>relicOK(r)&&!(M.relics||[]).includes(r.id));
 const MODS={
   fog     :{icon:'🌫️',name:'大雾',desc:'所有塔射程 -10%，敌人移速 -15%。'},
   goldrush:{icon:'💰',name:'黄金潮',desc:'击败敌人金币 +40%，但每波敌人数量 +15%。'},
@@ -1590,7 +1612,7 @@ const LIVE={
 
 // ======================= v0.3：大厅 / 英雄 / 诅咒 / 难度 =======================
 // 三个模块各有开关：网址加 ?off=meta,hero,curse 可以单独关闭（也方便出问题时直接关掉重发）
-const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true,map2:true,amb:true,ambsnd:true,lava2:true,death2:true,hero2:true,status2:true,combo2:true,tow2:true,frost3:false,evo2:true,misc2:true,upfx:1,elite2:true,bal2:false,modamb:true};
+const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true,map2:true,amb:true,ambsnd:true,lava2:true,death2:true,hero2:true,status2:true,combo2:true,tow2:true,frost3:false,evo2:true,misc2:true,upfx:1,elite2:true,bal2:false,modamb:true,relic:true};
 function bal2Desc(){if(!FEAT.bal2)return;COMBOS.find(c=>c.id==='C_moltengold').desc='在燃烧中被击败的敌人，掉落的金币 +50%';CARDS.find(c=>c.id==='g6').desc='每持有 100 金，所有伤害 +4%（最多 +30%）';}
 try{const u=new URLSearchParams(location.search),q=u.get('off'),q2=u.get('on');if(q)q.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=false;});if(q2)q2.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=true;});}catch(e){}
 // 局外存档
@@ -1616,6 +1638,10 @@ const ARTISANS=[
  {id:'hall',name:'英雄殿',icon:'⚔️',desc:'招募新的英雄。',items:[
    {id:'h_fire',name:'熔岩领主',cost:60,desc:'炮塔流英雄：陨石、焦土'},
    {id:'h_ice',name:'霜语者',cost:80,desc:'控制流英雄：冰封、寒冰壁垒'},
+ ]},
+ {id:'collector',name:'收藏家',icon:'🏺',desc:'把新的遗物加入 Boss 掉落。',items:[
+   {id:'rl_a',name:'古代遗物',cost:40,desc:'解锁遗物：停摆怀表、余烬炉心、商人天平、财宝王冠'},
+   {id:'rl_b',name:'禁忌遗物',cost:55,desc:'解锁遗物：狂战号角、暗之镜（有代价的强力遗物）'},
  ]},
  {id:'astro',name:'占星师',icon:'🌙',desc:'和命运做交易。',items:[
    {id:'altar',name:'诅咒祭坛',cost:40,desc:'击败第 1、2 个 Boss 后出现祭坛：接受一个诅咒，换取强力奖励'},
@@ -1657,7 +1683,7 @@ function resetRun(mapIdx,biome){
   setupMap(mapIdx,biome);buildBG();
   M={arrowDmg:1,arrowRate:1,arrowMulti:1,cannonDmg:1,cannonSplash:1,burn:0,frostSlow:.4,freeze:0,shatter:0,chain:3,teslaDmg:1,overload:0,interest:0,killGold:0,costMul:1,rangeMul:1,crit:0,allRate:1,execute:0,resonance:0,pierce:0,gale:0,hunter:0,ember:0,kindle:0,burnPlus:0,coldWave:0,shredRune:0,conductor:0,staticF:0,loot:0,greed:0,recycle:0,fifth:0,unstable:0,hourglass:0,resonStone:0,allDmg:1};
   bal2Desc();DIFF=FEAT.meta?Math.min(META.diff||0,META.unlockedDiff||0):0;curses={};
-  M.mod=pick(Object.keys(MODS));
+  M.mod=pick(Object.keys(MODS));M.relics=[];
   M.boss=[pick(['boss1','boss4','boss7']),pick(['boss2','boss5','boss8']),pick(['boss3','boss6','boss9'])];
   {const a=['bat','shaman','shieldman','beetle','rhino','flame','frostling','caster'];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}M.mob=a;}
   gold=170;lives=20;step=0;phase='node';curNode=null;towers=[];enemies=[];projs=[];fx=[];texts=[];parts=[];decals=[];sched=[];queue=[];spawnT=0;sel=null;taken={};grid={};
@@ -1675,7 +1701,7 @@ function resetRun(mapIdx,biome){
 // ======================= 敌人 =======================
 function spawn(type,d,pi,elite){
   const b=ET[type],isBoss=type.startsWith('boss');
-  let hp=b.hp*hpScale(step)*(MAP.hpMul||1)*diffHpMul()*(BIO.hp||1)*(curseOn('brittle')?1.1:1)*(modOn('iceage')?1.1:1)*(modOn('darkmoon')?1.2:1);if(elite)hp*=2.2;
+  let hp=b.hp*hpScale(step)*(MAP.hpMul||1)*diffHpMul()*(BIO.hp||1)*(curseOn('brittle')?1.1:1)*(modOn('iceage')?1.1:1)*(modOn('darkmoon')?1.2:1)*(M.rlMirror?1.15:1);if(elite)hp*=2.2;
   if(isBoss&&D(5))hp*=1.25;if((type==='boss3'||type==='boss6'||type==='boss9')&&D(10))hp*=1.5;
   let armor=(b.armor?b.armor+step*.5:0)+(curseOn('armor')?8:0);
   if(pi===undefined)pi=PATHS.length>1?(MAP.type==='fork'?(Math.random()<.5?0:1):(spawnCount++%PATHS.length)):0;
@@ -1728,8 +1754,8 @@ function buildWave(s,kind){
 
 // ======================= 塔 =======================
 const costOf=type=>Math.round(TT[type].cost*M.costMul);
-const upCost=t=>Math.round(TT[t.type].cost*.8*t.lvl*M.costMul);
-const sellRate=()=>M.recycle?1:(FEAT.meta&&META.owned.salv)?.8:.7;
+const upCost=t=>Math.round(TT[t.type].cost*.8*t.lvl*M.costMul*(1-(M.rlUp||0)));
+const sellRate=()=>M.recycle?1:((FEAT.meta&&META.owned.salv)?.8:.7)+(M.rlSell||0);
 function resonanceMul(){if(!M.resonance)return 1;return 1+M.resonance*new Set(towers.map(t=>t.type)).size;}
 function wellsNear(c,r){let n=0;for(let dc=-1;dc<=1;dc++)for(let dr=-1;dr<=1;dr++)if((dc||dr)&&tiles[(c+dc)+','+(r+dr)]==='runewell')n++;return n;}
 function sameNear(t){let n=0;for(const o of towers)if(o!==t&&o.type===t.type&&Math.abs(o.c-t.c)<=1&&Math.abs(o.r-t.r)<=1)n++;return n;}
@@ -1742,6 +1768,8 @@ function stat(t){
   if(modOn('gale'))rate/=1.2;
   if(M.resonStone)dmg*=1+.12*sameNear(t);
   if(tiles[t.c+','+t.r]==='highland')range+=CS;
+  if(t.type==='arrow'&&M.rlArrowR)range+=CS;
+  if(M.rlDmg)dmg*=1+M.rlDmg;
   if(t.type==='arrow'){dmg*=M.arrowDmg;rate/=M.arrowRate;}
   if(t.type==='cannon')dmg*=M.cannonDmg;
   if(t.type==='tesla')dmg*=M.teslaDmg;
@@ -1765,6 +1793,7 @@ function hit(e,dmg,src,o){
   const ctrl=e.slowT>0||e.frzT>0;
   if(M.shatter&&ctrl)dmg*=1+M.shatter;
   if(e.markT>0)dmg*=1.15;
+  if(M.rlHunt&&(e.elite||e.boss))dmg*=1+M.rlHunt;
   if(M.shredRune&&e.shredT>0)dmg*=1.1;
   if(M.greed)dmg*=FEAT.bal2?1+Math.min(.3,Math.floor(gold/100)*.04):1+Math.min(.4,Math.floor(gold/100)*.05);
   if(src==='cannon'&&M.kindle&&e.burnT>0)dmg*=1.2;
@@ -1785,7 +1814,7 @@ function hit(e,dmg,src,o){
   if(e.type==='rhino'&&!o.pure&&!(e.chgCd>0)&&e.hp>0){e.chgT=2;e.chgCd=5;txt(e.x,e.y-e.r-10,'冲锋！','#fca5a5',.8);sfx('hit');}
   if(e.hp<=0)kill(e);
 }
-function burnOn(e,dps,dur){if(e.fireImm)return;e.burnT=Math.max(e.burnT,dur+(M.burnPlus||0));e.burnD=Math.max(e.burnD,dps);}
+function burnOn(e,dps,dur){if(e.fireImm)return;if(M.rlBurn)dps*=1+M.rlBurn;e.burnT=Math.max(e.burnT,dur+(M.burnPlus||0));e.burnD=Math.max(e.burnD,dps);}
 function kill(e){
   if(e.clone){e.dead=true;if(SPS.pf_poof)pfx('poof',e.x,e.y+e.r*.6,.7);sfx('card');return;}
   if(e.type==='boss7'&&e.stolen){const g=Math.round(e.stolen*1.5);gold+=g;txt(e.x,e.y-e.r-20,'+'+g+' 金（还回来了）','#fde047',1.6);coins(e.x,e.y,10);}
@@ -1793,7 +1822,7 @@ function kill(e){
   e.dead=true;
   if(e.afx.avenger){const R=2*CS;let n=0;for(const o of enemies)if(o!==e&&!o.dead&&(o.x-e.x)**2+(o.y-e.y)**2<=R*R){o.vgT=2;n++;}
     fx.push({k:'ring',x:e.x,y:e.y,r:R,t:.45,T:.45,c:'#fb7185'});if(SPS.pf_bSlam)pfx('bSlam',e.x,e.y+e.r*.6,e.r/30);if(n)txt(e.x,e.y-e.r-14,'复仇！','#fda4af',1);}
-  let g=e.gold+M.killGold;if(modOn('goldrush'))g=Math.round(g*1.4);
+  let g=e.gold+M.killGold;if(modOn('goldrush'))g=Math.round(g*1.4);if(M.rlMirror)g=Math.round(g*1.4);
   if(M.loot&&(e.elite||e.boss))g+=e.gold;
   if(e.burnT>0&&has('C_moltengold')){g=FEAT.bal2?Math.round(g*1.5):g*2;txt(e.x,e.y-12,'熔金','#fbbf24',.7);if(FEAT.combo2&&SPS.pf_gold){const ns=fx.reduce((n,f)=>n+(f.k==='pfx'&&f.id==='gold'&&f.t/f.T>.6),0);pfx('gold',e.x,e.y+e.r*.5,rnd(.62,.7)*Math.max(.6,1-.12*ns),{sp:rnd(1,1.15),al:Math.max(.6,1-.12*ns)});}}
   gold+=g;stats.bounty+=M.killGold;stats.kills++;if(FEAT.modamb)modKill(e);
@@ -1990,6 +2019,7 @@ function updEnemy(e,dt){
   if(e.vgT>0)f*=1.5;
   if(e.chgT>0){e.chgT-=dt;f*=2.2;if(Math.random()<.5)chunks(e.x-(e.dir||1)*e.r*.8,e.y+e.r*.7,'#a8a29e',1,60,2.4);}
   if(e.under>0)f*=1.4;
+  if(M.rlWatch&&wClock<6)f*=.5;
   e.d+=e.spd*CS*f*dt;
   if(e.d>=(e.fly?flyLen(e.pi):PATHS[e.pi].tot)){
     e.dead=true;let lost=e.boss?Math.max(1,Math.ceil(e.hp/e.max*24)):e.dmg;
@@ -2008,13 +2038,15 @@ function updLava(dt){
 }
 
 // ======================= 流程 =======================
+let wClock=99;
 function startWave(){
   if(phase!=='build')return;
-  queue=buildWave(step,curNode);spawnT=.9;phase='wave';paused=false;bpOpen=false;bp.style.display='none';hourglassUsed=false;if(sel&&sel.enemy)sel=null;placing=null;renderPanel();
+  queue=buildWave(step,curNode);spawnT=.9;phase='wave';wClock=0;if(M.rlCat){gold+=20;txt(W/2,H*.32,'🐱 招财猫 +20 金','#fde047',1.4);}if(M.rlWatch)txt(W/2,H*.36,'⏱️ 停摆怀表：敌人减速 6 秒','#a5f3fc',1.6);paused=false;bpOpen=false;bp.style.display='none';hourglassUsed=false;if(sel&&sel.enemy)sel=null;placing=null;renderPanel();
   const isB=curNode==='boss';
   banner={a:isB?'Boss 来袭':`第 ${step} 站 · ${NODES[curNode].name}`,b:isB?EINFO[bossOf(actOf(step))].name:`第 ${actOf(step)} 幕`,boss:isB||curNode==='elite',t:2,T:2};sfx(isB?'boss':'wave');
 }
 function step_(dt){
+  if(phase==='wave')wClock+=dt;
   if(queue.length){spawnT-=dt;if(spawnT<=0){const q=queue.shift();spawn(q.t,0,undefined,q.elite);spawnT=q.gap;}}
   // 显形、领袖
   const frosts=towers.filter(t=>t.type==='frost'&&!(t.stun>0)).map(t=>[t,stat(t).range]);
@@ -2035,7 +2067,7 @@ function step_(dt){
   if(introQ.length){showIntro();return;}
   if(!queue.length&&!enemies.length&&!fx.some(f=>f.k==='bossfall'))waveDone();
 }
-function interestNow(){return M.interest?Math.min(60,Math.floor(gold*M.interest)):0;}
+function interestNow(){return (M.interest?Math.min(60,Math.floor(gold*M.interest)):0)+(M.rlCrown?Math.min(40,Math.floor(gold*.08)):0);}
 function waveDone(){
   projs=[];
   const elite=curNode==='elite',boss=curNode==='boss';
@@ -2047,12 +2079,27 @@ function waveDone(){
   if(M.unstable&&Math.random()<.5){const c=towers.filter(t=>t.lvl>1);if(c.length){const t=pick(c);t.lvl--;if(t.lvl<3)t.branch=null;txt(t.x,t.y-30,'不稳定：降级','#fca5a5',1.6);}}
   phase='reward';renderPanel();
   let sub=`奖励 +${bonus} 金${it?`，利息 +${it}`:''}`;
-  if(boss){const heal=curseOn('brittle')?0:D(7)?2:BOSS_HEAL;lives+=heal;if(heal)sub+=`，城墙修复 +${heal} ❤️`;offerCards(`击败 ${EINFO[bossOf(actOf(step))].name}！`,sub+' · Boss 宝箱：必出史诗或传说符文',2,altarAvailable()?offerAltar:offerNodes,true);}
+  if(boss){const heal=curseOn('brittle')?0:D(7)?2:BOSS_HEAL;lives+=heal;if(heal)sub+=`，城墙修复 +${heal} ❤️`;if(FEAT.relic&&relicPool().length){offerRelic(sub);return;}bossCards(sub);}
   else if(elite)offerEliteReward(sub);
   else offerCards(`第 ${step} 站完成！`,sub+' · 选择一个符文',0,offerNodes);
 }
+function bossCards(sub){offerCards(`击败 ${EINFO[bossOf(actOf(step))].name}！`,sub+' · Boss 宝箱：必出史诗或传说符文',2,altarAvailable()?offerAltar:offerNodes,true);}
 const BOSS_HEAL=5;
 function stepBonus(){let b=20+Math.max(step,1)*4;if(curseOn('tax'))b=Math.round(b*.5);if(modOn('poor'))b=Math.round(b*1.5);return b;}
+// 击败第 1、2 个 Boss：先拿一个遗物（三选一），再开 Boss 宝箱
+function offerRelic(sub,ids){
+  phase='relicpick';const pool=relicPool();if(!pool.length){bossCards(sub);return;}
+  ids=(ids||[]).filter(id=>pool.some(r=>r.id===id));if(!ids.length)ids=shuffleA(pool).slice(0,3).map(r=>r.id);
+  snapRun('relicpick',{sub,ids});
+  let h=`<h2>Boss 掉落了遗物！</h2><div class="sub">选一个遗物，整局都有效（每局只有前两个 Boss 掉落）· 之后照常开 Boss 宝箱</div><div class="cards">`;
+  ids.forEach((id,i)=>{const r=relicOf(id);h+=`<button class="card relic r1" data-i="${i}"><span class="r" style="color:#fdba74">遗物</span><div class="ricon">${r.icon}</div><div class="n">${r.name}</div><div class="d">${r.desc}</div></button>`;});
+  h+=`</div><button class="reroll" id="seeRunes">🔮 我的符文 / 遗物</button>`;
+  ov.innerHTML=h;ov.style.display='flex';sfx('card');
+  ov.querySelectorAll('.card.relic').forEach(b=>b.onclick=()=>{const r=relicOf(ids[+b.dataset.i]);if(!r)return;takeRelic(r);ov.style.display='none';phase='reward';renderPanel();bossCards(sub);});
+  $('seeRunes').onclick=openRunes;
+}
+function takeRelic(r){if(!M.relics)M.relics=[];if(M.relics.includes(r.id))return;M.relics.push(r.id);r.ap();sfx('up');
+  banner={a:'获得遗物：'+r.icon+' '+r.name,b:r.desc,boss:false,t:2.2,T:2.2};}
 // 精英战胜利：符文（稀有以上）或地形卡，二选一
 function offerEliteReward(sub){
   phase='elitepick';eliteSub=sub;snapRun('elitepick',{sub});
@@ -3338,8 +3385,9 @@ function closeRunes(){bpOpen=false;bp.style.display='none';paused=!!(ov.style.di
 function renderRunes(){
   const ids=Object.keys(taken);
   let h=`<div class="wrap"><h2>🔮 我的符文（${ids.length}）</h2>`;
+  if(M.relics&&M.relics.length)h+=`<div class="sum"><b style="color:#fdba74">🏺 遗物（${M.relics.length}）</b><br>${M.relics.map(id=>{const r=relicOf(id);return r?`${r.icon} <b>${r.name}</b>：${r.desc}`:''}).join('<br>')}</div>`;
   if(M.mod)h+=`<div class="sub" style="color:#a5f3fc">本局特性：${MODS[M.mod].icon} <b>${MODS[M.mod].name}</b> · ${MODS[M.mod].desc}</div>`;
-  h+=`<div class="sum">下场战斗结束预计收入：过关奖励 <b>+${stepBonus()}</b> 金${M.interest?`，利息 <b>+${interestNow()}</b> 金`:''}<br>暴击率 ${Math.round(M.crit*100)}% · 射程 +${pc(M.rangeMul)}% · 攻速 +${pc(M.allRate)}% · 费用 ${M.costMul<=1?'-':'+'}${Math.abs(Math.round((1-M.costMul)*100))}%${M.allDmg>1?` · 全塔伤害 +${pc(M.allDmg)}%`:''}</div>`;
+  h+=`<div class="sum">下场战斗结束预计收入：过关奖励 <b>+${stepBonus()}</b> 金${interestNow()?`，利息 <b>+${interestNow()}</b> 金`:''}<br>暴击率 ${Math.round(M.crit*100)}% · 射程 +${pc(M.rangeMul)}% · 攻速 +${pc(M.allRate)}% · 费用 ${M.costMul<=1?'-':'+'}${Math.abs(Math.round((1-M.costMul)*100))}%${M.allDmg>1?` · 全塔伤害 +${pc(M.allDmg)}%`:''}</div>`;
   const cl=Object.keys(curses);h+=`<div class="sum">地图主题：<b style="color:${BIO.col}">${BIO.icon} ${BIO.name}</b> · ${BIO.desc}</div>`;if(cl.length||DIFF||HERO)h+=`<div class="sum">${HERO?`英雄：${HEROES[HERO.id].icon}${HEROES[HERO.id].name}（被动：${HEROES[HERO.id].passive}）<br>`:''}${DIFF?`难度 ${DIFF}<br>`:''}${cl.length?'诅咒：'+cl.map(k=>`<b style="color:#fca5a5">${CURSES[k].name}</b>（${CURSES[k].desc}）`).join('、'):''}</div>`;
   h+=`<div class="sum">${schoolLine()}<br><span style="color:#9aa3c7">两个流派各有 2 个符文（传说符文也算），就会解锁它们的合体：</span><br>${comboLines()}</div>`;
   if(!ids.length)h+=`<div class="sum" style="text-align:center;color:#9aa3c7">还没有符文。开局和每场战斗结束都能三选一获得。</div>`;
@@ -3391,9 +3439,9 @@ function rollOffer(minR,chest){
 }
 function takeCard(c){c.ap();taken[c.id]=(taken[c.id]||0)+1;if(c.id.startsWith('C_'))later(.35,()=>comboFormFx(c));
   for(const cb of COMBOS)if(comboReady(cb)&&!comboSeen.has(cb.id)){comboSeen.add(cb.id);banner={a:'解锁合体：'+cb.name,b:SC[cb.a].name+' + '+SC[cb.b].name+' · 下次奖励必定出现',boss:false,t:2.4,T:2.4};}}
-let offerChest=false;
+let offerChest=false,rrFree=0;
 function offerCards(title,sub,minR,then,chest){
-  cardTitle=[title,sub];rerollCost=modOn('runestorm')?0:25;afterPick=then;offerChest=!!chest;pendingCards=rollOffer(minR,chest);showCards(pendingCards,minR);sfx('card');
+  cardTitle=[title,sub];rrFree=(modOn('runestorm')?1:0)+(M.rlDice||0);rerollCost=rrFree?0:25;afterPick=then;offerChest=!!chest;pendingCards=rollOffer(minR,chest);showCards(pendingCards,minR);sfx('card');
 }
 let lastMinR=0;
 function snapCards(){snapRun('cards',{ids:pendingCards.map(c=>c.id),title:cardTitle,minR:lastMinR,chest:offerChest,reroll:rerollCost,next:afterPick===offerAltar?'altar':afterPick===offerNodes?'nodes':'cards2'});}
@@ -3412,7 +3460,7 @@ function showCards(cs,minR){
   ov.innerHTML=h;ov.style.display='flex';
   ov.querySelectorAll('.card').forEach(btn=>btn.onclick=()=>pickCard(+btn.dataset.i));
   $('seeRunes').onclick=openRunes;
-  $('rr').onclick=()=>{if(gold<rerollCost)return;gold-=rerollCost;rerollCost=rerollCost?rerollCost+15:25;pendingCards=rollOffer(minR,offerChest);showCards(pendingCards,minR);};
+  $('rr').onclick=()=>{if(gold<rerollCost)return;gold-=rerollCost;if(rerollCost===0&&rrFree>1)rrFree--;else{rrFree=0;rerollCost=rerollCost?rerollCost+15:25;}pendingCards=rollOffer(minR,offerChest);showCards(pendingCards,minR);};
   snapCards();
 }
 function pickCard(i){const c=pendingCards[i];if(!c)return;takeCard(c);ov.style.display='none';pendingCards=[];renderPanel();const f=afterPick;afterPick=null;if(f)f();}
@@ -3553,7 +3601,7 @@ function takeCurse(k){
 function runShards(win){
   const cleared=win?MAXS:Math.max(0,step-1);
   const base=2*cleared+3*stats.eliteWins+8*stats.bossWins+(win?15:0);
-  return Math.round(base*(1+.15*DIFF)*(modOn('darkmoon')?1.4:1));
+  return Math.round(base*(1+.15*DIFF)*(modOn('darkmoon')?1.4:1)*(M.rlShard?1.5:1));
 }
 function showLobby(){
   if(!FEAT.meta){showMapSelect();return;}
@@ -3622,6 +3670,7 @@ function resumeRun(){
     pendingCards=(x.ids||[]).map(findCard).filter(Boolean);if(!pendingCards.length)pendingCards=rollOffer(x.minR||0,offerChest);
     renderPanel();showCards(pendingCards,x.minR||0);}
   else if(s.stage==='elitepick'){renderPanel();offerEliteReward(x.sub||'');}
+  else if(s.stage==='relicpick'){renderPanel();offerRelic(x.sub||'',x.ids);}
   else if(s.stage==='tilepick'){renderPanel();eliteTile();}
   else if(s.stage==='altar'){renderPanel();offerAltar(x.offers);}
   else {renderPanel();offerNodes();}
@@ -3723,11 +3772,11 @@ function showTutorial(then){
   ov.innerHTML=`<h2>怎么玩</h2><div class="tip" style="max-width:400px">
   1. 点空地建塔，点塔可以升级或出售。战斗中也能建。<br>
   2. 一局 15 站、分 3 幕，每幕第 5 站是 Boss。<br>
-  3. 每站都是一场战斗。打完选下一站：普通战斗稳一点；精英战斗风险大，奖励更好（稀有符文或地形卡）。打败 Boss 会回复 5 条命。<br>
+  3. 每站都是一场战斗。打完选下一站：普通战斗稳一点；精英战斗风险大，奖励更好（稀有符文或地形卡）。打败 Boss 会回复 5 条命；前两个 Boss 还会掉落遗物（三选一）。<br>
   4. 每场战斗打完三选一<b>符文</b>，围绕一两种塔叠出流派。右上角 🔮 随时查看。<br>
   5. 符文分风、火、冰、雷、金五个流派，两个流派各凑 2 个会解锁「合体」；塔升到 3 级时选分支，满级再拿到传说符文就能进化。<br>
   6. 英雄的两个技能在面板最上面，默认「自动」释放；关掉自动可以自己掌握时机。<br>
-  7. 每局结束得到「符文碎片」，回大厅在工匠铺解锁新符文、英雄和诅咒祭坛。<br>
+  7. 每局结束得到「符文碎片」，回大厅在工匠铺解锁新符文、遗物、英雄和诅咒祭坛。<br>
   8. 地图有草原、雪原、火山三种主题：雪原的敌人怕火、火山的敌人怕冰，选地图时就能看到。<br>
   9. 看不懂的东西就点它：敌人、地块都有说明。</div>
   <button class="big" style="max-width:260px;margin-top:16px" id="tutok">知道了</button>`;

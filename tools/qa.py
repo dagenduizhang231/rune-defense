@@ -107,7 +107,7 @@ def run_worker(args):
         pg.on('console', lambda m: m.type == 'error' and errs.append('console.error: ' + m.text))
         pg.goto(ROOT); pg.wait_for_timeout(800)
         if wid % 2 == 0:
-            pg.evaluate("localStorage.setItem('"+('wxp_' if WX else '')+"td_meta',JSON.stringify({shards:900,owned:{altar:true,fate:true,h_fire:true,h_ice:true,pk_odd:true},hero:'fire',diff:"+os.environ.get('QA_DIFF','0')+",unlockedDiff:"+str(max(3,int(os.environ.get('QA_DIFF','0'))))+",runs:0,wins:0,auto:true}))")
+            pg.evaluate("localStorage.setItem('"+('wxp_' if WX else '')+"td_meta',JSON.stringify({shards:900,owned:{altar:true,fate:true,h_fire:true,h_ice:true,pk_odd:true,rl_a:true,rl_b:true},hero:'fire',diff:"+os.environ.get('QA_DIFF','0')+",unlockedDiff:"+str(max(3,int(os.environ.get('QA_DIFF','0'))))+",runs:0,wins:0,auto:true}))")
             pg.reload(); pg.wait_for_timeout(800)
         D = Drv(pg)
         D.inject(BOT_JS)
@@ -150,7 +150,7 @@ def run_worker(args):
                 ev("localStorage.removeItem('td_seen')")   # 一半的局重新看到敌人介绍
             t0 = time.time(); errs.clear(); run_sh0 = ev('META.shards')
             last_sig, last_change = None, time.time()
-            done = False; route = rnd.choice(['safe', 'mixed', 'greedy'])
+            done = False; route = os.environ.get('QA_ROUTE') or rnd.choice(['safe', 'mixed', 'greedy'])
             ev('__qa.types=null'); resumed = False
             while time.time() - t0 < 420:
                 for e in errs: prob(run, e)
