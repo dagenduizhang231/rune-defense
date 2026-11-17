@@ -1,4 +1,4 @@
-// 符文塔防 v0.7f · 微信小游戏版（由 tools/build_wx.py 生成，不要手改）
+// 符文塔防 v0.7g · 微信小游戏版（由 tools/build_wx.py 生成，不要手改）
 // 符文塔防 · 微信小游戏宿主：屏幕画布、触摸、存储、音频、图片。
 // 注意：微信里第一次 wx.createCanvas() 得到的是上屏画布，之后创建的都是离屏画布。
 var __HOST = (function () {
@@ -1131,7 +1131,7 @@ window.RUNE_MAPS=[{"type":"snake","paths":[[[-1,1],[1,1],[1,11],[4,11],[4,1],[7,
 var RuneMusic=window.RuneMusic;
 
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.7f';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.7g';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -1679,7 +1679,7 @@ const LIVE={
 
 // ======================= v0.3：大厅 / 英雄 / 诅咒 / 难度 =======================
 // 三个模块各有开关：网址加 ?off=meta,hero,curse 可以单独关闭（也方便出问题时直接关掉重发）
-const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true,map2:true,amb:true,ambsnd:true,lava2:true,death2:true,hero2:true,status2:true,combo2:true,tow2:true,frost3:false,evo2:true,misc2:true,upfx:1,elite2:true,bal2:false,modamb:true,relic:true,events:true};
+const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true,map2:true,amb:true,ambsnd:true,lava2:true,death2:true,hero2:true,status2:true,combo2:true,tow2:true,frost3:false,evo2:true,misc2:true,upfx:1,elite2:true,bal2:false,modamb:true,relic:true,events:true,ftxt:true};
 function bal2Desc(){if(!FEAT.bal2)return;COMBOS.find(c=>c.id==='C_moltengold').desc='在燃烧中被击败的敌人，掉落的金币 +50%';CARDS.find(c=>c.id==='g6').desc='每持有 100 金，所有伤害 +4%（最多 +30%）';}
 try{const u=new URLSearchParams(location.search),q=u.get('off'),q2=u.get('on');if(q)q.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=false;});if(q2)q2.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=true;});}catch(e){}
 // 局外存档
@@ -1874,7 +1874,7 @@ function hit(e,dmg,src,o){
   if(!o.pure&&!o.ap)dmg=Math.max(dmg*.25,dmg-arm);
   if(e.shield>0){const m=src==='tesla'?2:1,ab=Math.min(e.shield,dmg*m);e.shield-=ab;dmg-=ab/m;if(e.shield<=0){if(FEAT.elite2&&SPS.pf_eBreak){pfx('eBreak',e.x,e.y+e.r*.3,e.r/16);shards(e.x,e.y-e.r*.3,8,'#93c5fd',150);sfx('frost');}else burst(e.x,e.y,'#93c5fd',10,90,0,.35,2);}}
   e.hp-=dmg;if(!o.pure){e.hitT=0;if(!o.quiet){e.flT=.09;e.flA=0;}}
-  if(crit)txt(e.x,e.y-14,Math.round(dmg)+'!','#fde047');
+  if(FEAT.ftxt){if(dmg>0)dmgNum(e,dmg,src,crit,o);}else if(crit)txt(e.x,e.y-14,Math.round(dmg)+'!','#fde047');
   if(!o.pure&&!o.quiet)hitFx(e,src,crit);
   if(M.execute&&!e.boss&&e.hp>0&&e.hp<e.max*M.execute){e.hp=0;stats.exec++;txt(e.x,e.y-14,'处决','#f87171');slashFx(e);}
   if(e.type==='boss1')while(e.hp>0&&e.hp<=e.max*e.nextSplit&&e.nextSplit>0){e.nextSplit-=.25;for(let k=0;k<5;k++)spawn('mini',Math.max(0,e.d-6-k*9),e.pi);txt(e.x,e.y-26,'分裂！','#f5d0fe',1.2);if(FEAT.elite2&&SPS.pf_bSplit){pfx('bSplit',e.x,e.y+e.r*.6,e.r/20);shake=Math.max(shake,4);sfx('boom');}}
@@ -1884,6 +1884,7 @@ function hit(e,dmg,src,o){
 }
 function burnOn(e,dps,dur){if(e.fireImm)return;if(M.rlBurn)dps*=1+M.rlBurn;e.burnT=Math.max(e.burnT,dur+(M.burnPlus||0));e.burnD=Math.max(e.burnD,dps);}
 function kill(e){
+  if(FEAT.ftxt&&e._acc)flushAcc(e);
   if(e.clone){e.dead=true;if(SPS.pf_poof)pfx('poof',e.x,e.y+e.r*.6,.7);sfx('card');return;}
   if(e.type==='boss7'&&e.stolen){const g=Math.round(e.stolen*1.5);gold+=g;txt(e.x,e.y-e.r-20,'+'+g+' 金（还回来了）','#fde047',1.6);coins(e.x,e.y,10);}
   if(e.afx.undying&&!e.revived&&e.burnT<=0){e.revived=true;e.hp=e.max*.4;txt(e.x,e.y-16,'不灭！','#fde68a',1);if(FEAT.elite2&&SPS.pf_eRevive){pfx('eRevive',e.x,e.y+e.r*.7,e.r/22,{sp:1.6});e.hsT=Math.max(e.hsT||0,.5);stopT=Math.max(stopT,.06);sfx('up');}else burst(e.x,e.y,'#fde68a',14,80,-60,.6,2);return;}
@@ -2033,7 +2034,7 @@ function updProj(p,dt){
 function updEnemy(e,dt){
   if(e.dead)return;
   e.hitT+=dt;if(e.flT>0)e.flT-=dt;if(e.zjT>0)e.zjT-=dt;if(e.elT>0)e.elT-=dt;if(e.numbT>0)e.numbT-=dt;if(e.kbx){const k=Math.exp(-dt*14);e.kbx*=k;e.kby*=k;if(Math.abs(e.kbx)<.2)e.kbx=e.kby=0;}if(e.frzCd>0)e.frzCd-=dt;if(e.markT>0)e.markT-=dt;if(e.shredT>0)e.shredT-=dt;if(e.steamCd>0)e.steamCd-=dt;
-  if(e.burnT>0){e.burnT-=dt;e._burnAge=(e._burnAge||0)+dt;hit(e,e.burnD*dt,'cannon',{noCrit:true,pure:true});if(e.dead)return;}else{e._burnAge=0;e._fl=null;}
+  if(e.burnT>0){e.burnT-=dt;e._burnAge=(e._burnAge||0)+dt;hit(e,e.burnD*dt,'cannon',{noCrit:true,pure:true,dot:'burn'});if(e.dead)return;}else{e._burnAge=0;e._fl=null;}
   if(has('C_steam')&&e.burnT>0&&(e.slowT>0||e.frzT>0)&&!(e.steamCd>0)){
     e.steamCd=3;const R=1.2*CS,dm=e.max*(e.boss?.03:.12);
     if(FEAT.combo2&&SPS.pf_steam){{const ns=fx.reduce((n,f)=>n+(f.k==='pfx'&&f.id==='steam'&&f.t/f.T>.4),0);pfx('steam',e.x,e.y+e.r*.6,rnd(.5,.58)*Math.max(.45,1-.2*ns),{sp:rnd(1.25,1.4),al:Math.max(.5,.92-.14*ns)});};shake=Math.max(shake,3);}else{fx.push({k:'boom',x:e.x,y:e.y,r:R,t:.35,T:.35,c:'#e2e8f0'});burst(e.x,e.y,'#f1f5f9',14,120,-40,.6,2.4);smoke(e.x,e.y,6,8,'#f1f5f9',-30);}txt(e.x,e.y-18,'蒸汽爆炸','#e2e8f0',.8);sfx('boom');
@@ -2101,7 +2102,7 @@ function updEnemy(e,dt){
   const p=e.fly?flyAt(e.pi,e.d):posAt(e.pi,e.d);if(Math.abs(p.x-e.x)>.01)e.dir=p.x<e.x?-1:1;{const dx=p.x-e.x,dy=p.y-e.y,l=Math.hypot(dx,dy);if(l>.01){e.mvx=dx/l;e.mvy=dy/l;}}e.x=p.x;e.y=p.y;
 }
 function updLava(dt){
-  for(const l of lavas){l.t-=dt;if(l.dps>0)for(const e of enemies)if(!e.dead&&!e.air&&(e.x-l.x)**2+(e.y-l.y)**2<=l.r*l.r)hit(e,l.dps*dt,'cannon',{pure:true,noCrit:true,fire:true});}
+  for(const l of lavas){l.t-=dt;if(l.dps>0)for(const e of enemies)if(!e.dead&&!e.air&&(e.x-l.x)**2+(e.y-l.y)**2<=l.r*l.r)hit(e,l.dps*dt,'cannon',{pure:true,noCrit:true,fire:true,dot:'burn'});}
   lavas=lavas.filter(l=>l.t>0);
 }
 
@@ -2295,10 +2296,81 @@ function updFx(dt){
   if(sched.length){for(const s of sched)s.t-=dt;const due=sched.filter(s=>s.t<=0);sched=sched.filter(s=>s.t>0);for(const s of due)s.f();}parts=parts.filter(q=>q.t>0);if(parts.length>420)parts.splice(0,parts.length-420);
   for(const d of decals)d.t-=dt;decals=decals.filter(d=>d.t>0);
   shake=Math.max(0,shake-dt*18);
-  for(const t of texts){t.t-=dt;t.y-=22*dt;}texts=texts.filter(t=>t.t>0);
+  if(FEAT.ftxt){updAcc(dt);for(const t of texts){t.t-=dt;if(t.vy!=null){t.x+=t.vx*dt;t.y+=t.vy*dt;t.vy*=Math.exp(-dt*(t.k==='info'?1:5.5));if(t.y<t.sz*.7+2)t.y=t.sz*.7+2;t.vx*=Math.exp(-dt*4);}else t.y-=22*dt;}}else for(const t of texts){t.t-=dt;t.y-=22*dt;}texts=texts.filter(t=>t.t>0);
 }
 function burst(x,y,c,n,sp,g,life,r){for(let i=0;i<n;i++){const a=Math.random()*6.283,v=sp*(.4+Math.random()*.6);parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-(g?sp*.3:0),g:g||0,t:life*(.6+Math.random()*.4),T:life,c,r:r||2});}}
-function txt(x,y,s,c,T){texts.push({x,y,s,c,t:T||.8,T:T||.8});}
+function txt(x,y,s,c,T,kind){
+  if(!FEAT.ftxt){texts.push({x,y,s,c,t:T||.8,T:T||.8});return;}
+  s=String(s);if(!kind)kind=Math.abs(x-W/2)<1?'info':/！$/.test(s)?'shout':/金/.test(s)&&/^[+-]/.test(s)?'gold':'kw';
+  if(kind==='kw'){for(const t of texts)if(t.s===s&&t.T-t.t<.6&&Math.abs(t.x-x)<70&&Math.abs(t.y-y)<50){t.t=t.T-.02;return;}let nk=0;for(const t of texts)if(t.k==='kw')nk++;if(nk>=8-4*numDen)return;}
+  const K={info:[14,1],shout:[15,1.25],gold:[12,1],kw:[12.5,1]}[kind];
+  if(kind==='kw'||kind==='shout'){const w=s.length*K[0]*1.02+4,sp=freeSpot(x,y-6,w,K[0],true);if(!sp){if(kind==='kw')return;}else{x=sp[0];y=sp[1];}}
+  texts.push({x,y,s,c,t:(T||.8)*K[1],T:(T||.8)*K[1],k:kind,sz:K[0],vx:0,vy:kind==='info'?-14:-40,sd:Math.random()*9});}
+// ---- 伤害数字：同一个怪 0.25 秒内的普通伤害合并成一个数字；暴击单独弹出 ----
+const ELC={arrow:'#f8fafc',cannon:'#fdba74',frost:'#7dd3fc',tesla:'#e9d5ff',burn:'#fb923c'};
+const ELS={arrow:'#334155',cannon:'#7c2d12',frost:'#0c4a6e',tesla:'#4c1d95',burn:'#7c2d12'};
+function dkCol(c){const m=/^#([0-9a-f]{6})$/i.exec(c||'');if(!m)return '#1e293b';const v=parseInt(m[1],16);const f=x=>Math.round(x*.38);return `rgb(${f(v>>16&255)},${f(v>>8&255)},${f(v&255)})`;}
+let NUMS='all';try{NUMS=localStorage.getItem('td_nums')||'all';}catch(e){}
+const NUMSL={all:'全部',crit:'只看暴击',off:'关闭'};
+function setNums(v){NUMS=v;try{localStorage.setItem('td_nums',v);}catch(e){}}
+function numsRow(){return `<div class="sum">💥 伤害数字：${Object.keys(NUMSL).map(k=>`<button class="chip nums${NUMS===k?' on':''}" data-n="${k}" style="margin:2px 3px;${NUMS===k?'background:#2563eb;color:#fff':''}">${NUMSL[k]}</button>`).join('')}</div>`;}
+function bindNums(root,re){root.querySelectorAll('.chip.nums').forEach(b=>b.onclick=()=>{setNums(b.dataset.n);re();});}
+// 找一个不和别的飘字重叠的位置（只看刚出现不久的字）；找不到就返回 null
+function txtW(t){return String(t.s).length*(t.k==='num'?(t.crit?.72:.62):1.02)*t.sz+4;}
+function freeSpot(x,y,w,h,skipNum){const tries=[[0,0],[0,-1],[.6,-.5],[-.6,-.5],[0,-2],[.7,-1.5],[-.7,-1.5],[0,-3],[0,1],[.7,1],[-.7,1],[0,2]];
+  for(const [fx,fy] of tries){const X=Math.max(w/2,Math.min(W-w/2,x+fx*w)),Y=Math.max(h*.7+2,y+fy*(h+2));let ok=true;
+    for(const t of texts){if(t.T-t.t>.55)continue;if(skipNum&&t.k==='num'&&!t.crit)continue;const tw=txtW(t),th=t.sz;if(Math.abs(t.x-X)<(tw+w)/2&&Math.abs(t.y-Y)<(th+h)/2){ok=false;break;}}
+    if(ok)return [X,Y];}
+  return null;}
+// 拥挤程度 0~1：场上伤害数字越多越接近 1；越挤，合并窗口越长、小数字越容易被省略、数字消失得越快
+let numDen=0,numBig=0;
+function updDen(dt){let n=0;for(const t of texts)if(t.k==='num')n++;const tg=Math.min(1,Math.max(0,(n-6)/10));numDen+=(tg-numDen)*Math.min(1,dt*4);numBig*=Math.exp(-dt*.7);}
+function fmtN(n){n=Math.round(n);return n>=10000?(n/10000).toFixed(n>=100000?0:1)+'万':String(n);}
+function dmgNum(e,dmg,src,crit,o){
+  if(crit){numPush(e,dmg,src||'arrow',1);return;}
+  if(o.dot){const b=e._dot||(e._dot={d:0,t:0});b.d+=dmg;return;}   // 燃烧这类持续伤害单独合并，0.8 秒一跳
+  const a=e._acc||(e._acc={d:0,t:0,s:{}});const k=src||'arrow';a.d+=dmg;a.s[k]=(a.s[k]||0)+dmg;}
+function flushDot(e){const b=e._dot;e._dot=null;if(b&&b.d>=2)numPush(e,b.d,'burn',0);}
+function flushAcc(e){if(e._dot)flushDot(e);const a=e._acc;e._acc=null;if(!a||a.d<1)return;let k='arrow',b=-1;for(const q in a.s)if(a.s[q]>b){b=a.s[q];k=q;}numPush(e,a.d,k,0);}
+function numPush(e,d,k,crit){if(d<1||NUMS==='off'||(NUMS==='crit'&&!crit))return;
+  const mx=Math.max(1,e.max),szOf=v=>{const rel=Math.min(1,v/mx);let z=crit?17+Math.min(7,rel*24):10+Math.min(4,rel*16);if(k==='burn'&&!crit)z=Math.min(z,10.5);return z;};
+  // 普通伤害：从怪物右上方冒出、偏小；暴击：从头顶正上方弹出、大号金色斜体
+  if(!crit){numBig=Math.max(numBig,d);if(numDen>.2&&d<numBig*.18*numDen)return;}   // 很挤时，省略相对很小的普通伤害
+  let x=crit?e.x+rnd(-4,4):e.x+e.r*.55+rnd(-3,5),y=crit?e.y-e.r-16:e.y-e.r*.6-4;
+  // 拥挤时合并：附近刚出现的同类数字直接累加并重新弹一下，不再新开一个
+  const win=crit?.2:.35,R2=crit?24:20;
+  for(const t of texts)if(t.k==='num'&&!!t.crit===!!crit&&t.el===k&&t.T-t.t<win&&Math.abs(t.x-x)<R2&&Math.abs(t.y-y)<16){t.v+=d;t.s=fmtN(t.v);t.sz=Math.max(t.sz,szOf(t.v));t.t=t.T-.02;return;}
+  if(crit){{let best=null,bd=(46+20*numDen)**2;for(const t of texts)if(t.crit&&t.T-t.t<.4){const q=(t.x-x)**2+(t.y-y)**2;if(q<bd){bd=q;best=t;}}if(best){best.v+=d;best.s=fmtN(best.v);best.sz=Math.max(best.sz,szOf(best.v));best.t=best.T-.02;return;}}
+    let nc=0;for(const t of texts)if(t.crit)nc++;const sz=szOf(d),sp=nc>=5?null:freeSpot(x,y,fmtN(d).length*.72*sz+4,sz,true);if(sp){x=sp[0];y=sp[1];}else{let best=null,bd=1e9;for(const t of texts)if(t.crit&&t.T-t.t<.5){const q=(t.x-x)**2+(t.y-y)**2;if(q<bd){bd=q;best=t;}}if(best){best.v+=d;best.s=fmtN(best.v);best.sz=Math.max(best.sz,szOf(best.v));best.t=best.T-.02;return;}}}
+  else{let near=0,best=null,bd=1e9;for(const t of texts)if(t.k==='num'&&!t.crit&&t.T-t.t<.45){const q=(t.x-x)**2+(t.y-y)**2;if(q<(45+20*numDen)**2){near++;if(q<bd){bd=q;best=t;}}}
+    if(near>=5-2*numDen&&best){best.v+=d;best.s=fmtN(best.v);best.sz=Math.max(best.sz,szOf(best.v));best.t=best.T-.02;return;}   // 太挤：并进最近的数字
+    for(const t of texts)if(t.k==='num'&&!t.crit&&t.T-t.t<.3&&Math.abs(t.x-x)<16&&Math.abs(t.y-y)<11)y=t.y-11;}
+  let n=0;for(const t of texts)if(t.k==='num')n++;
+  if(n>=40){const i=texts.findIndex(t=>t.k==='num'&&!t.crit);if(i>=0)texts.splice(i,1);else if(!crit)return;}
+  texts.push({k:'num',el:k,v:d,x,y,s:fmtN(d),c:crit?'#fde047':ELC[k]||'#f8fafc',st:crit?'#9a3412':ELS[k]||'#1e293b',crit:!!crit,sz:szOf(d),t:(crit?1:.7)*(1-.3*numDen),T:(crit?1:.7)*(1-.3*numDen),vx:0,vy:k==='burn'&&!crit?-24:-40,sd:Math.random()*9});}
+function updAcc(dt){updDen(dt);for(const e of enemies){const a=e._acc;if(a){a.t+=dt;if(a.t>=.25+.4*numDen){e._acc=null;const d=e._dot;e._dot=d;flushAcc2(e,a);}}const b=e._dot;if(b){b.t+=dt;if(b.t>=.8)flushDot(e);}}}
+function flushAcc2(e,a){if(a.d<1)return;let k='arrow',b=-1;for(const q in a.s)if(a.s[q]>b){b=a.s[q];k=q;}numPush(e,a.d,k,0);}
+function drawTexts(){
+  ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';
+  // 遮挡淡化：普通数字压在暴击/文字下面时变淡；暴击压在文字下面时也变淡，保证重要的字始终看得清
+  const pr=t=>t.k==='num'?(t.crit?1:0):2,bx=t=>{const w=txtW(t),h=t.sz;return [t.x-w/2,t.y-h/2,t.x+w/2,t.y+h/2];};
+  const hi=texts.filter(t=>pr(t)>0&&t.k!=='info').map(t=>[pr(t),bx(t)]);
+  for(const t of texts){t._fd=1;const p=pr(t);if(p>=2||t.k==='info')continue;const b=bx(t);for(const [q,c] of hi)if(q>p&&b[0]<c[2]&&b[2]>c[0]&&b[1]<c[3]&&b[3]>c[1]){t._fd=p===0?.25:.45;break;}}
+  for(const t of [...texts.filter(t=>t.k==='num'&&!t.crit),...texts.filter(t=>t.crit),...texts.filter(t=>t.k!=='num')]){const age=t.T-t.t,k=t.t/t.T;
+    let a=Math.min(1,t.t/(t.T*.35))*(t.k==='num'&&!t.crit?.93:1)*(t._fd||1);if(t.k==='info')a=Math.min(1,t.t/(t.T*.3),age/.12);
+    // 弹出：0.12 秒内从大到正常
+    const pop=t.k==='info'?1:age<.06?1+(t.crit?.9:.5)*(age/.06):age<.16?1+(t.crit?.9:.5)*(1-(age-.06)/.1):1;
+    const sz=t.sz*pop*(k<.3?.8+.2*k/.3:1);
+    let ox=0;if(t.k==='shout'&&age<.3)ox=Math.sin(age*60)*(1-age/.3)*2;
+    ctx.globalAlpha=a;ctx.font=(t.crit?'italic ':'')+'900 '+sz.toFixed(1)+'px sans-serif';
+    const X=t.x+ox,Y=t.y;
+    if(t.crit){ctx.strokeStyle=t.c;ctx.globalAlpha=a*.35;ctx.lineWidth=7;ctx.strokeText(t.s,X,Y);ctx.globalAlpha=a;}
+    if(t.k!=='num'){ctx.strokeStyle='rgba(8,10,20,.9)';ctx.lineWidth=5.5;ctx.strokeText(t.s,X,Y);ctx.strokeStyle=t.dk||(t.dk=dkCol(t.c));ctx.lineWidth=2.6;ctx.strokeText(t.s,X,Y);}
+    else{ctx.strokeStyle=t.st||'rgba(10,12,24,.92)';ctx.lineWidth=t.crit?3.6:3;ctx.strokeText(t.s,X,Y);}
+    ctx.fillStyle=t.c;ctx.fillText(t.s,X,Y);
+    if(t.crit){ctx.globalAlpha=a*.85;ctx.fillStyle='#fff7ed';ctx.save();ctx.beginPath();ctx.rect(X-60,Y-sz,120,sz*.55);ctx.clip();ctx.fillText(t.s,X,Y);ctx.restore();}
+  }
+  ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.globalAlpha=1;}
 
 // ======================= v0.5c：特效 =======================
 // 地面印记（焦痕、弹坑、黏液、冰霜）画在地面之上、塔和敌人之下；粒子分多种形状。
@@ -3542,8 +3614,9 @@ function renderRunes(){
     const sct=c.r===3?scTag(c.a)+scTag(c.b):scTag(c.school);
     h+=`<div class="rl r${c.r}"><div class="n">${sct}${c.name}${n>1?' ×'+n:''}${c.r>=3?` <span style="font-size:12px;color:${c.r===3?'#67e8f9':'#fda4af'}">${RAR[c.r]}</span>`:''}</div><div class="d">${c.desc}</div><div class="lv">${LIVE[id]?LIVE[id](n):''}</div>${off}</div>`;
   }
+  if(FEAT.ftxt)h+=numsRow();
   h+=`<button class="close" id="closeRunes">返回</button></div>`;
-  bp.innerHTML=h;$('closeRunes').onclick=closeRunes;
+  bp.innerHTML=h;$('closeRunes').onclick=closeRunes;if(FEAT.ftxt)bindNums(bp,renderRunes);
 }
 $('runes').onclick=openRunes;
 function schoolLine(){return '<b>流派</b> '+Object.keys(SC).map(k=>`${scTag(k)}${schoolCount(k)}`).join(' ');}
@@ -3764,13 +3837,14 @@ function showLobby(){
     h+=`<div class="hint" style="text-align:left">${META.diff?DIFFS.slice(1,META.diff+1).map((s,i)=>`${i+1}. ${s}`).join('<br>')+(FEAT.bal2?`<br>另外：每级敌人血量 +4%（叠加，当前共 +${Math.round((Math.pow(1.04,META.diff)-1)*100)}%）`:'')+`<br><b style="color:#a5f3fc">符文碎片 +${META.diff*15}%</b>`:'难度 0：标准难度。打通当前最高难度会解锁下一级。'}</div>`;
   }else h+=`<div class="hint" style="text-align:left">打通一次后解锁「难度 1」，每升一级敌人更强，符文碎片也更多。</div>`;
   h+=`</div>${continueBlock()}<button class="big" style="max-width:420px;margin-top:14px" id="lgo">⚔️ ${savedRun()?'开始新的一局（会放弃上一局）':'开始冒险'}</button>
-  <div><button class="reroll" id="lart" style="margin-top:10px">🔨 工匠铺（用碎片解锁内容）</button> <button class="reroll" id="lhelp" style="margin-top:10px">📖 玩法说明</button></div>`;
+  <div><button class="reroll" id="lart" style="margin-top:10px">🔨 工匠铺（用碎片解锁内容）</button> <button class="reroll" id="lhelp" style="margin-top:10px">📖 玩法说明</button> <button class="reroll" id="lset" style="margin-top:10px">⚙️ 设置</button></div>`;
   ov.innerHTML=h;ov.style.display='flex';
   ov.querySelectorAll('.card.hero').forEach(b=>b.onclick=()=>{if(b.disabled)return;META.hero=b.dataset.h;saveMeta();showLobby();});
   ov.querySelectorAll('.dchip').forEach(b=>b.onclick=()=>{META.diff=+b.dataset.d;saveMeta();showLobby();});
   $('lgo').onclick=()=>{ov.style.display='none';showMapSelect();};
-  $('lart').onclick=showArtisans;$('lhelp').onclick=()=>showTutorial(showLobby);if($('lcont'))$('lcont').onclick=()=>{ov.style.display='none';resumeRun();};
+  $('lart').onclick=showArtisans;if($('lset'))$('lset').onclick=showSettings;$('lhelp').onclick=()=>showTutorial(showLobby);if($('lcont'))$('lcont').onclick=()=>{ov.style.display='none';resumeRun();};
 }
+function showSettings(){ov.innerHTML=`<h2>⚙️ 设置</h2><div class="wrap">${numsRow()}<div class="sum" style="color:#9aa3c7;font-size:13px">伤害数字也可以在战斗中打开「🔮 符文」面板，在最下面切换。<br>声音在右上角的 🔊 按钮切换。</div></div><button class="close" id="setBack">返回大厅</button>`;ov.style.display='flex';bindNums(ov,showSettings);$('setBack').onclick=showLobby;}
 function showArtisans(){
   let h=`<h2>🔨 工匠铺</h2><div class="sub">💎 符文碎片 <b style="color:#a5f3fc">${META.shards}</b> · 每局结束按打到的站数、精英和 Boss 获得碎片</div><div class="wrap">`;
   for(const a of ARTISANS){
@@ -4299,7 +4373,7 @@ function draw(){
   if(FEAT.modamb)drawModAmb();
   ctx.globalAlpha=1;for(const e of enemies)if(!e.dead&&e._bar){const[x,y,w,p]=e._bar;ctx.fillStyle='#000a';ctx.fillRect(x,y,w,3);ctx.fillStyle=p>.5?'#4ade80':p>.25?'#facc15':'#ef4444';ctx.fillRect(x,y,w*p,3);}
   ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.font='bold 13px sans-serif';
-  for(const t of texts){ctx.globalAlpha=Math.min(1,t.t/t.T*1.5);ctx.fillStyle=t.c;ctx.fillText(t.s,t.x,t.y);}
+  if(FEAT.ftxt)drawTexts();else for(const t of texts){ctx.globalAlpha=Math.min(1,t.t/t.T*1.5);ctx.fillStyle=t.c;ctx.fillText(t.s,t.x,t.y);}
   ctx.globalAlpha=1;ctx.restore();
   if(banner){
     const k=banner.t/banner.T,a=Math.min(1,(1-k)*6,k*4),y=H*.4;
