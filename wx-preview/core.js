@@ -1074,7 +1074,7 @@ window.RUNE_MAPS=[{"type":"snake","paths":[[[-1,1],[1,1],[1,11],[4,11],[4,1],[7,
 var RuneMusic=window.RuneMusic;
 
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.7d';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.7e';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -1509,7 +1509,12 @@ const NODES={
   normal:{name:'普通战斗',icon:'⚔️',desc:'普通敌人。奖励：过关金币 + 符文三选一。',combat:true},
   elite :{name:'精英战斗',icon:'🔥',desc:'会出现带词缀的精英怪，风险更大。奖励：过关金币 +50%，并在「稀有以上的符文」和「地形卡」之间二选一。',combat:true},
   boss  :{name:'Boss 战',icon:'👑',desc:'',combat:true},
+  shop  :{name:'商店',icon:'🛒',desc:'不打仗。用金币买符文、地形卡或修城墙。跳过这一站的战斗，也就少拿一次过关金币和符文。'},
+  event :{name:'奇遇',icon:'❓',desc:'不打仗。遇到一件随机的事，做个选择：可能是好处，也可能要付出代价。'},
+  smith :{name:'铁匠铺',icon:'⚒️',desc:'不打仗。选一座塔，免费升 1 级。'},
+  treasure:{name:'藏宝点',icon:'💰',desc:'不打仗。拿一笔金币和一次普通符文三选一，但下一场战斗会多来一波守卫。'},
 };
+const EVK=['shop','event','smith','treasure'];
 const RAR=['普通','稀有','史诗','合体','传说'];
 const SC={wind:{name:'风',col:'#4ade80'},fire:{name:'火',col:'#fb923c'},ice:{name:'冰',col:'#60a5fa'},thunder:{name:'雷',col:'#c084fc'},gold:{name:'金',col:'#fbbf24'}};
 const TAG2S={arrow:'wind',cannon:'fire',frost:'ice',tesla:'thunder'};
@@ -1612,7 +1617,7 @@ const LIVE={
 
 // ======================= v0.3：大厅 / 英雄 / 诅咒 / 难度 =======================
 // 三个模块各有开关：网址加 ?off=meta,hero,curse 可以单独关闭（也方便出问题时直接关掉重发）
-const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true,map2:true,amb:true,ambsnd:true,lava2:true,death2:true,hero2:true,status2:true,combo2:true,tow2:true,frost3:false,evo2:true,misc2:true,upfx:1,elite2:true,bal2:false,modamb:true,relic:true};
+const FEAT={meta:true,hero:true,curse:true,fx2:false,sprfx:true,frost2:true,zap3:true,arrow2:true,cskin:true,bossfall:true,map2:true,amb:true,ambsnd:true,lava2:true,death2:true,hero2:true,status2:true,combo2:true,tow2:true,frost3:false,evo2:true,misc2:true,upfx:1,elite2:true,bal2:false,modamb:true,relic:true,events:true};
 function bal2Desc(){if(!FEAT.bal2)return;COMBOS.find(c=>c.id==='C_moltengold').desc='在燃烧中被击败的敌人，掉落的金币 +50%';CARDS.find(c=>c.id==='g6').desc='每持有 100 金，所有伤害 +4%（最多 +30%）';}
 try{const u=new URLSearchParams(location.search),q=u.get('off'),q2=u.get('on');if(q)q.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=false;});if(q2)q2.split(',').forEach(k=>{if(k in FEAT)FEAT[k]=true;});}catch(e){}
 // 局外存档
@@ -1732,7 +1737,7 @@ function spawn(type,d,pi,elite){
 function bossOf(act){return (M.boss&&M.boss[act-1])||'boss'+act;}
 function mobOf(s){const a=(M.mob||[]);if(s<2)return[];return a.slice(0,Math.min(3,actOf(s)));}
 function buildWave(s,kind){
-  const q=[],act=actOf(s);let n=7+Math.floor(s*2);if(modOn('goldrush'))n=Math.round(n*1.15);
+  const q=[],act=actOf(s);let n=7+Math.floor(s*2);if(modOn('goldrush'))n=Math.round(n*1.15);if(M.caravan){n=Math.round(n*1.25);M.caravan=0;}if(M.guards&&kind!=='boss'){n=Math.round(n*1.3);M.guards=0;}
   if(kind==='boss')n=Math.floor(n*.6);if(kind==='elite')n=Math.floor(n*.7);
   for(let i=0;i<n;i++){
     let t='norm';const r=Math.random();
@@ -1770,6 +1775,7 @@ function stat(t){
   if(tiles[t.c+','+t.r]==='highland')range+=CS;
   if(t.type==='arrow'&&M.rlArrowR)range+=CS;
   if(M.rlDmg)dmg*=1+M.rlDmg;
+  if(M.drill)dmg*=1+M.drill;
   if(t.type==='arrow'){dmg*=M.arrowDmg;rate/=M.arrowRate;}
   if(t.type==='cannon')dmg*=M.cannonDmg;
   if(t.type==='tesla')dmg*=M.teslaDmg;
@@ -2041,7 +2047,7 @@ function updLava(dt){
 let wClock=99;
 function startWave(){
   if(phase!=='build')return;
-  queue=buildWave(step,curNode);spawnT=.9;phase='wave';wClock=0;if(M.rlCat){gold+=20;txt(W/2,H*.32,'🐱 招财猫 +20 金','#fde047',1.4);}if(M.rlWatch)txt(W/2,H*.36,'⏱️ 停摆怀表：敌人减速 6 秒','#a5f3fc',1.6);paused=false;bpOpen=false;bp.style.display='none';hourglassUsed=false;if(sel&&sel.enemy)sel=null;placing=null;renderPanel();
+  queue=buildWave(step,curNode);spawnT=.9;phase='wave';wClock=0;if(M.loan&&step>=M.loan.at){gold+=M.loan.amt;txt(W/2,H*.28,'💰 流浪商人还钱 +'+M.loan.amt+' 金','#fde047',1.8);M.loan=null;}if(M.rlCat){gold+=20;txt(W/2,H*.32,'🐱 招财猫 +20 金','#fde047',1.4);}if(M.rlWatch)txt(W/2,H*.36,'⏱️ 停摆怀表：敌人减速 6 秒','#a5f3fc',1.6);paused=false;bpOpen=false;bp.style.display='none';hourglassUsed=false;if(sel&&sel.enemy)sel=null;placing=null;renderPanel();
   const isB=curNode==='boss';
   banner={a:isB?'Boss 来袭':`第 ${step} 站 · ${NODES[curNode].name}`,b:isB?EINFO[bossOf(actOf(step))].name:`第 ${actOf(step)} 幕`,boss:isB||curNode==='elite',t:2,T:2};sfx(isB?'boss':'wave');
 }
@@ -2122,7 +2128,9 @@ function takeTile(k){tcards[k]++;sfx('card');ov.style.display='none';offerNodes(
 function genNodes(next){
   if(next%5===0)return['boss'];
   if(next===1)return['normal'];
-  return['normal','elite'];
+  const o=['normal','elite'];
+  if(FEAT.events&&next>=2&&!EVK.includes(curNode)&&!(M.evActs||[]).includes(actOf(next))&&Math.random()<.55){const r=Math.random();o.push(r<.4?'event':r<.65?'shop':r<.83?'smith':'treasure');}
+  return o;
 }
 function offerNodes(){
   phase='node';sel=null;renderPanel();
@@ -2140,7 +2148,82 @@ function offerNodes(){
   $('seeRunes').onclick=openRunes;
   snapRun('nodes');if(GUIDE===1)guideSet(2);
 }
-function chooseNode(k){step++;curNode=k;phase='build';renderPanel();snapRun('build');}
+function chooseNode(k){step++;curNode=k;if(EVK.includes(k)){startEvent(k);return;}phase='build';renderPanel();snapRun('build');}
+// ======================= 不打仗的站：商店 / 奇遇 / 铁匠铺 / 藏宝点 =======================
+const EVENTS=[
+ {id:'stone',title:'古老石台',text:'路边一座长满苔藓的石台，刻着发光的纹路。摸一下，能感觉到它在吸取你的力量。',opts:[
+   {t:'献出 5 条命',d:'史诗或以上的符文三选一',ok:()=>lives>5,f:()=>{lives-=5;offerCards('古老石台','史诗或以上的符文三选一',2,offerNodes);return 1;}},
+   {t:'离开',d:'什么也不发生',f:()=>0}]},
+ {id:'merchant',title:'流浪商人',text:'一个背着大包的商人说：现在借我 80 金，两站以后还你 160。',opts:[
+   {t:'借给他 80 金',d:'两站之后收回 160 金',ok:()=>gold>=80,f:()=>{gold-=80;M.loan={at:step+2,amt:160};return 0;}},
+   {t:'不借',d:'什么也不发生',f:()=>0}]},
+ {id:'craftsman',title:'落难工匠',text:'一个修塔的工匠在路边避雨，愿意帮你干点活。',opts:[
+   {t:'请他修塔',d:'最多 3 座 1 级塔升到 2 级',ok:()=>towers.some(t=>t.lvl===1),f:()=>{shuffleA(towers.filter(t=>t.lvl===1)).slice(0,3).forEach(t=>{t.lvl=2;upFx(t,0);});return 0;}},
+   {t:'请他喝酒',d:'他塞给你 60 金',f:()=>{gold+=60;return 0;}}]},
+ {id:'camp',title:'废弃营地',text:'一处没人的营地，篝火还是温的。',opts:[
+   {t:'翻找物资',d:'获得金币',dyn:()=>`获得 ${50+step*6} 金`,f:()=>{gold+=50+step*6;return 0;}},
+   {t:'修补城墙',d:'生命 +5',f:()=>{lives+=5;return 0;}}]},
+ {id:'runestone',title:'符文碎石',text:'一块裂开的符文石，里面的力量还在流动。',opts:[
+   {t:'仔细挑选',d:'稀有或以上的符文三选一',f:()=>{offerCards('符文碎石','稀有或以上的符文三选一',1,offerNodes);return 1;}},
+   {t:'整块带走',d:'普通符文三选一，再拿 40 金',f:()=>{gold+=40;offerCards('符文碎石','符文三选一',0,offerNodes);return 1;}}]},
+ {id:'caravan',title:'迷路的商队',text:'商队被怪物追着跑，求你护送他们一程。',opts:[
+   {t:'护送商队',d:'立刻得 150 金，但下一场战斗敌人数量 +25%',f:()=>{gold+=150;M.caravan=1;return 0;}},
+   {t:'让他们自己走',d:'什么也不发生',f:()=>0}]},
+ {id:'spring',title:'地脉泉眼',text:'地下涌出带着符文光的泉水。',opts:[
+   {t:'引一条地脉',d:'获得一张地形卡（三选一）',f:()=>{eliteTile();return 1;}},
+   {t:'喝一口泉水',d:'生命 +4',f:()=>{lives+=4;return 0;}}]},
+ {id:'drill',title:'训练场',text:'一处旧军营的训练场，器械还能用。',opts:[
+   {t:'操练一番',d:'本局所有塔伤害 +6%',f:()=>{M.drill=(M.drill||0)+.06;return 0;}},
+   {t:'变卖器械',d:'获得 70 金',f:()=>{gold+=70;return 0;}}]},
+];
+function startEvent(k){
+  phase='event';sel=null;renderPanel();(M.evActs=M.evActs||[]).push(actOf(step));
+  if(k==='shop'){const c=rollCards(0).filter(x=>x.r<3);M.ev={k,items:[...c.map(x=>({c:x.id})),{tile:pick(TCARDS)},{heal:1}],sold:[]};}
+  else if(k==='event'){M.ev={k,id:pick(EVENTS.filter(e=>e.id!==(M.lastEv||''))).id};M.lastEv=M.ev.id;}
+  else M.ev={k};
+  showEvent();
+}
+const shopPrice=it=>{const a=(actOf(step)-1)*15;if(it.c){const r=findCard(it.c).r;return [55,95,150][r]+a;}if(it.tile)return 60+a;return 40;};
+function shopItemTxt(it){if(it.c){const c=findCard(it.c);return {n:`${scTag(c.school)}${c.name}`,d:c.desc,r:RAR[c.r],cls:'r'+c.r};}
+  if(it.tile)return {n:'🗺️ 地形卡：'+TILEINFO[it.tile].name,d:TILEINFO[it.tile].desc,r:'地形',cls:''};return {n:'🧱 修城墙',d:'生命 +5',r:'',cls:''};}
+function evDone(){M.ev=null;ov.style.display='none';renderPanel();offerNodes();}
+function showEvent(){
+  const E=M.ev;if(!E){offerNodes();return;}snapRun('event');let h='';
+  if(E.k==='shop'){
+    h=`<h2>🛒 商店</h2><div class="sub">💰 你有 <b style="color:#fde047">${Math.floor(gold)}</b> 金 · 买完点"离开"继续</div><div class="cards">`;
+    E.items.forEach((it,i)=>{const t=shopItemTxt(it),p=shopPrice(it),sold=E.sold.includes(i);
+      h+=`<button class="card shop ${t.cls}" data-i="${i}" ${sold||gold<p?'disabled':''} style="${sold?'opacity:.4':''}"><span class="r">${sold?'已买':'💰 '+p}</span><div class="n">${t.n}</div><div class="d">${t.d}</div></button>`;});
+    h+=`</div><button class="reroll" id="evLeave">离开商店</button> <button class="reroll" id="seeRunes">🔮 我的符文</button>`;
+  }else if(E.k==='event'){
+    const ev=EVENTS.find(e=>e.id===E.id);
+    h=`<h2>❓ ${ev.title}</h2><div class="sub" style="max-width:340px">${ev.text}</div><div class="cards">`;
+    ev.opts.forEach((o,i)=>{const ok=!o.ok||o.ok();h+=`<button class="card evopt" data-i="${i}" ${ok?'':'disabled'} style="${ok?'':'opacity:.45'}"><div class="n">${o.t}</div><div class="d">${o.dyn?o.dyn():o.d}${ok?'':'（现在做不到）'}</div></button>`;});
+    h+=`</div><button class="reroll" id="seeRunes">🔮 我的符文</button>`;
+  }else if(E.k==='smith'){
+    const ts=towers.filter(t=>t.lvl<4).sort((a,b)=>b.lvl-a.lvl||b.spent-a.spent).slice(0,6);
+    h=`<h2>⚒️ 铁匠铺</h2><div class="sub">选一座塔，免费升 1 级（2 级升 3 级时顺便选分支）</div><div class="cards">`;
+    if(!ts.length)h+=`<div class="sum">你还没有能升级的塔，铁匠送你 60 金。</div>`;
+    ts.forEach(t=>{const i=towers.indexOf(t),nm=(t.branch?BR[t.branch].name:TT[t.type].name);
+      if(t.lvl===2)for(const [bid,bn,bd] of BRANCH[t.type])h+=`<button class="card evopt" data-t="${i}" data-br="${bid}"><div class="n">${TT[t.type].name} Lv.2 → <b style="color:#fde68a">${bn}</b> Lv.3</div><div class="d">${bd}</div></button>`;
+      else h+=`<button class="card evopt" data-t="${i}"><div class="n">${nm} Lv.${t.lvl} → Lv.${t.lvl+1}</div><div class="d">${t.lvl===3?'升到满级（有对应传说符文就会进化）':'伤害和攻速提升'}</div></button>`;});
+    h+=`</div>`+(ts.length?'':`<button class="reroll" id="evLeave">收下 60 金</button>`);
+  }else if(E.k==='treasure'){
+    const g=40+step*6;
+    h=`<h2>💰 藏宝点</h2><div class="sub">挖出一箱金币和一块符文石。守宝的怪物会在下一场战斗追上来（多一波敌人）。</div><div class="cards">
+      <button class="card evopt" data-i="0"><div class="n">打开宝箱</div><div class="d">获得 ${g} 金，再从普通符文里三选一</div></button></div>`;
+  }
+  ov.innerHTML=h;ov.style.display='flex';
+  if($('seeRunes'))$('seeRunes').onclick=openRunes;
+  if(E.k==='shop'){ov.querySelectorAll('.card.shop').forEach(b=>b.onclick=()=>{const i=+b.dataset.i,it=E.items[i],p=shopPrice(it);if(E.sold.includes(i)||gold<p)return;gold-=p;E.sold.push(i);sfx('coin');
+      if(it.c)takeCard(findCard(it.c));else if(it.tile)tcards[it.tile]++;else lives+=5;renderPanel();showEvent();});
+    $('evLeave').onclick=evDone;}
+  else if(E.k==='event'){const ev=EVENTS.find(e=>e.id===E.id);ov.querySelectorAll('.card.evopt').forEach(b=>b.onclick=()=>{const o=ev.opts[+b.dataset.i];if(o.ok&&!o.ok())return;
+      M.ev=null;ov.style.display='none';const busy=o.f();renderPanel();if(!busy)offerNodes();});}
+  else if(E.k==='smith'){ov.querySelectorAll('.card.evopt').forEach(b=>b.onclick=()=>{const t=towers[+b.dataset.t];if(!t)return;t.lvl++;if(b.dataset.br)t.branch=b.dataset.br;sfx('up');upFx(t,b.dataset.br?1:0);
+      if(t.lvl>=4&&has('L_'+t.type))txt(t.x,t.y-34,'进化：'+EVO[t.type],'#fbbf24',1.6);evDone();});
+    if($('evLeave'))$('evLeave').onclick=()=>{gold+=60;evDone();};}
+  else if(E.k==='treasure'){ov.querySelector('.card.evopt').onclick=()=>{gold+=40+step*6;M.guards=1;M.ev=null;ov.style.display='none';renderPanel();offerCards('藏宝点','符文三选一',0,offerNodes);};}
+}
 
 // ======================= 特效 =======================
 function updFx(dt){
@@ -3607,7 +3690,7 @@ function showLobby(){
   if(!FEAT.meta){showMapSelect();return;}
   phase='map';sel=null;renderPanel();
   let best=0;try{best=+localStorage.getItem('td_best2')||0;}catch(e){}
-  let h=`<h2>符文塔防 ${VERSION}</h2><div class="sub">💎 符文碎片 <b style="color:#a5f3fc">${META.shards}</b>${best?` · 最佳纪录 第 ${best} 站`:''}${META.wins?` · 通关 ${META.wins} 次`:''}</div><div class="wrap">`;
+  let h=`<h2>符文塔防 ${VERSION}</h2><div class="sub">💎 符文碎片 <b style="color:#a5f3fc">${META.shards}</b>${best?` · 最佳纪录 第 ${best} 站`:''}${META.wins?` · 通关 ${META.wins} 次`:''}${(()=>{const L=(META.log||[]).filter(x=>x.t>60);if(!L.length)return'';const a=L.reduce((s,x)=>s+x.t,0)/L.length;return ` · 平均一局 ${Math.round(a/60)} 分钟`;})()}</div><div class="wrap">`;
   if(FEAT.hero){
     h+=`<div class="lsec">英雄</div><div class="hrow">`;
     for(const k in HEROES){const H=HEROES[k],ok=heroOK(k);
@@ -3670,6 +3753,7 @@ function resumeRun(){
     pendingCards=(x.ids||[]).map(findCard).filter(Boolean);if(!pendingCards.length)pendingCards=rollOffer(x.minR||0,offerChest);
     renderPanel();showCards(pendingCards,x.minR||0);}
   else if(s.stage==='elitepick'){renderPanel();offerEliteReward(x.sub||'');}
+  else if(s.stage==='event'){renderPanel();showEvent();}
   else if(s.stage==='relicpick'){renderPanel();offerRelic(x.sub||'',x.ids);}
   else if(s.stage==='tilepick'){renderPanel();eliteTile();}
   else if(s.stage==='altar'){renderPanel();offerAltar(x.offers);}
@@ -3782,15 +3866,16 @@ function showTutorial(then){
   <button class="big" style="max-width:260px;margin-top:16px" id="tutok">知道了</button>`;
   ov.style.display='flex';$('tutok').onclick=()=>{ov.style.display='none';then();};
 }
+const fmtT=t=>{t=Math.round(t||0);return Math.floor(t/60)+' 分 '+String(t%60).padStart(2,'0')+' 秒';};
 function endGame(win){
   clearRun();if(guideOn())guideEnd();
   phase=win?'win':'over';sel=null;bpOpen=false;bp.style.display='none';paused=false;
   let best=0;try{best=+localStorage.getItem('td_best2')||0;if(step>best)localStorage.setItem('td_best2',step);}catch(e){}
   let shardLine='';
-  if(FEAT.meta){const sh=runShards(win);META.shards+=sh;META.runs++;let un='';if(win){META.wins++;if(DIFF>=META.unlockedDiff&&META.unlockedDiff<10){META.unlockedDiff=DIFF+1;META.diff=DIFF+1;un=`<br><b style="color:#fde68a">解锁难度 ${DIFF+1}！</b>`;}}saveMeta();
+  if(FEAT.meta){const sh=runShards(win);META.shards+=sh;META.runs++;(META.log=META.log||[]).push({t:Math.round(M.playT||0),s:step,w:win?1:0,d:DIFF,ev:(M.evActs||[]).length});if(META.log.length>50)META.log.shift();let un='';if(win){META.wins++;if(DIFF>=META.unlockedDiff&&META.unlockedDiff<10){META.unlockedDiff=DIFF+1;META.diff=DIFF+1;un=`<br><b style="color:#fde68a">解锁难度 ${DIFF+1}！</b>`;}}saveMeta();
     shardLine=`<div class="sum" style="text-align:center">💎 获得符文碎片 <b style="color:#a5f3fc">+${sh}</b>（共 ${META.shards}）${DIFF?` · 难度 ${DIFF} 加成 +${DIFF*15}%`:''}${un}</div>`;}
   ov.innerHTML=`<h2>${win?'🏆 守住了！':'💥 城门失守'}</h2>
-  <div class="sub">地图：${mapTitle(MAP)} · ${win?'15 站全部通过':'倒在第 '+step+' 站'} · 击杀 ${stats.kills} · 最佳 第 ${Math.max(best,step)} 站</div>
+  <div class="sub">地图：${mapTitle(MAP)} · ${win?'15 站全部通过':'倒在第 '+step+' 站'} · 击杀 ${stats.kills} · 最佳 第 ${Math.max(best,step)} 站<br>⏱️ 本局用时 <b>${fmtT(M.playT)}</b></div>
   <div class="build" style="margin-top:14px">${M.mod?'本局特性：'+MODS[M.mod].icon+' '+MODS[M.mod].name+'<br>':''}本局流派：${buildSummary()||'无'}</div>${shardLine}
   <button class="big" style="max-width:300px;margin-top:18px" id="again">${FEAT.meta?'回到大厅':'再来一局'}</button>`;
   ov.style.display='flex';
@@ -4167,6 +4252,7 @@ let last=performance.now(),uiT=0;
 function loop(now){
   if(window.__hold){last=now;requestAnimationFrame(loop);return;}  // 截图/录特效对比时手动推进
   const dt=Math.min(.05,(now-last)/1000);last=now;
+  if(M&&M.relics&&phase!=='map'&&phase!=='win'&&phase!=='over')M.playT=(M.playT||0)+dt;   // 本局实际用时（真实秒数，不受倍速影响）
   try{
   if(stopT>0){stopT-=dt;updFx(dt*.15);}
   else if(phase==='wave'&&!paused){for(let s=0;s<speed&&phase==='wave'&&!paused;s++)step_(dt);}

@@ -205,7 +205,14 @@ def run_worker(args):
                         nodes = ev('pendingNodes')
                         want = 'elite' if route == 'greedy' else ('elite' if route == 'mixed' and rnd.random() < .35 else 'normal')
                         i = nodes.index(want) if want in nodes else 0
+                        if len(nodes) > 2 and rnd.random() < .45: i = 2; C('奇遇站:' + nodes[2])
                         click(f'#ov .card.node[data-i="{i}"]')
+                    elif D.vis('#ov .card.evopt') or D.vis('#evLeave'):
+                        en = [i for i, v, e in D.all('#ov .card.evopt') if v and e]
+                        sh = [i for i, v, e in D.all('#ov .card.shop') if v and e]
+                        if sh and rnd.random() < .6: C('商店购买'); click('#ov .card.shop', rnd.choice(sh))
+                        elif en: click('#ov .card.evopt', rnd.choice(en))
+                        else: click('#evLeave')
                     elif D.vis('#erRune'):
                         C('精英奖励'); click('#erTile' if rnd.random() < .35 else '#erRune')
                     else:
