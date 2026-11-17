@@ -1,4 +1,4 @@
-// 符文塔防 v0.7e · 微信小游戏版（由 tools/build_wx.py 生成，不要手改）
+// 符文塔防 v0.7f · 微信小游戏版（由 tools/build_wx.py 生成，不要手改）
 // 符文塔防 · 微信小游戏宿主：屏幕画布、触摸、存储、音频、图片。
 // 注意：微信里第一次 wx.createCanvas() 得到的是上屏画布，之后创建的都是离屏画布。
 var __HOST = (function () {
@@ -1131,7 +1131,7 @@ window.RUNE_MAPS=[{"type":"snake","paths":[[[-1,1],[1,1],[1,11],[4,11],[4,1],[7,
 var RuneMusic=window.RuneMusic;
 
 "use strict";
-const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.7e';
+const COLS=9,ROWS=14,CS=40,W=COLS*CS,H=ROWS*CS,MAXS=15,VERSION='v0.7f';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const DPR=Math.min(3,window.devicePixelRatio||1);
 cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
@@ -1551,16 +1551,21 @@ const relicOf=id=>RELICS.find(r=>r.id===id);
 const relicOK=r=>!r.pack||!FEAT.meta||owns(r.pack);
 const relicPool=()=>RELICS.filter(r=>relicOK(r)&&!(M.relics||[]).includes(r.id));
 const MODS={
-  fog     :{icon:'🌫️',name:'大雾',desc:'所有塔射程 -10%，敌人移速 -15%。'},
-  goldrush:{icon:'💰',name:'黄金潮',desc:'击败敌人金币 +40%，但每波敌人数量 +15%。'},
-  elites  :{icon:'👑',name:'精英横行',desc:'从第 2 站起，普通战斗也会混入 1 个精英。'},
-  runestorm:{icon:'🔮',name:'符文风暴',desc:'每次选符文，第一次刷新免费；但造塔、升级费用 +15%。'},
-  gale    :{icon:'🌪️',name:'疾风',desc:'敌人移速 +15%，所有塔攻速 +20%。'},
-  poor    :{icon:'🪙',name:'拮据开局',desc:'开局金币 -70，但每站的过关奖励 +50%。'},
-  iceage  :{icon:'🧊',name:'冰河期',desc:'敌人移速 -15%，但生命 +10%。'},
-  darkmoon:{icon:'🌑',name:'暗月',desc:'敌人生命 +20%，结算时符文碎片 +40%。'},
+  fog     :{icon:'🌫️',name:'大雾',desc:'所有塔射程 -10%，敌人移速 -15%。',look:'地图会起雾，每座塔只能看清自己射程内的一圈。'},
+  goldrush:{icon:'💰',name:'黄金潮',desc:'击败敌人金币 +40%，但每波敌人数量 +15%。',look:'路上会流动着金光，打死怪会多蹦金币。'},
+  elites  :{icon:'👑',name:'精英横行',desc:'从第 2 站起，普通战斗也会混入 1 个精英。',look:'精英头顶有小金冠、脚下有红光，刷怪口会亮红光。'},
+  runestorm:{icon:'🔮',name:'符文风暴',desc:'每次选符文，第一次刷新免费；但造塔、升级费用 +15%。',look:'符文会绕着地图旋转，造塔或升级时脚下会亮起法阵。'},
+  gale    :{icon:'🌪️',name:'疾风',desc:'敌人移速 +15%，所有塔攻速 +20%。',look:'风线和落叶会一直从画面吹过。'},
+  poor    :{icon:'🪙',name:'拮据开局',desc:'开局金币 -70，但每站的过关奖励 +50%。',look:'草地会发灰干裂，偶尔有风滚草滚过。'},
+  iceage  :{icon:'🧊',name:'冰河期',desc:'敌人移速 -15%，但生命 +10%。',look:'画面边缘结霜，会一直下雪。'},
+  darkmoon:{icon:'🌑',name:'暗月',desc:'敌人生命 +20%，结算时符文碎片 +40%。',look:'画面变暗，怪物脚下有暗影，死时飞出紫色碎片。'},
 };
 const modOn=k=>M.mod===k;
+function showModIntro(then){const m=MODS[M.mod];
+  ov.innerHTML=`<div class="intro"><div class="sub">本局特性 · 整局都生效</div><div style="font-size:64px;line-height:1.1;margin:6px 0">${m.icon}</div><h2>${m.name}</h2>
+    <div class="tip"><b style="color:#fde68a">效果：</b>${m.desc}${m.look?`<br><b style="color:#a5f3fc">画面：</b>${m.look}`:''}<br><span style="color:#9aa3c7">随时可以在「🔮 符文」面板里再看。</span></div>
+    <button class="big" style="max-width:260px;margin-top:16px" id="modOk">知道了</button></div>`;
+  ov.style.display='flex';sfx('card');$('modOk').onclick=()=>{ov.style.display='none';banner={a:'本局特性：'+m.name,b:m.desc,boss:false,t:2.6,T:2.6};then();};}
 const AFX_ACT1=['shield','armored','swift','regen'],AFX_ALL=Object.keys(AFX);
 const NODES={
   normal:{name:'普通战斗',icon:'⚔️',desc:'普通敌人。奖励：过关金币 + 符文三选一。',combat:true},
@@ -1755,9 +1760,9 @@ function resetRun(mapIdx,biome){
   if(modOn('poor'))gold-=70;if(modOn('runestorm'))M.costMul*=1.15;
   heroInit();
   runStage='new';if(!loading){GUIDE=0;if(firstRunPending&&!seen.has('guide'))guideStart();firstRunPending=false;}
-  {const m=MODS[M.mod];banner={a:'本局特性：'+m.icon+' '+m.name,b:m.desc,boss:false,t:3.6,T:3.6};}
   renderPanel();
-  offerCards('选择开局符文','之后每场战斗结束都能三选一，围绕你的塔叠出流派',0,offerNodes);
+  const go=()=>offerCards('选择开局符文','之后每场战斗结束都能三选一，围绕你的塔叠出流派',0,offerNodes);
+  if(!loading&&M.mod)showModIntro(go);else go();
 }
 
 // ======================= 敌人 =======================
@@ -4114,6 +4119,8 @@ function drawModAmb(){const m=M&&M.mod;if(!m)return;ctx.save();ctx.globalAlpha=1
     else if(a.k==='rune'){ctx.save();ctx.translate(a.x,a.y);ctx.rotate(a.a);ctx.globalAlpha=.16*fade;ctx.fillStyle='#c084fc';ctx.beginPath();ctx.arc(0,0,a.r*1.5,0,7);ctx.fill();ctx.globalAlpha=.6*fade;ctx.strokeStyle='#e9d5ff';ctx.lineWidth=1.3;ctx.beginPath();ctx.arc(0,0,a.r,0,7);ctx.stroke();const g=RUNEG[a.s];ctx.beginPath();for(let i=0;i<g.length;i+=2){ctx.moveTo(g[i][0]*a.r*.55,g[i][1]*a.r*.55);if(g[i+1])ctx.lineTo(g[i+1][0]*a.r*.55,g[i+1][1]*a.r*.55);}ctx.stroke();ctx.restore();}}
   if(m==='elites')for(const e of enemies)if(e.elite&&!e.dead){const y=e.y-e.r-10+Math.sin(fxClock*3+e.x)*1.5;ctx.globalAlpha=.95;ctx.fillStyle='#facc15';ctx.strokeStyle='#7c2d12';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(e.x-5,y+3);ctx.lineTo(e.x-5,y-2);ctx.lineTo(e.x-2.5,y+.5);ctx.lineTo(e.x,y-3.5);ctx.lineTo(e.x+2.5,y+.5);ctx.lineTo(e.x+5,y-2);ctx.lineTo(e.x+5,y+3);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#ef4444';ctx.fillRect(e.x-.8,y,1.6,1.6);}
   ctx.globalAlpha=1;const v=modVig(m);if(v)ctx.drawImage(v,0,0,W,H);
+  {const tx='本局特性 · '+MODS[m].name;ctx.font='bold 11px sans-serif';const tw=ctx.measureText(tx).width+16,x0=(W-tw)/2;ctx.globalAlpha=.78;ctx.fillStyle='#0d1020';ctx.beginPath();if(ctx.roundRect)ctx.roundRect(x0,4,tw,18,9);else ctx.rect(x0,4,tw,18);ctx.fill();
+    ctx.globalAlpha=.95;ctx.fillStyle='#a5f3fc';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(tx,W/2,13.5);ctx.textAlign='left';ctx.textBaseline='alphabetic';}
   if(m==='darkmoon'){const mx=W-34,my=34;ctx.globalAlpha=.35;const g=ctx.createRadialGradient(mx,my,4,mx,my,30);g.addColorStop(0,'rgba(221,214,254,.9)');g.addColorStop(1,'rgba(221,214,254,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(mx,my,30,0,7);ctx.fill();
     ctx.globalAlpha=.55;ctx.fillStyle='#ede9fe';ctx.beginPath();ctx.arc(mx,my,11,0,7);ctx.fill();ctx.fillStyle='rgba(30,12,60,1)';ctx.globalAlpha=.6;ctx.beginPath();ctx.arc(mx+5,my-3,10,0,7);ctx.fill();}
   ctx.restore();}
